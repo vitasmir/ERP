@@ -1,0 +1,4 @@
+<%@ page contentType="text/html; charset=UTF-8" pageEncoding="UTF-8" %>
+<%@ include file="fragments/base-header.jspf" %>
+<section class="section-head"><div><span class="eyebrow">BASE / ACCESS</span><h2>Role a oprávnění</h2><p>Řízení přístupů podle pracovních odpovědností.</p></div><button class="primary">+ Nová role</button></section><section class="role-grid"><article class="role-card"><span class="role-mark admin">A</span><h3>Administrátor</h3><p>Plný přístup do všech modulů a nastavení.</p><b>3 uživatelé</b></article><article class="role-card"><span class="role-mark buyer">N</span><h3>Nákupčí</h3><p>Produkty, dodavatelé a promo kampaně.</p><b>7 uživatelů</b></article><article class="role-card"><span class="role-mark logistics">L</span><h3>Logistika</h3><p>Sklady, příjem a distribuce zboží.</p><b>11 uživatelů</b></article></section>
+<%@ include file="fragments/base-footer.jspf" %>

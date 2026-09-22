@@ -1,0 +1,25 @@
+spring:
+  application:
+    name: erp-backend
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/erp}
+    username: ${DB_USERNAME:postgres}
+    password: ${DB_PASSWORD:password}
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    open-in-view: false
+  flyway:
+    enabled: true
+server:
+  port: 8080
+  error:
+    include-message: always
+
+flyway:
+  locations: classpath:db/migration
+  baseline-on-migrate: true
+  enabled: true
+  baseline-version: 1
+  schemas: public
+  

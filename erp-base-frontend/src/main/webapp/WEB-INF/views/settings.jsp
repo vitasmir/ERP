@@ -1,0 +1,4 @@
+<%@ page contentType="text/html; charset=UTF-8" pageEncoding="UTF-8" %>
+<%@ include file="fragments/base-header.jspf" %>
+<section class="section-head"><div><span class="eyebrow">BASE / CONFIGURATION</span><h2>Nastavení</h2><p>Základní konfigurace instance ERP.</p></div></section><section class="panel settings-panel"><label>URL backendu<input value="http://localhost:8080" readonly></label><label>Časové pásmo<select><option>Europe/Prague</option></select></label><label>Výchozí měna<select><option>CZK — česká koruna</option></select></label><button class="primary">Uložit nastavení</button></section>
+<%@ include file="fragments/base-footer.jspf" %>

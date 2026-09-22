@@ -1,0 +1,40 @@
+services:
+  postgres:
+    image: postgres:18
+    environment:
+      POSTGRES_DB: erp
+      POSTGRES_USER: erp
+      POSTGRES_PASSWORD: erp
+    ports:
+      - "5434:5432"
+    volumes:
+      - erp-postgres-data:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U erp -d erp"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  backend:
+    build: ./erp-backend
+    environment:
+      DB_URL: jdbc:postgresql://postgres:5432/erp
+      DB_USERNAME: erp
+      DB_PASSWORD: erp
+    ports:
+      - "8080:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  frontend:
+    build: ./erp-base-frontend
+    environment:
+      BACKEND_URL: http://backend:8080
+    ports:
+      - "4201:8080"
+    depends_on:
+      - backend
+
+volumes:
+  erp-postgres-data:

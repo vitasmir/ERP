@@ -1,0 +1,4 @@
+<%@ page contentType="text/html; charset=UTF-8" pageEncoding="UTF-8" %>
+<%@ include file="fragments/base-header.jspf" %>
+<section class="section-head"><div><span class="eyebrow">BASE / ENTITIES</span><h2>Společnosti</h2><p>Organizační jednotky a jejich konfigurace.</p></div><button class="primary">+ Nová společnost</button></section><section class="company-grid"><article><span class="company-logo">R</span><h3>Retail Group a.s.</h3><small>Centrála · CZK · aktivní</small></article><article><span class="company-logo orange">D</span><h3>Distribuce CZ s.r.o.</h3><small>Logistika · CZK · aktivní</small></article><article><span class="company-logo blue">F</span><h3>Fresh Foods s.r.o.</h3><small>Dodavatel · CZK · aktivní</small></article></section>
+<%@ include file="fragments/base-footer.jspf" %>

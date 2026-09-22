@@ -36,6 +36,8 @@ document.getElementById('drawer-action')?.addEventListener('click', () => {
     window.location.assign('users');
   } else if (module === 'settings') {
     window.location.assign('settings');
+  } else if (module === 'crm') {
+    window.location.assign('crm');
   } else if (module === 'accounting') {
     window.location.assign('accounting');
   } else if (module === 'promotions') {

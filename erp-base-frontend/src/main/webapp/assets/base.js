@@ -60,6 +60,10 @@ document.getElementById('drawer-action')?.addEventListener('click', () => {
     window.location.assign('website');
   } else if (module === 'marketing') {
     window.location.assign('marketing');
+  } else if (module === 'planning') {
+    window.location.assign('planning');
+  } else if (module === 'settings') {
+    window.location.assign('settings');
   } else if (module === 'accounting') {
     window.location.assign('accounting');
   } else if (module === 'promotions') {

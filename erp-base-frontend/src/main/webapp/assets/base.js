@@ -38,10 +38,14 @@ document.getElementById('drawer-action')?.addEventListener('click', () => {
     window.location.assign('settings');
   } else if (module === 'crm') {
     window.location.assign('crm');
+  } else if (module === 'sales') {
+    window.location.assign('sales');
   } else if (module === 'accounting') {
     window.location.assign('accounting');
   } else if (module === 'promotions') {
     window.location.assign('promo');
+  } else if (module === 'dashboard') {
+    window.location.assign('dashboard');
   } else {
     window.alert(`Modul ${document.getElementById('drawer-title').textContent} bude napojen v další iteraci.`);
   }

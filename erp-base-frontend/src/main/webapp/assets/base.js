@@ -44,6 +44,8 @@ document.getElementById('drawer-action')?.addEventListener('click', () => {
     window.location.assign('purchase');
   } else if (module === 'inventory') {
     window.location.assign('inventory');
+  } else if (module === 'manufacturing') {
+    window.location.assign('manufacturing');
   } else if (module === 'accounting') {
     window.location.assign('accounting');
   } else if (module === 'promotions') {

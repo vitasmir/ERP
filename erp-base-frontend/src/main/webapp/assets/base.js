@@ -40,6 +40,8 @@ document.getElementById('drawer-action')?.addEventListener('click', () => {
     window.location.assign('crm');
   } else if (module === 'sales') {
     window.location.assign('sales');
+  } else if (module === 'purchase') {
+    window.location.assign('purchase');
   } else if (module === 'accounting') {
     window.location.assign('accounting');
   } else if (module === 'promotions') {

@@ -58,6 +58,8 @@ document.getElementById('drawer-action')?.addEventListener('click', () => {
     window.location.assign('helpdesk');
   } else if (module === 'website') {
     window.location.assign('website');
+  } else if (module === 'marketing') {
+    window.location.assign('marketing');
   } else if (module === 'accounting') {
     window.location.assign('accounting');
   } else if (module === 'promotions') {

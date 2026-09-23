@@ -48,6 +48,8 @@ document.getElementById('drawer-action')?.addEventListener('click', () => {
     window.location.assign('manufacturing');
   } else if (module === 'pos') {
     window.location.assign('pos');
+  } else if (module === 'hr') {
+    window.location.assign('hr');
   } else if (module === 'accounting') {
     window.location.assign('accounting');
   } else if (module === 'promotions') {

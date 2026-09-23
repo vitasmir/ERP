@@ -22,6 +22,18 @@ public class CrmLead {
     private LocalDate expectedCloseDate;
 
     protected CrmLead() { }
+    public static CrmLead create(String name, String customerName, BigDecimal expectedRevenue, int probability,
+            LocalDate expectedCloseDate) {
+        CrmLead lead = new CrmLead();
+        lead.id = UUID.randomUUID();
+        lead.name = name;
+        lead.customerName = customerName;
+        lead.expectedRevenue = expectedRevenue;
+        lead.probability = probability;
+        lead.stage = LeadStage.NEW;
+        lead.expectedCloseDate = expectedCloseDate;
+        return lead;
+    }
     public UUID getId() { return id; }
     public String getName() { return name; }
     public String getCustomerName() { return customerName; }
@@ -30,4 +42,5 @@ public class CrmLead {
     public LeadStage getStage() { return stage; }
     public LocalDate getExpectedCloseDate() { return expectedCloseDate; }
     public void markWon() { stage = LeadStage.WON; probability = 100; }
+    public void moveTo(LeadStage nextStage) { stage = nextStage; }
 }

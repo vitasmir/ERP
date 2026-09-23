@@ -2,7 +2,34 @@ document.getElementById('user-search')?.addEventListener('input', (event) => {
   const query = event.target.value.toLowerCase();
   document.querySelectorAll('#user-table tr').forEach((row) => row.classList.toggle('hidden', !row.textContent.toLowerCase().includes(query)));
 });
-document.getElementById('add-user')?.addEventListener('click', () => window.alert('Formulář nového uživatele bude napojen na /api/v1/users v další iteraci modulu base.'));
+const userModal = document.getElementById('user-modal');
+const userForm = document.getElementById('user-form');
+const openUserDialog = (user) => {
+  document.getElementById('user-action').value = user ? 'update' : 'create';
+  document.getElementById('user-id').value = user?.dataset.userId || '';
+  document.getElementById('user-full-name').value = user?.dataset.fullName || '';
+  document.getElementById('user-role-name').value = user?.dataset.roleName || '';
+  document.getElementById('user-company-name').value = user?.dataset.companyName || '';
+  document.getElementById('user-status').value = user?.dataset.status || 'ACTIVE';
+  document.getElementById('user-dialog-title').textContent = user ? 'Upravit uživatele' : 'Nový uživatel';
+  document.getElementById('save-user').textContent = user ? 'Uložit změny' : 'Přidat uživatele';
+  userModal?.classList.add('open');
+  userModal?.setAttribute('aria-hidden', 'false');
+  document.getElementById('user-full-name')?.focus();
+};
+const closeUserDialog = () => {
+  userModal?.classList.remove('open');
+  userModal?.setAttribute('aria-hidden', 'true');
+  userForm?.reset();
+};
+document.getElementById('add-user')?.addEventListener('click', () => openUserDialog());
+document.getElementById('close-user-dialog')?.addEventListener('click', closeUserDialog);
+document.getElementById('cancel-user-dialog')?.addEventListener('click', closeUserDialog);
+userModal?.querySelector('.user-modal-backdrop')?.addEventListener('click', closeUserDialog);
+document.querySelectorAll('.edit-user').forEach((button) => button.addEventListener('click', () => openUserDialog(button.closest('tr'))));
+document.querySelectorAll('.delete-user-form').forEach((form) => form.addEventListener('submit', (event) => {
+  if (!window.confirm('Opravdu chcete tohoto uživatele smazat?')) event.preventDefault();
+}));
 
 const drawer = document.getElementById('module-drawer');
 const backdrop = document.createElement('div');

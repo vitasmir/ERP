@@ -52,6 +52,8 @@ document.getElementById('drawer-action')?.addEventListener('click', () => {
     window.location.assign('hr');
   } else if (module === 'documents') {
     window.location.assign('documents');
+  } else if (module === 'project') {
+    window.location.assign('projects');
   } else if (module === 'accounting') {
     window.location.assign('accounting');
   } else if (module === 'promotions') {

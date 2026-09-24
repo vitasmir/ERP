@@ -6,7 +6,7 @@ import java.util.UUID;
 
 public record InventoryOverviewView(int totalQuantity, BigDecimal stockValue, long lowStockCount,
         List<InventoryItemView> items, List<InventoryProductView> products) {
-    public record InventoryItemView(UUID id, String productName, String sku, String locationName, int quantity,
+        public record InventoryItemView(UUID id, String productName, String imageUrl, String sku, String locationName, int quantity,
             int reorderLevel, BigDecimal unitCost, int orderedFromCentral, String unit, String categoryPath,
             int categoryDepth) { }
 

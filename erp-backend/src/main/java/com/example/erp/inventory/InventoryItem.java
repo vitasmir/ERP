@@ -57,6 +57,11 @@ public class InventoryItem {
         quantity += receivedQuantity;
     }
 
+    public void updateStockSettings(int newReorderLevel, BigDecimal newUnitCost) {
+        reorderLevel = newReorderLevel;
+        unitCost = newUnitCost;
+    }
+
     public void orderFromCentral(int requestedQuantity) {
         orderedFromCentral = requestedQuantity;
     }

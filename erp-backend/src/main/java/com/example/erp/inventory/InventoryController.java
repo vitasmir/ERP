@@ -62,11 +62,14 @@ public class InventoryController {
 
     @PatchMapping("/items/{id}/receive")
     public InventoryItemResponse receive(@PathVariable UUID id, @RequestBody ReceiveStockRequest request) {
-        if (request.quantity() <= 0) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Received quantity must be positive.");
+        if (request == null || request.quantity() <= 0 || request.reorderLevel() < 0
+                || request.unitCost() == null || request.unitCost().signum() < 0) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "Received quantity, minimum, and unit cost must be valid non-negative values.");
         }
         InventoryItem item = items.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Inventory item was not found."));
+        item.updateStockSettings(request.reorderLevel(), request.unitCost());
         item.receive(request.quantity());
         InventoryItem saved = items.save(item);
         Product product = product(saved.getProductId());
@@ -184,18 +187,18 @@ public class InventoryController {
         }
     }
 
-    public record ReceiveStockRequest(int quantity) { }
+    public record ReceiveStockRequest(int quantity, int reorderLevel, BigDecimal unitCost) { }
 
     public record OrderStockRequest(UUID productId, String locationName, int quantity) { }
 
     public record InventoryOverview(int totalQuantity, BigDecimal stockValue, long lowStockCount,
             List<InventoryItemResponse> items, List<InventoryProductResponse> products) { }
 
-    public record InventoryItemResponse(UUID id, String productName, String sku, String locationName, int quantity,
+    public record InventoryItemResponse(UUID id, String productName, String imageUrl, String sku, String locationName, int quantity,
             int reorderLevel, BigDecimal unitCost, int orderedFromCentral, String unit, String categoryPath,
             int categoryDepth) {
         static InventoryItemResponse from(InventoryItem item, Product product, CategoryDetails category) {
-            return new InventoryItemResponse(item.getId(), product.getName(), product.getSku(), item.getLocationName(),
+            return new InventoryItemResponse(item.getId(), product.getName(), product.getImageUrl(), product.getSku(), item.getLocationName(),
                 item.getQuantity(), item.getReorderLevel(), item.getUnitCost(), item.getOrderedFromCentral(), product.getUnit(),
                 category.path(), category.depth());
         }

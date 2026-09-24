@@ -1,6 +1,7 @@
 package com.example.erp.frontend.inventory;
 
 import java.io.IOException;
+import java.math.BigDecimal;
 import java.net.URI;
 import java.net.URLEncoder;
 import java.net.http.HttpClient;
@@ -51,11 +52,18 @@ public class InventoryServlet extends HttpServlet {
         }
         String id = request.getParameter("id");
         String quantity = request.getParameter("quantity");
+        String reorderLevel = request.getParameter("reorderLevel");
+        String unitCost = request.getParameter("unitCost");
         try {
             UUID.fromString(id);
             int receivedQuantity = Integer.parseInt(quantity);
-            if (receivedQuantity <= 0) throw new IllegalArgumentException();
-            String requestBody = mapper.writeValueAsString(new ReceiveStockRequest(receivedQuantity));
+            int minimumQuantity = Integer.parseInt(reorderLevel);
+            BigDecimal receivedUnitCost = new BigDecimal(unitCost.replace(',', '.'));
+            if (receivedQuantity <= 0 || minimumQuantity < 0 || receivedUnitCost.signum() < 0) {
+                throw new IllegalArgumentException();
+            }
+            String requestBody = mapper.writeValueAsString(
+                    new ReceiveStockRequest(receivedQuantity, minimumQuantity, receivedUnitCost));
             HttpRequest backendRequest = HttpRequest.newBuilder(URI.create(backendUrl + "/api/v1/inventory/items/" + id + "/receive"))
                     .header("Content-Type", "application/json")
                     .method("PATCH", HttpRequest.BodyPublishers.ofString(requestBody)).build();
@@ -64,7 +72,8 @@ public class InventoryServlet extends HttpServlet {
                     ? "Příjem zásoby byl zaevidován." : "Příjem zásoby backend odmítl.";
             response.sendRedirect("inventory?message=" + URLEncoder.encode(message, StandardCharsets.UTF_8));
         } catch (IllegalArgumentException exception) {
-            response.sendRedirect("inventory?error=" + URLEncoder.encode("Zadejte kladné množství příjmu.", StandardCharsets.UTF_8));
+            response.sendRedirect("inventory?error=" + URLEncoder.encode(
+                    "Zadejte platné množství příjmu, minimum a jednotkovou cenu.", StandardCharsets.UTF_8));
         } catch (InterruptedException exception) {
             Thread.currentThread().interrupt();
             response.sendRedirect("inventory?error=" + URLEncoder.encode("Příjem zásoby byl přerušen.", StandardCharsets.UTF_8));
@@ -102,7 +111,7 @@ public class InventoryServlet extends HttpServlet {
         }
     }
 
-    private record ReceiveStockRequest(int quantity) { }
+    private record ReceiveStockRequest(int quantity, int reorderLevel, BigDecimal unitCost) { }
 
     private record OrderStockRequest(UUID productId, String locationName, int quantity) { }
 }

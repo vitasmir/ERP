@@ -7,6 +7,13 @@ const userForm = document.getElementById('user-form');
 const openUserDialog = (user) => {
   document.getElementById('user-action').value = user ? 'update' : 'create';
   document.getElementById('user-id').value = user?.dataset.userId || '';
+  const employeeSelect = document.getElementById('user-employee-id');
+  if (employeeSelect) {
+    employeeSelect.value = user?.dataset.employeeId || '';
+    employeeSelect.querySelectorAll('option[data-has-account="true"]').forEach((option) => {
+      option.disabled = option.value !== user?.dataset.employeeId;
+    });
+  }
   document.getElementById('user-full-name').value = user?.dataset.fullName || '';
   document.getElementById('user-role-name').value = user?.dataset.roleName || '';
   document.getElementById('user-company-name').value = user?.dataset.companyName || '';
@@ -27,6 +34,14 @@ document.getElementById('close-user-dialog')?.addEventListener('click', closeUse
 document.getElementById('cancel-user-dialog')?.addEventListener('click', closeUserDialog);
 userModal?.querySelector('.user-modal-backdrop')?.addEventListener('click', closeUserDialog);
 document.querySelectorAll('.edit-user').forEach((button) => button.addEventListener('click', () => openUserDialog(button.closest('tr'))));
+const requestedEmployeeId = userModal?.dataset.requestedEmployeeId;
+if (requestedEmployeeId) {
+  openUserDialog();
+  const employeeSelect = document.getElementById('user-employee-id');
+  employeeSelect.value = requestedEmployeeId;
+  const employeeOption = employeeSelect.options[employeeSelect.selectedIndex];
+  if (employeeOption) document.getElementById('user-full-name').value = employeeOption.textContent.split(' · ')[0];
+}
 document.querySelectorAll('.delete-user-form').forEach((form) => form.addEventListener('submit', (event) => {
   if (!window.confirm('Opravdu chcete tohoto uživatele smazat?')) event.preventDefault();
 }));

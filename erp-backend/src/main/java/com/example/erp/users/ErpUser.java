@@ -3,11 +3,16 @@ package com.example.erp.users;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
+import com.example.erp.hr.Employee;
+
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
+import jakarta.persistence.FetchType;
 import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.OneToOne;
 import jakarta.persistence.Table;
 
 @Entity
@@ -25,6 +30,10 @@ public class ErpUser {
     @Column(name = "company_name")
     private String companyName;
 
+    @OneToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "employee_id", unique = true)
+    private Employee employee;
+
     @Enumerated(EnumType.STRING)
     private UserStatus status;
 
@@ -33,9 +42,10 @@ public class ErpUser {
 
     protected ErpUser() { }
 
-    public static ErpUser create(String fullName, String roleName, String companyName, UserStatus status) {
+    public static ErpUser create(Employee employee, String fullName, String roleName, String companyName, UserStatus status) {
         ErpUser user = new ErpUser();
         user.id = UUID.randomUUID();
+        user.employee = employee;
         user.fullName = fullName;
         user.roleName = roleName;
         user.companyName = companyName;
@@ -43,7 +53,8 @@ public class ErpUser {
         return user;
     }
 
-    public void update(String fullName, String roleName, String companyName, UserStatus status) {
+    public void update(Employee employee, String fullName, String roleName, String companyName, UserStatus status) {
+        this.employee = employee;
         this.fullName = fullName;
         this.roleName = roleName;
         this.companyName = companyName;
@@ -51,6 +62,7 @@ public class ErpUser {
     }
 
     public UUID getId() { return id; }
+    public UUID getEmployeeId() { return employee == null ? null : employee.getId(); }
     public String getFullName() { return fullName; }
     public String getRoleName() { return roleName; }
     public String getCompanyName() { return companyName; }

@@ -40,6 +40,13 @@ public class UsersServlet extends HttpServlet {
                 throw new IOException("Backend returned HTTP " + backendResponse.statusCode());
             }
             request.setAttribute("users", mapper.readValue(backendResponse.body(), UserView[].class));
+            HttpRequest employeeRequest = HttpRequest.newBuilder(URI.create(backendUrl + "/api/v1/users/employee-options"))
+                    .timeout(Duration.ofSeconds(5)).GET().build();
+            HttpResponse<String> employeeResponse = client.send(employeeRequest, HttpResponse.BodyHandlers.ofString());
+            if (employeeResponse.statusCode() != HttpServletResponse.SC_OK) {
+                throw new IOException("Backend returned HTTP " + employeeResponse.statusCode());
+            }
+            request.setAttribute("employeeOptions", mapper.readValue(employeeResponse.body(), EmployeeOption[].class));
         } catch (InterruptedException exception) {
             Thread.currentThread().interrupt();
             request.setAttribute("error", "Načítání uživatelů bylo přerušeno.");
@@ -80,6 +87,7 @@ public class UsersServlet extends HttpServlet {
     private HttpResponse<String> sendSave(String action, HttpServletRequest request)
             throws IOException, InterruptedException {
         String body = mapper.writeValueAsString(Map.of(
+            "employeeId", request.getParameter("employeeId"),
                 "fullName", request.getParameter("fullName"),
                 "roleName", request.getParameter("roleName"),
                 "companyName", request.getParameter("companyName"),
@@ -117,8 +125,8 @@ public class UsersServlet extends HttpServlet {
 
     private String encode(String value) { return URLEncoder.encode(value, StandardCharsets.UTF_8); }
 
-    public record UserView(UUID id, String fullName, String roleName, String companyName,
-            String status, String lastAccessAt) {
+        public record UserView(UUID id, String fullName, String roleName, String companyName,
+            String status, String lastAccessAt, UUID employeeId) {
         public String initials() {
             String[] words = fullName.trim().split("\\s+");
             return words.length > 1
@@ -145,4 +153,6 @@ public class UsersServlet extends HttpServlet {
             }
         }
     }
+
+    public record EmployeeOption(UUID id, String fullName, String teamName, boolean hasAccount) { }
 }

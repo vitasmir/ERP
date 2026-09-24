@@ -15,30 +15,45 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
 
+import com.example.erp.hr.Employee;
+import com.example.erp.hr.EmployeeRepository;
+
 @RestController
 @RequestMapping("/api/v1/users")
 public class UserController {
     private final UserRepository users;
+    private final EmployeeRepository employees;
 
-    public UserController(UserRepository users) { this.users = users; }
+    public UserController(UserRepository users, EmployeeRepository employees) {
+        this.users = users;
+        this.employees = employees;
+    }
 
     @GetMapping
     public List<UserResponse> list() {
         return users.findAllByOrderByFullNameAsc().stream().map(UserResponse::from).toList();
     }
 
+    @GetMapping("/employee-options")
+    public List<EmployeeOption> employeeOptions() {
+        return employees.findAllByOrderByEmploymentStartDateDesc().stream()
+                .map(employee -> new EmployeeOption(employee.getId(), employee.getFullName(), employee.getTeamName(),
+                        users.existsByEmployee_Id(employee.getId())))
+                .toList();
+    }
+
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     public UserResponse create(@RequestBody UserRequest request) {
-        UserData data = validate(request);
-        return UserResponse.from(users.save(ErpUser.create(data.fullName(), data.roleName(), data.companyName(), data.status())));
+        UserData data = validate(request, null);
+        return UserResponse.from(users.save(ErpUser.create(data.employee(), data.fullName(), data.roleName(), data.companyName(), data.status())));
     }
 
     @PutMapping("/{id}")
     public UserResponse update(@PathVariable UUID id, @RequestBody UserRequest request) {
-        UserData data = validate(request);
+        UserData data = validate(request, id);
         ErpUser user = findUser(id);
-        user.update(data.fullName(), data.roleName(), data.companyName(), data.status());
+        user.update(data.employee(), data.fullName(), data.roleName(), data.companyName(), data.status());
         return UserResponse.from(users.save(user));
     }
 
@@ -53,7 +68,7 @@ public class UserController {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User was not found."));
     }
 
-    private UserData validate(UserRequest request) {
+    private UserData validate(UserRequest request, UUID currentUserId) {
         if (request == null || isBlank(request.fullName()) || isBlank(request.roleName()) || isBlank(request.companyName())) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "User fields are required.");
         }
@@ -63,20 +78,41 @@ public class UserController {
         } catch (IllegalArgumentException exception) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Unknown user status.");
         }
-        return new UserData(request.fullName().trim(), request.roleName().trim(), request.companyName().trim(), status);
+        Employee employee = findEmployee(request.employeeId());
+        if ((currentUserId == null
+                ? users.existsByEmployee_Id(employee.getId())
+                : users.existsByEmployee_IdAndIdNot(employee.getId(), currentUserId))) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Employee already has a user account.");
+        }
+        return new UserData(employee, request.fullName().trim(), request.roleName().trim(), request.companyName().trim(), status);
+    }
+
+    private Employee findEmployee(String employeeId) {
+        if (isBlank(employeeId)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Employee is required.");
+        }
+        try {
+            return employees.findById(UUID.fromString(employeeId))
+                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Employee was not found."));
+        } catch (IllegalArgumentException exception) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid employee.");
+        }
     }
 
     private boolean isBlank(String value) { return value == null || value.isBlank(); }
 
-    public record UserRequest(String fullName, String roleName, String companyName, String status) { }
+    public record UserRequest(String employeeId, String fullName, String roleName, String companyName, String status) { }
 
-    private record UserData(String fullName, String roleName, String companyName, UserStatus status) { }
+    private record UserData(Employee employee, String fullName, String roleName, String companyName, UserStatus status) { }
 
     public record UserResponse(UUID id, String fullName, String roleName, String companyName,
-            UserStatus status, String lastAccessAt) {
+            UserStatus status, String lastAccessAt, UUID employeeId) {
         static UserResponse from(ErpUser user) {
             return new UserResponse(user.getId(), user.getFullName(), user.getRoleName(), user.getCompanyName(),
-                    user.getStatus(), user.getLastAccessAt() == null ? null : user.getLastAccessAt().toString());
+                    user.getStatus(), user.getLastAccessAt() == null ? null : user.getLastAccessAt().toString(),
+                    user.getEmployeeId());
         }
     }
+
+    public record EmployeeOption(UUID id, String fullName, String teamName, boolean hasAccount) { }
 }

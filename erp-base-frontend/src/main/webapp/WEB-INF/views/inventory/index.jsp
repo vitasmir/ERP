@@ -23,20 +23,20 @@
     </header>
     <% if (error != null) { %><p class="inventory-message error"><%= error %></p><% } if (actionError != null) { %><p class="inventory-message error"><%= actionError %></p><% } if (message != null) { %><p class="inventory-message"><%= message %></p><% } %>
     <section class="inventory-metrics">
-      <article><span>Zásoba celkem</span><strong><%= overview == null ? "-" : overview.totalQuantity() %> kg</strong><small>v evidovaných lokacích</small></article>
+      <article><span>Zásoba celkem</span><strong><%= overview == null ? "-" : overview.totalQuantity() %> jednotek</strong><small>součet evidovaných kusů a měrných jednotek</small></article>
       <article><span>Hodnota zásob</span><strong><%= overview == null ? "-" : amount(overview.stockValue()) %> Kč</strong><small>v pořizovacích cenách</small></article>
       <article><span>Pod minimem</span><strong><%= overview == null ? "-" : overview.lowStockCount() %></strong><small>lokace vyžadují doplnění</small></article>
     </section>
     <section id="stock" class="inventory-section">
       <div class="section-head"><div><span class="eyebrow">SKLADOVÉ POLOŽKY</span><h2>Stav zásob podle lokace</h2></div><span class="item-count"><%= overview == null ? 0 : overview.items().size() %> lokace</span></div>
-      <div class="stock-list">
-        <% if (overview != null) for (InventoryItemView item : overview.items()) { boolean lowStock = item.quantity() < item.reorderLevel(); %>
+      <div class="category-tree">
+        <% String categoryPath = null; if (overview != null) for (InventoryItemView item : overview.items()) { if (!item.categoryPath().equals(categoryPath)) { if (categoryPath != null) { %></div></details><% } categoryPath = item.categoryPath(); %><details class="category-branch" open><summary><span>Kategorie</span> <strong><%= categoryPath %></strong></summary><div class="stock-list"><% } boolean lowStock = item.quantity() < item.reorderLevel(); %>
         <article class="stock-card <%= lowStock ? "low-stock" : "" %>">
           <div class="stock-main"><span class="status-chip <%= lowStock ? "status-low" : "status-ok" %>"><%= lowStock ? "DOPLNIT" : "V POŘÁDKU" %></span><h3><%= item.locationName() %></h3><p><%= item.productName() %> · <%= item.sku() %></p></div>
           <dl><div><dt>Skladem</dt><dd><%= item.quantity() %> <%= item.unit() %></dd></div><div><dt>Minimum</dt><dd><%= item.reorderLevel() %> <%= item.unit() %></dd></div><div><dt>Jednotková cena</dt><dd><%= amount(item.unitCost()) %> Kč</dd></div></dl>
-          <form method="post" class="receive-form"><input type="hidden" name="id" value="<%= item.id() %>"><label>Příjem <input type="number" name="quantity" min="1" value="1000" required> kg</label><button class="secondary" type="submit">Zaevidovat příjem</button></form>
+          <form method="post" class="receive-form"><input type="hidden" name="id" value="<%= item.id() %>"><label>Příjem <input type="number" name="quantity" min="1" value="1" required> <%= item.unit() %></label><button class="secondary" type="submit">Zaevidovat příjem</button></form>
         </article>
-        <% } %>
+        <% } if (categoryPath != null) { %></div></details><% } %>
       </div>
     </section>
   </main>

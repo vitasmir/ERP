@@ -57,6 +57,7 @@ public class EcommerceServlet extends HttpServlet {
             switch (action) {
                 case "homepage" -> { updateHomepage(request); redirect(response, "Homepage byla uložena.", null); }
                 case "category" -> { createCategory(request); redirect(response, "Kategorie byla přidána.", null); }
+                case "product" -> { saveProduct(request); redirect(response, "Produkt byl uložen.", null); }
                 case "import" -> { importProducts(request); redirect(response, "Produkty byly naimportovány.", null); }
                 case "estimate" -> redirect(response, estimate(request), null);
                 default -> redirect(response, null, "Neznámá eCommerce akce.");
@@ -85,6 +86,17 @@ public class EcommerceServlet extends HttpServlet {
     private void importProducts(HttpServletRequest request) throws IOException, InterruptedException {
         List<ProductRequest> body = mapper.readValue(request.getParameter("products"), new TypeReference<>() { });
         send("POST", "/api/v1/catalog/products/import", mapper.writeValueAsString(body));
+    }
+
+    private void saveProduct(HttpServletRequest request) throws IOException, InterruptedException {
+        String productId = request.getParameter("productId");
+        String category = request.getParameter("categoryId");
+        ProductRequest body = new ProductRequest(request.getParameter("sku"), request.getParameter("name"),
+                request.getParameter("unit"), request.getParameter("description"), new BigDecimal(request.getParameter("price")),
+                category == null || category.isBlank() ? null : UUID.fromString(category), request.getParameter("imageUrl"),
+                "on".equals(request.getParameter("active")));
+        String path = productId == null || productId.isBlank() ? "/api/v1/catalog/products" : "/api/v1/catalog/products/" + UUID.fromString(productId);
+        send(productId == null || productId.isBlank() ? "POST" : "PUT", path, mapper.writeValueAsString(body));
     }
 
     private String estimate(HttpServletRequest request) throws IOException, InterruptedException {

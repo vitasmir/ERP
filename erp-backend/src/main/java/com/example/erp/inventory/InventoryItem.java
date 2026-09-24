@@ -28,6 +28,9 @@ public class InventoryItem {
     @Column(name = "unit_cost")
     private BigDecimal unitCost;
 
+    @Column(name = "ordered_from_central")
+    private int orderedFromCentral;
+
     protected InventoryItem() { }
 
     public static InventoryItem create(UUID productId, String locationName) {
@@ -38,6 +41,7 @@ public class InventoryItem {
         item.quantity = 0;
         item.reorderLevel = 0;
         item.unitCost = BigDecimal.ZERO;
+        item.orderedFromCentral = 0;
         return item;
     }
 
@@ -47,8 +51,13 @@ public class InventoryItem {
     public int getQuantity() { return quantity; }
     public int getReorderLevel() { return reorderLevel; }
     public BigDecimal getUnitCost() { return unitCost; }
+    public int getOrderedFromCentral() { return orderedFromCentral; }
 
     public void receive(int receivedQuantity) {
         quantity += receivedQuantity;
+    }
+
+    public void orderFromCentral(int requestedQuantity) {
+        orderedFromCentral = requestedQuantity;
     }
 }

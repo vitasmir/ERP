@@ -73,6 +73,30 @@ public class InventoryController {
         return InventoryItemResponse.from(saved, product, categoryTree().detailsFor(product.getCategoryId()));
     }
 
+    @PatchMapping("/orders")
+    public InventoryItemResponse orderFromCentral(@RequestBody OrderStockRequest request) {
+        if (request == null || request.productId() == null || request.locationName() == null
+                || request.locationName().isBlank() || request.quantity() < 0) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid warehouse order request.");
+        }
+        String locationName = request.locationName().trim();
+        if (isCentralLocation(locationName)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "Orders can only be created for a non-central warehouse.");
+        }
+        Product product = product(request.productId());
+        boolean knownWarehouse = items.findAll().stream()
+                .anyMatch(item -> locationName.equals(item.getLocationName()) && !isCentralLocation(item.getLocationName()));
+        if (!knownWarehouse) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Warehouse was not found.");
+        }
+        InventoryItem item = items.findByProductIdAndLocationName(product.getId(), locationName)
+                .orElseGet(() -> InventoryItem.create(product.getId(), locationName));
+        item.orderFromCentral(request.quantity());
+        InventoryItem saved = items.save(item);
+        return InventoryItemResponse.from(saved, product, categoryTree().detailsFor(product.getCategoryId()));
+    }
+
     private Product product(UUID id) {
         return products.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Product was not found."));
@@ -80,6 +104,12 @@ public class InventoryController {
 
         private List<InventoryProductResponse> productRows(List<InventoryItem> inventoryItems,
             Map<UUID, Product> productsById, CategoryTree categoryTree) {
+            List<String> warehouseNames = inventoryItems.stream()
+                .map(InventoryItem::getLocationName)
+                .filter(locationName -> !isCentralLocation(locationName))
+                .distinct()
+                .sorted()
+                .toList();
         Map<UUID, ProductStock> stockByProductId = new LinkedHashMap<>();
         for (InventoryItem item : inventoryItems) {
             Product product = productsById.computeIfAbsent(item.getProductId(), this::product);
@@ -88,7 +118,7 @@ public class InventoryController {
             stock.add(item);
         }
         return stockByProductId.values().stream()
-            .map(ProductStock::toResponse)
+            .map(stock -> stock.toResponse(warehouseNames))
             .sorted(Comparator.comparing(InventoryProductResponse::categoryPath)
                 .thenComparing(InventoryProductResponse::productName)
                 .thenComparing(InventoryProductResponse::sku))
@@ -156,21 +186,27 @@ public class InventoryController {
 
     public record ReceiveStockRequest(int quantity) { }
 
+    public record OrderStockRequest(UUID productId, String locationName, int quantity) { }
+
     public record InventoryOverview(int totalQuantity, BigDecimal stockValue, long lowStockCount,
             List<InventoryItemResponse> items, List<InventoryProductResponse> products) { }
 
     public record InventoryItemResponse(UUID id, String productName, String sku, String locationName, int quantity,
-            int reorderLevel, BigDecimal unitCost, String unit, String categoryPath, int categoryDepth) {
+            int reorderLevel, BigDecimal unitCost, int orderedFromCentral, String unit, String categoryPath,
+            int categoryDepth) {
         static InventoryItemResponse from(InventoryItem item, Product product, CategoryDetails category) {
             return new InventoryItemResponse(item.getId(), product.getName(), product.getSku(), item.getLocationName(),
-                item.getQuantity(), item.getReorderLevel(), item.getUnitCost(), product.getUnit(),
+                item.getQuantity(), item.getReorderLevel(), item.getUnitCost(), item.getOrderedFromCentral(), product.getUnit(),
                 category.path(), category.depth());
         }
     }
 
     public record InventoryProductResponse(UUID productId, String productName, String sku, String unit,
             String description, String imageUrl, String categoryPath, int categoryDepth, int centralQuantity,
-            int warehouseQuantity, int locationCount) { }
+            int warehouseQuantity, int locationCount, List<WarehouseStockResponse> warehouses) { }
+
+    public record WarehouseStockResponse(UUID inventoryItemId, String locationName, int quantity,
+            int orderedFromCentral) { }
 
     private static final class ProductStock {
         private final Product product;
@@ -189,15 +225,25 @@ public class InventoryController {
                 centralQuantity += item.getQuantity();
             } else {
                 warehouseQuantity += item.getQuantity();
+                warehouseItems.put(item.getLocationName(), item);
             }
             locationCount++;
         }
 
-        private InventoryProductResponse toResponse() {
+        private InventoryProductResponse toResponse(List<String> warehouseNames) {
+            List<WarehouseStockResponse> warehouses = warehouseNames.stream()
+                    .map(locationName -> {
+                        InventoryItem item = warehouseItems.get(locationName);
+                        return new WarehouseStockResponse(item == null ? null : item.getId(), locationName,
+                                item == null ? 0 : item.getQuantity(),
+                                item == null ? 0 : item.getOrderedFromCentral());
+                    }).toList();
             return new InventoryProductResponse(product.getId(), product.getName(), product.getSku(), product.getUnit(),
                     product.getDescription(), product.getImageUrl(), category.path(), category.depth(), centralQuantity,
-                    warehouseQuantity, locationCount);
+                    warehouseQuantity, locationCount, warehouses);
         }
+
+        private final Map<String, InventoryItem> warehouseItems = new LinkedHashMap<>();
     }
 
     private record CategoryDetails(String path, int depth) { }

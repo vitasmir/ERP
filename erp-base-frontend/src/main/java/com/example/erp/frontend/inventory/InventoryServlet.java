@@ -45,6 +45,10 @@ public class InventoryServlet extends HttpServlet {
 
     @Override
     protected void doPost(HttpServletRequest request, HttpServletResponse response) throws IOException {
+        if ("order".equals(request.getParameter("action"))) {
+            saveOrder(request, response);
+            return;
+        }
         String id = request.getParameter("id");
         String quantity = request.getParameter("quantity");
         try {
@@ -67,5 +71,38 @@ public class InventoryServlet extends HttpServlet {
         }
     }
 
+    private void saveOrder(HttpServletRequest request, HttpServletResponse response) throws IOException {
+        String productId = request.getParameter("productId");
+        String locationName = request.getParameter("locationName");
+        String quantity = request.getParameter("quantity");
+        try {
+            UUID.fromString(productId);
+            int orderedQuantity = Integer.parseInt(quantity);
+            if (orderedQuantity < 0 || locationName == null || locationName.isBlank()) {
+                throw new IllegalArgumentException();
+            }
+            String requestBody = mapper.writeValueAsString(
+                    new OrderStockRequest(UUID.fromString(productId), locationName, orderedQuantity));
+            HttpRequest backendRequest = HttpRequest.newBuilder(URI.create(backendUrl + "/api/v1/inventory/orders"))
+                    .header("Content-Type", "application/json")
+                    .method("PATCH", HttpRequest.BodyPublishers.ofString(requestBody)).build();
+            HttpResponse<Void> backendResponse = client.send(backendRequest, HttpResponse.BodyHandlers.discarding());
+            String message = backendResponse.statusCode() == HttpServletResponse.SC_OK
+                    ? "Objednávka z hlavního skladu byla uložena." : "Objednávku backend odmítl.";
+            String location = URLEncoder.encode(locationName, StandardCharsets.UTF_8);
+            response.sendRedirect("inventory?message=" + URLEncoder.encode(message, StandardCharsets.UTF_8)
+                    + "&warehouseName=" + location + "&view=products");
+        } catch (IllegalArgumentException exception) {
+            response.sendRedirect("inventory?error="
+                    + URLEncoder.encode("Zadejte nezáporné množství a platný sklad.", StandardCharsets.UTF_8));
+        } catch (InterruptedException exception) {
+            Thread.currentThread().interrupt();
+            response.sendRedirect("inventory?error="
+                    + URLEncoder.encode("Objednávka byla přerušena.", StandardCharsets.UTF_8));
+        }
+    }
+
     private record ReceiveStockRequest(int quantity) { }
+
+    private record OrderStockRequest(UUID productId, String locationName, int quantity) { }
 }

@@ -44,6 +44,17 @@ public class HrController {
     public record HrOverview(long activeEmployeeCount, long onboardingCount, long teamCount,
             List<EmployeeResponse> employees) { }
 
+    /**
+     * Represents the response for an employee in the HR overview.
+     *
+     * @param id                the unique identifier of the employee
+     * @param fullName          the full name of the employee
+     * @param teamName          the name of the team the employee belongs to
+     * @param jobTitle          the job title of the employee
+     * @param employmentStartDate the start date of the employee's employment
+     * @param status            the current status of the employee
+     * @param hasUserAccount    whether the employee has an associated user account
+     */
     public record EmployeeResponse(UUID id, String fullName, String teamName, String jobTitle,
                         LocalDate employmentStartDate, EmployeeStatus status, boolean hasUserAccount) {
                 static EmployeeResponse from(Employee employee, boolean hasUserAccount) {

@@ -120,6 +120,8 @@ document.getElementById('drawer-action')?.addEventListener('click', () => {
     window.location.assign('helpdesk');
   } else if (module === 'website') {
     window.location.assign('website');
+  } else if (module === 'ecommerce') {
+    window.location.assign('ecommerce');
   } else if (module === 'marketing') {
     window.location.assign('marketing');
   } else if (module === 'planning') {

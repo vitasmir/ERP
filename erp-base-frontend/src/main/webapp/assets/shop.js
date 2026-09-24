@@ -48,5 +48,11 @@
   paymentForm?.querySelectorAll('input[name="paymentMethod"]').forEach((input) => {
     input.addEventListener('change', updateCardFields);
   });
+  paymentForm?.querySelectorAll('[name^="cardNumber"]').forEach((input, index, inputs) => {
+    input.addEventListener('input', () => {
+      input.value = input.value.replace(/\D/g, '').slice(0, 4);
+      if (input.value.length === 4 && inputs[index + 1]) inputs[index + 1].focus();
+    });
+  });
   updateCardFields();
 })();

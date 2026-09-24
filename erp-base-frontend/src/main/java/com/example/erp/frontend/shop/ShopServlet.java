@@ -15,6 +15,7 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 
 import com.example.erp.frontend.ecommerce.EcommerceView;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
@@ -211,18 +212,22 @@ public class ShopServlet extends HttpServlet {
             return;
         }
         if ("card".equals(paymentMethod)) {
-            String cardNumber = text(request.getParameter("cardNumber")).replace(" ", "");
+            String cardNumber = text(request.getParameter("cardNumber1")) + text(request.getParameter("cardNumber2"))
+                    + text(request.getParameter("cardNumber3")) + text(request.getParameter("cardNumber4"));
             String cardExpiry = text(request.getParameter("cardExpiry"));
             String cardCvc = text(request.getParameter("cardCvc"));
-            if (!cardNumber.matches("\\d{13,19}") || !cardExpiry.matches("(0[1-9]|1[0-2])/\\d{2}")
+            if (!cardNumber.matches("\\d{16}") || !cardExpiry.matches("(0[1-9]|1[0-2])/\\d{2}")
                     || !cardCvc.matches("\\d{3,4}")) {
                 response.sendRedirect("eshop?checkout=payment&error=" + java.net.URLEncoder.encode(
                         "Zkontrolujte číslo karty, platnost a CVV.", java.nio.charset.StandardCharsets.UTF_8));
                 return;
             }
         }
-        request.getSession().setAttribute(PAYMENT_ATTRIBUTE, paymentMethod);
-        response.sendRedirect("eshop?checkout=payment&payment=selected");
+        HttpSession session = request.getSession();
+        session.removeAttribute(CART_ATTRIBUTE);
+        session.removeAttribute(DELIVERY_ATTRIBUTE);
+        session.removeAttribute(PAYMENT_ATTRIBUTE);
+        response.sendRedirect("eshop");
     }
 
     private String text(String value) {
@@ -254,5 +259,6 @@ public class ShopServlet extends HttpServlet {
         return mapper.readValue(response.body(), type);
     }
 
-    private record SettingsResponse(BigDecimal deliveryFee) { }
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    public record SettingsResponse(BigDecimal deliveryFee) { }
 }

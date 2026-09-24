@@ -227,7 +227,7 @@ public class ShopServlet extends HttpServlet {
         session.removeAttribute(CART_ATTRIBUTE);
         session.removeAttribute(DELIVERY_ATTRIBUTE);
         session.removeAttribute(PAYMENT_ATTRIBUTE);
-        response.sendRedirect("eshop");
+        response.sendRedirect("eshop?order=completed");
     }
 
     private String text(String value) {

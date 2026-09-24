@@ -55,4 +55,8 @@
     });
   });
   updateCardFields();
+
+  if (document.querySelector('.order-complete-dialog')) {
+    window.setTimeout(() => { window.location.href = 'eshop'; }, 3000);
+  }
 })();

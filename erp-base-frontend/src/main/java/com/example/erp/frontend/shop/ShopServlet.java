@@ -28,6 +28,8 @@ import jakarta.servlet.http.HttpSession;
 @WebServlet({"/eshop", "/shop"})
 public class ShopServlet extends HttpServlet {
     private static final String CART_ATTRIBUTE = "eshop.cart";
+    private static final String DELIVERY_ATTRIBUTE = "eshop.delivery";
+    private static final String PAYMENT_ATTRIBUTE = "eshop.payment";
     private final HttpClient client = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(3)).build();
     private final ObjectMapper mapper = new ObjectMapper();
     private final String backendUrl = System.getenv().getOrDefault("BACKEND_URL", "http://localhost:8080");
@@ -39,8 +41,15 @@ public class ShopServlet extends HttpServlet {
             List<EcommerceView.Product> sourceProducts = getList("/api/v1/catalog/products", new TypeReference<>() { });
             List<ShopView.Category> categories = sourceCategories.stream().map(this::toCategory).toList();
             List<ShopView.Product> products = loadAvailableProducts(sourceProducts);
+            SettingsResponse settings = get("/api/v1/settings", SettingsResponse.class);
             UUID selectedCategoryId = categoryId(request.getParameter("categoryId"));
-            ShopView shop = buildView(categories, products, selectedCategoryId, cart(request.getSession()));
+            HttpSession session = request.getSession();
+                ShopView.DeliveryDetails delivery = delivery(session);
+                boolean paymentOpen = "payment".equals(request.getParameter("checkout")) && delivery != null;
+                boolean checkoutOpen = "delivery".equals(request.getParameter("checkout"))
+                    || (delivery != null && !paymentOpen);
+                ShopView shop = buildView(categories, products, selectedCategoryId, cart(session), checkoutOpen,
+                        paymentOpen, settings.deliveryFee(), delivery);
             request.setAttribute("shop", shop);
         } catch (InterruptedException exception) {
             Thread.currentThread().interrupt();
@@ -55,6 +64,14 @@ public class ShopServlet extends HttpServlet {
     protected void doPost(HttpServletRequest request, HttpServletResponse response) throws IOException {
         try {
             String action = request.getParameter("action");
+            if ("delivery".equals(action)) {
+                saveDelivery(request, response);
+                return;
+            }
+            if ("payment".equals(action)) {
+                savePayment(request, response);
+                return;
+            }
             String productIdParameter = request.getParameter("productId");
             if (action == null || productIdParameter == null || productIdParameter.isBlank()) {
                 throw new IllegalArgumentException("Produkt nebyl zadán.");
@@ -100,7 +117,8 @@ public class ShopServlet extends HttpServlet {
     }
 
         private ShopView buildView(List<ShopView.Category> categories, List<ShopView.Product> allProducts,
-            UUID selectedCategoryId, Map<UUID, Integer> cart) {
+            UUID selectedCategoryId, Map<UUID, Integer> cart, boolean checkoutOpen, boolean paymentOpen,
+            BigDecimal deliveryFee, ShopView.DeliveryDetails delivery) {
         List<ShopView.Product> visibleProducts = selectedCategoryId == null ? allProducts : allProducts.stream()
             .filter(product -> selectedCategoryId.equals(product.categoryId())).toList();
         Map<UUID, ShopView.Product> productsById = allProducts.stream()
@@ -121,7 +139,7 @@ public class ShopServlet extends HttpServlet {
         List<ShopView.CategoryOption> categoryOptions = new ArrayList<>();
         flattenCategories(categories, 0, categoryOptions);
         return new ShopView(categories, categoryOptions, visibleProducts, allProducts.size(), selectedCategoryId,
-                lines, cartCount, cartTotal.setScale(2));
+            lines, cartCount, cartTotal.setScale(2), checkoutOpen, paymentOpen, deliveryFee, delivery);
     }
 
     private void flattenCategories(List<ShopView.Category> categories, int depth,
@@ -161,6 +179,56 @@ public class ShopServlet extends HttpServlet {
         return selectedCategoryId == null ? "" : "?categoryId=" + selectedCategoryId;
     }
 
+    private ShopView.DeliveryDetails delivery(HttpSession session) {
+        Object value = session.getAttribute(DELIVERY_ATTRIBUTE);
+        return value instanceof ShopView.DeliveryDetails details ? details : null;
+    }
+
+    private void saveDelivery(HttpServletRequest request, HttpServletResponse response) throws IOException {
+        String firstName = text(request.getParameter("firstName"));
+        String lastName = text(request.getParameter("lastName"));
+        String phone = text(request.getParameter("phone"));
+        String street = text(request.getParameter("street"));
+        String city = text(request.getParameter("city"));
+        String postalCode = text(request.getParameter("postalCode"));
+        if (firstName.isBlank() || lastName.isBlank() || phone.isBlank() || street.isBlank()
+                || city.isBlank() || postalCode.isBlank() || !phone.matches("[+0-9 ()-]{9,20}")
+                || !postalCode.matches("\\d{3} ?\\d{2}")) {
+            response.sendRedirect("eshop?checkout=delivery&error=" + java.net.URLEncoder.encode(
+                    "Vyplňte jméno, telefon a úplnou adresu zákazníka.", java.nio.charset.StandardCharsets.UTF_8));
+            return;
+        }
+        request.getSession().setAttribute(DELIVERY_ATTRIBUTE,
+                new ShopView.DeliveryDetails(firstName, lastName, phone, street, city, postalCode));
+        response.sendRedirect("eshop?checkout=payment#payment-step");
+    }
+
+    private void savePayment(HttpServletRequest request, HttpServletResponse response) throws IOException {
+        String paymentMethod = text(request.getParameter("paymentMethod"));
+        if (!"card".equals(paymentMethod) && !"cod".equals(paymentMethod)) {
+            response.sendRedirect("eshop?checkout=payment&error=" + java.net.URLEncoder.encode(
+                    "Vyberte způsob platby.", java.nio.charset.StandardCharsets.UTF_8));
+            return;
+        }
+        if ("card".equals(paymentMethod)) {
+            String cardNumber = text(request.getParameter("cardNumber")).replace(" ", "");
+            String cardExpiry = text(request.getParameter("cardExpiry"));
+            String cardCvc = text(request.getParameter("cardCvc"));
+            if (!cardNumber.matches("\\d{13,19}") || !cardExpiry.matches("(0[1-9]|1[0-2])/\\d{2}")
+                    || !cardCvc.matches("\\d{3,4}")) {
+                response.sendRedirect("eshop?checkout=payment&error=" + java.net.URLEncoder.encode(
+                        "Zkontrolujte číslo karty, platnost a CVV.", java.nio.charset.StandardCharsets.UTF_8));
+                return;
+            }
+        }
+        request.getSession().setAttribute(PAYMENT_ATTRIBUTE, paymentMethod);
+        response.sendRedirect("eshop?checkout=payment&payment=selected");
+    }
+
+    private String text(String value) {
+        return value == null ? "" : value.trim();
+    }
+
     private ShopView.Category toCategory(EcommerceView.Category category) {
         return new ShopView.Category(category.id(), category.parentId(), category.name(), category.slug(),
                 category.sortOrder(), category.active(), category.children().stream().map(this::toCategory).toList());
@@ -175,4 +243,16 @@ public class ShopServlet extends HttpServlet {
         }
         return mapper.readValue(response.body(), type);
     }
+
+    private <T> T get(String path, Class<T> type) throws IOException, InterruptedException {
+        HttpResponse<String> response = client.send(
+                HttpRequest.newBuilder(URI.create(backendUrl + path)).timeout(Duration.ofSeconds(5)).GET().build(),
+                HttpResponse.BodyHandlers.ofString());
+        if (response.statusCode() != HttpServletResponse.SC_OK) {
+            throw new IOException("Backend returned HTTP " + response.statusCode());
+        }
+        return mapper.readValue(response.body(), type);
+    }
+
+    private record SettingsResponse(BigDecimal deliveryFee) { }
 }

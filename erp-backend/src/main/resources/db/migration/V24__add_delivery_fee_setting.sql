@@ -1,0 +1,2 @@
+ALTER TABLE erp_settings
+    ADD COLUMN delivery_fee NUMERIC(10,2) NOT NULL DEFAULT 79.00;

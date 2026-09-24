@@ -1,5 +1,6 @@
 package com.example.erp.settings;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
@@ -31,6 +32,9 @@ public class ErpSettings {
     @Column(name = "default_payment_terms_days")
     private int defaultPaymentTermsDays;
 
+    @Column(name = "delivery_fee")
+    private BigDecimal deliveryFee;
+
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
 
@@ -43,16 +47,18 @@ public class ErpSettings {
     public String getTimezone() { return timezone; }
     public int getFiscalYearStartMonth() { return fiscalYearStartMonth; }
     public int getDefaultPaymentTermsDays() { return defaultPaymentTermsDays; }
+    public BigDecimal getDeliveryFee() { return deliveryFee; }
     public LocalDateTime getUpdatedAt() { return updatedAt; }
 
     public void update(String companyName, String companyEmail, String currencyCode, String timezone,
-            int fiscalYearStartMonth, int defaultPaymentTermsDays) {
+            int fiscalYearStartMonth, int defaultPaymentTermsDays, BigDecimal deliveryFee) {
         this.companyName = companyName;
         this.companyEmail = companyEmail;
         this.currencyCode = currencyCode;
         this.timezone = timezone;
         this.fiscalYearStartMonth = fiscalYearStartMonth;
         this.defaultPaymentTermsDays = defaultPaymentTermsDays;
+        this.deliveryFee = deliveryFee;
         this.updatedAt = LocalDateTime.now();
     }
 }

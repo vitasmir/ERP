@@ -1,6 +1,7 @@
 package com.example.erp.frontend.settings;
 
 import java.io.IOException;
+import java.math.BigDecimal;
 import java.net.URI;
 import java.net.URLEncoder;
 import java.net.http.HttpClient;
@@ -39,7 +40,7 @@ public class SettingsServlet extends HttpServlet {
         } catch (IOException exception) {
             request.setAttribute("error", "Backend pro nastavení není dostupný: " + exception.getMessage());
         }
-        request.getRequestDispatcher("/WEB-INF/views/settings/index.jsp").forward(request, response);
+        request.getRequestDispatcher("/WEB-INF/views/settings.jsp").forward(request, response);
     }
 
     @Override
@@ -47,7 +48,8 @@ public class SettingsServlet extends HttpServlet {
         UpdateSettingsRequest body = new UpdateSettingsRequest(request.getParameter("companyName"),
                 request.getParameter("companyEmail"), request.getParameter("currencyCode"), request.getParameter("timezone"),
                 Integer.parseInt(request.getParameter("fiscalYearStartMonth")),
-                Integer.parseInt(request.getParameter("defaultPaymentTermsDays")));
+                Integer.parseInt(request.getParameter("defaultPaymentTermsDays")),
+                new BigDecimal(request.getParameter("deliveryFee")));
         try {
             HttpRequest backendRequest = HttpRequest.newBuilder(URI.create(backendUrl + "/api/v1/settings"))
                     .header("Content-Type", "application/json")
@@ -65,5 +67,5 @@ public class SettingsServlet extends HttpServlet {
     }
 
     private record UpdateSettingsRequest(String companyName, String companyEmail, String currencyCode, String timezone,
-            int fiscalYearStartMonth, int defaultPaymentTermsDays) { }
+            int fiscalYearStartMonth, int defaultPaymentTermsDays, BigDecimal deliveryFee) { }
 }

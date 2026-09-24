@@ -1,5 +1,6 @@
 package com.example.erp.settings;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
@@ -26,12 +27,14 @@ public class SettingsController {
     public SettingsResponse update(@RequestBody UpdateSettingsRequest request) {
         if (request.companyName().isBlank() || request.companyEmail().isBlank() || request.currencyCode().isBlank()
                 || request.timezone().isBlank() || request.fiscalYearStartMonth() < 1 || request.fiscalYearStartMonth() > 12
-                || request.defaultPaymentTermsDays() < 0) {
+                || request.defaultPaymentTermsDays() < 0 || request.deliveryFee() == null
+                || request.deliveryFee().compareTo(BigDecimal.ZERO) < 0) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Settings contain invalid values.");
         }
         ErpSettings configuration = load();
         configuration.update(request.companyName().trim(), request.companyEmail().trim(), request.currencyCode().trim(),
-                request.timezone().trim(), request.fiscalYearStartMonth(), request.defaultPaymentTermsDays());
+            request.timezone().trim(), request.fiscalYearStartMonth(), request.defaultPaymentTermsDays(),
+            request.deliveryFee());
         return SettingsResponse.from(settings.save(configuration));
     }
 
@@ -41,14 +44,14 @@ public class SettingsController {
     }
 
     public record UpdateSettingsRequest(String companyName, String companyEmail, String currencyCode, String timezone,
-            int fiscalYearStartMonth, int defaultPaymentTermsDays) { }
+            int fiscalYearStartMonth, int defaultPaymentTermsDays, BigDecimal deliveryFee) { }
 
     public record SettingsResponse(String companyName, String companyEmail, String currencyCode, String timezone,
-            int fiscalYearStartMonth, int defaultPaymentTermsDays, LocalDateTime updatedAt) {
+            int fiscalYearStartMonth, int defaultPaymentTermsDays, BigDecimal deliveryFee, LocalDateTime updatedAt) {
         static SettingsResponse from(ErpSettings configuration) {
             return new SettingsResponse(configuration.getCompanyName(), configuration.getCompanyEmail(),
                     configuration.getCurrencyCode(), configuration.getTimezone(), configuration.getFiscalYearStartMonth(),
-                    configuration.getDefaultPaymentTermsDays(), configuration.getUpdatedAt());
+                    configuration.getDefaultPaymentTermsDays(), configuration.getDeliveryFee(), configuration.getUpdatedAt());
         }
     }
 }

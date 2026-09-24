@@ -5,7 +5,9 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
@@ -41,18 +43,21 @@ public class InventoryController {
     @GetMapping("/overview")
     public InventoryOverview overview() {
         CategoryTree categoryTree = categoryTree();
-        List<InventoryItemResponse> rows = items.findAllByOrderByQuantityAsc().stream()
+        List<InventoryItem> inventoryItems = items.findAllByOrderByQuantityAsc();
+        Map<UUID, Product> productsById = new HashMap<>();
+        List<InventoryItemResponse> rows = inventoryItems.stream()
                 .map(item -> {
-                    Product product = product(item.getProductId());
+                    Product product = productsById.computeIfAbsent(item.getProductId(), this::product);
                     return InventoryItemResponse.from(item, product, categoryTree.detailsFor(product.getCategoryId()));
                 }).sorted(Comparator.comparing(InventoryItemResponse::categoryPath)
                         .thenComparing(InventoryItemResponse::productName)
                         .thenComparing(InventoryItemResponse::locationName)).toList();
+        List<InventoryProductResponse> productRows = productRows(inventoryItems, productsById, categoryTree);
         int totalQuantity = rows.stream().mapToInt(InventoryItemResponse::quantity).sum();
         long lowStockCount = rows.stream().filter(row -> row.quantity() < row.reorderLevel()).count();
         BigDecimal stockValue = rows.stream().map(row -> row.unitCost().multiply(BigDecimal.valueOf(row.quantity())))
                 .reduce(BigDecimal.ZERO, BigDecimal::add).setScale(2);
-        return new InventoryOverview(totalQuantity, stockValue, lowStockCount, rows);
+        return new InventoryOverview(totalQuantity, stockValue, lowStockCount, rows, productRows);
     }
 
     @PatchMapping("/items/{id}/receive")
@@ -72,6 +77,28 @@ public class InventoryController {
         return products.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Product was not found."));
     }
+
+        private List<InventoryProductResponse> productRows(List<InventoryItem> inventoryItems,
+            Map<UUID, Product> productsById, CategoryTree categoryTree) {
+        Map<UUID, ProductStock> stockByProductId = new LinkedHashMap<>();
+        for (InventoryItem item : inventoryItems) {
+            Product product = productsById.computeIfAbsent(item.getProductId(), this::product);
+            ProductStock stock = stockByProductId.computeIfAbsent(product.getId(), id ->
+                new ProductStock(product, categoryTree.detailsFor(product.getCategoryId())));
+            stock.add(item);
+        }
+        return stockByProductId.values().stream()
+            .map(ProductStock::toResponse)
+            .sorted(Comparator.comparing(InventoryProductResponse::categoryPath)
+                .thenComparing(InventoryProductResponse::productName)
+                .thenComparing(InventoryProductResponse::sku))
+            .toList();
+        }
+
+        private static boolean isCentralLocation(String locationName) {
+        return locationName != null
+            && locationName.toLowerCase(Locale.ROOT).startsWith("centrální sklad");
+        }
 
     private CategoryTree categoryTree() {
         Map<UUID, CategoryNode> nodesById = new HashMap<>();
@@ -130,7 +157,7 @@ public class InventoryController {
     public record ReceiveStockRequest(int quantity) { }
 
     public record InventoryOverview(int totalQuantity, BigDecimal stockValue, long lowStockCount,
-            List<InventoryItemResponse> items) { }
+            List<InventoryItemResponse> items, List<InventoryProductResponse> products) { }
 
     public record InventoryItemResponse(UUID id, String productName, String sku, String locationName, int quantity,
             int reorderLevel, BigDecimal unitCost, String unit, String categoryPath, int categoryDepth) {
@@ -138,6 +165,38 @@ public class InventoryController {
             return new InventoryItemResponse(item.getId(), product.getName(), product.getSku(), item.getLocationName(),
                 item.getQuantity(), item.getReorderLevel(), item.getUnitCost(), product.getUnit(),
                 category.path(), category.depth());
+        }
+    }
+
+    public record InventoryProductResponse(UUID productId, String productName, String sku, String unit,
+            String description, String imageUrl, String categoryPath, int categoryDepth, int centralQuantity,
+            int warehouseQuantity, int locationCount) { }
+
+    private static final class ProductStock {
+        private final Product product;
+        private final CategoryDetails category;
+        private int centralQuantity;
+        private int warehouseQuantity;
+        private int locationCount;
+
+        private ProductStock(Product product, CategoryDetails category) {
+            this.product = product;
+            this.category = category;
+        }
+
+        private void add(InventoryItem item) {
+            if (isCentralLocation(item.getLocationName())) {
+                centralQuantity += item.getQuantity();
+            } else {
+                warehouseQuantity += item.getQuantity();
+            }
+            locationCount++;
+        }
+
+        private InventoryProductResponse toResponse() {
+            return new InventoryProductResponse(product.getId(), product.getName(), product.getSku(), product.getUnit(),
+                    product.getDescription(), product.getImageUrl(), category.path(), category.depth(), centralQuantity,
+                    warehouseQuantity, locationCount);
         }
     }
 

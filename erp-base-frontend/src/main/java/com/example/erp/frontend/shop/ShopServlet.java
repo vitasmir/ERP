@@ -39,7 +39,8 @@ public class ShopServlet extends HttpServlet {
             List<EcommerceView.Product> sourceProducts = getList("/api/v1/catalog/products", new TypeReference<>() { });
             List<ShopView.Category> categories = sourceCategories.stream().map(this::toCategory).toList();
             List<ShopView.Product> products = loadAvailableProducts(sourceProducts);
-            ShopView shop = buildView(categories, products, cart(request.getSession()));
+            UUID selectedCategoryId = categoryId(request.getParameter("categoryId"));
+            ShopView shop = buildView(categories, products, selectedCategoryId, cart(request.getSession()));
             request.setAttribute("shop", shop);
         } catch (InterruptedException exception) {
             Thread.currentThread().interrupt();
@@ -75,7 +76,7 @@ public class ShopServlet extends HttpServlet {
             };
             if (requested <= 0) cart.remove(productId);
             else cart.put(productId, Math.min(requested, product.availableQuantity()));
-            response.sendRedirect("eshop");
+            response.sendRedirect("eshop" + categoryRedirect(request.getParameter("categoryId")));
         } catch (InterruptedException exception) {
             Thread.currentThread().interrupt();
             response.sendRedirect("eshop?error=Požadavek byl přerušen.");
@@ -98,9 +99,11 @@ public class ShopServlet extends HttpServlet {
         return products;
     }
 
-    private ShopView buildView(List<ShopView.Category> categories, List<ShopView.Product> products,
-            Map<UUID, Integer> cart) {
-        Map<UUID, ShopView.Product> productsById = products.stream()
+        private ShopView buildView(List<ShopView.Category> categories, List<ShopView.Product> allProducts,
+            UUID selectedCategoryId, Map<UUID, Integer> cart) {
+        List<ShopView.Product> visibleProducts = selectedCategoryId == null ? allProducts : allProducts.stream()
+            .filter(product -> selectedCategoryId.equals(product.categoryId())).toList();
+        Map<UUID, ShopView.Product> productsById = allProducts.stream()
                 .collect(Collectors.toMap(ShopView.Product::id, product -> product));
         List<ShopView.CartLine> lines = new ArrayList<>();
         int cartCount = 0;
@@ -115,7 +118,18 @@ public class ShopServlet extends HttpServlet {
             cartCount += quantity;
             cartTotal = cartTotal.add(lineTotal);
         }
-        return new ShopView(categories, products, lines, cartCount, cartTotal.setScale(2));
+        List<ShopView.CategoryOption> categoryOptions = new ArrayList<>();
+        flattenCategories(categories, 0, categoryOptions);
+        return new ShopView(categories, categoryOptions, visibleProducts, allProducts.size(), selectedCategoryId,
+                lines, cartCount, cartTotal.setScale(2));
+    }
+
+    private void flattenCategories(List<ShopView.Category> categories, int depth,
+            List<ShopView.CategoryOption> result) {
+        for (ShopView.Category category : categories) {
+            result.add(new ShopView.CategoryOption(category.id(), category.name(), depth));
+            flattenCategories(category.children(), depth + 1, result);
+        }
     }
 
     @SuppressWarnings("unchecked")
@@ -131,6 +145,20 @@ public class ShopServlet extends HttpServlet {
         int quantity = Integer.parseInt(value);
         if (quantity <= 0) throw new IllegalArgumentException("Množství musí být kladné.");
         return quantity;
+    }
+
+    private UUID categoryId(String value) {
+        if (value == null || value.isBlank()) return null;
+        try {
+            return UUID.fromString(value);
+        } catch (IllegalArgumentException exception) {
+            return null;
+        }
+    }
+
+    private String categoryRedirect(String value) {
+        UUID selectedCategoryId = categoryId(value);
+        return selectedCategoryId == null ? "" : "?categoryId=" + selectedCategoryId;
     }
 
     private ShopView.Category toCategory(EcommerceView.Category category) {

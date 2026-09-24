@@ -46,14 +46,16 @@ public class UserController {
     @ResponseStatus(HttpStatus.CREATED)
     public UserResponse create(@RequestBody UserRequest request) {
         UserData data = validate(request, null);
-        return UserResponse.from(users.save(ErpUser.create(data.employee(), data.fullName(), data.roleName(), data.companyName(), data.status())));
+        return UserResponse.from(users.save(ErpUser.create(data.employee(), data.fullName(), data.roleName(),
+            data.companyName(), data.username(), data.passwordHash(), data.status())));
     }
 
     @PutMapping("/{id}")
     public UserResponse update(@PathVariable UUID id, @RequestBody UserRequest request) {
         UserData data = validate(request, id);
         ErpUser user = findUser(id);
-        user.update(data.employee(), data.fullName(), data.roleName(), data.companyName(), data.status());
+        user.update(data.employee(), data.fullName(), data.roleName(), data.companyName(), data.username(),
+            data.passwordHash(), data.status());
         return UserResponse.from(users.save(user));
     }
 
@@ -84,7 +86,13 @@ public class UserController {
                 : users.existsByEmployee_IdAndIdNot(employee.getId(), currentUserId))) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Employee already has a user account.");
         }
-        return new UserData(employee, request.fullName().trim(), request.roleName().trim(), request.companyName().trim(), status);
+        String username = normalizeUsername(request.username());
+        if ((currentUserId == null ? users.existsByUsername(username) : users.existsByUsernameAndIdNot(username, currentUserId))) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Username is already in use.");
+        }
+        String passwordHash = passwordHash(request.password(), currentUserId == null);
+        return new UserData(employee, request.fullName().trim(), request.roleName().trim(), request.companyName().trim(),
+            username, passwordHash, status);
     }
 
     private Employee findEmployee(String employeeId) {
@@ -101,16 +109,36 @@ public class UserController {
 
     private boolean isBlank(String value) { return value == null || value.isBlank(); }
 
-    public record UserRequest(String employeeId, String fullName, String roleName, String companyName, String status) { }
+    private String normalizeUsername(String username) {
+        if (isBlank(username) || !username.trim().matches("[a-zA-Z0-9._-]{3,64}")) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Username must contain 3 to 64 letters, numbers, dots, hyphens, or underscores.");
+        }
+        return username.trim().toLowerCase(java.util.Locale.ROOT);
+    }
 
-    private record UserData(Employee employee, String fullName, String roleName, String companyName, UserStatus status) { }
+    private String passwordHash(String password, boolean required) {
+        if (isBlank(password)) {
+            if (required) throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Password is required.");
+            return null;
+        }
+        if (password.length() < 10) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Password must contain at least 10 characters.");
+        }
+        return PasswordHasher.hash(password);
+    }
+
+    public record UserRequest(String employeeId, String fullName, String roleName, String companyName, String username,
+            String password, String status) { }
+
+    private record UserData(Employee employee, String fullName, String roleName, String companyName, String username,
+            String passwordHash, UserStatus status) { }
 
     public record UserResponse(UUID id, String fullName, String roleName, String companyName,
-            UserStatus status, String lastAccessAt, UUID employeeId) {
+            UserStatus status, String lastAccessAt, UUID employeeId, String username) {
         static UserResponse from(ErpUser user) {
             return new UserResponse(user.getId(), user.getFullName(), user.getRoleName(), user.getCompanyName(),
                     user.getStatus(), user.getLastAccessAt() == null ? null : user.getLastAccessAt().toString(),
-                    user.getEmployeeId());
+                    user.getEmployeeId(), user.getUsername());
         }
     }
 

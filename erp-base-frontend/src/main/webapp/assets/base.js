@@ -15,6 +15,10 @@ const openUserDialog = (user) => {
     });
   }
   document.getElementById('user-full-name').value = user?.dataset.fullName || '';
+  document.getElementById('user-username').value = user?.dataset.username || '';
+  const passwordInput = document.getElementById('user-password');
+  passwordInput.value = '';
+  passwordInput.required = !user;
   document.getElementById('user-role-name').value = user?.dataset.roleName || '';
   document.getElementById('user-company-name').value = user?.dataset.companyName || '';
   document.getElementById('user-status').value = user?.dataset.status || 'ACTIVE';

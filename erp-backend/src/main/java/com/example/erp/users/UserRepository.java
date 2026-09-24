@@ -11,4 +11,7 @@ public interface UserRepository extends JpaRepository<ErpUser, UUID> {
     Optional<ErpUser> findByEmployee_Id(UUID employeeId);
     boolean existsByEmployee_Id(UUID employeeId);
     boolean existsByEmployee_IdAndIdNot(UUID employeeId, UUID id);
+    Optional<ErpUser> findByUsername(String username);
+    boolean existsByUsername(String username);
+    boolean existsByUsernameAndIdNot(String username, UUID id);
 }

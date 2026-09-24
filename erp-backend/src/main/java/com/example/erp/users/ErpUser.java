@@ -30,6 +30,12 @@ public class ErpUser {
     @Column(name = "company_name")
     private String companyName;
 
+    @Column(name = "username")
+    private String username;
+
+    @Column(name = "password_hash")
+    private String passwordHash;
+
     @OneToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "employee_id", unique = true)
     private Employee employee;
@@ -42,30 +48,39 @@ public class ErpUser {
 
     protected ErpUser() { }
 
-    public static ErpUser create(Employee employee, String fullName, String roleName, String companyName, UserStatus status) {
+        public static ErpUser create(Employee employee, String fullName, String roleName, String companyName,
+            String username, String passwordHash, UserStatus status) {
         ErpUser user = new ErpUser();
         user.id = UUID.randomUUID();
         user.employee = employee;
         user.fullName = fullName;
         user.roleName = roleName;
         user.companyName = companyName;
+        user.username = username;
+        user.passwordHash = passwordHash;
         user.status = status;
         return user;
     }
 
-    public void update(Employee employee, String fullName, String roleName, String companyName, UserStatus status) {
+        public void update(Employee employee, String fullName, String roleName, String companyName, String username,
+            String passwordHash, UserStatus status) {
         this.employee = employee;
         this.fullName = fullName;
         this.roleName = roleName;
         this.companyName = companyName;
+        this.username = username;
+        if (passwordHash != null) this.passwordHash = passwordHash;
         this.status = status;
     }
 
     public UUID getId() { return id; }
     public UUID getEmployeeId() { return employee == null ? null : employee.getId(); }
+    public String getUsername() { return username; }
+    public String getPasswordHash() { return passwordHash; }
     public String getFullName() { return fullName; }
     public String getRoleName() { return roleName; }
     public String getCompanyName() { return companyName; }
     public UserStatus getStatus() { return status; }
     public LocalDateTime getLastAccessAt() { return lastAccessAt; }
+    public void recordLogin() { lastAccessAt = LocalDateTime.now(); }
 }

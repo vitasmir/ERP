@@ -91,6 +91,8 @@ public class UsersServlet extends HttpServlet {
                 "fullName", request.getParameter("fullName"),
                 "roleName", request.getParameter("roleName"),
                 "companyName", request.getParameter("companyName"),
+                "username", request.getParameter("username"),
+                "password", request.getParameter("password"),
                 "status", request.getParameter("status")));
         HttpRequest.Builder builder = HttpRequest.newBuilder(userUri(action, request.getParameter("id")))
                 .header("Content-Type", "application/json");
@@ -126,7 +128,7 @@ public class UsersServlet extends HttpServlet {
     private String encode(String value) { return URLEncoder.encode(value, StandardCharsets.UTF_8); }
 
         public record UserView(UUID id, String fullName, String roleName, String companyName,
-            String status, String lastAccessAt, UUID employeeId) {
+            String status, String lastAccessAt, UUID employeeId, String username) {
         public String initials() {
             String[] words = fullName.trim().split("\\s+");
             return words.length > 1

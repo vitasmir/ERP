@@ -32,7 +32,7 @@
           <div class="employee-main"><span class="employee-avatar"><%= initials.toUpperCase() %></span><div><span class="status-chip status-<%= employee.status().toLowerCase() %>"><%= employee.status().equals("ONBOARDING") ? "NÁSTUP" : employee.status().equals("ACTIVE") ? "AKTIVNÍ" : "NEAKTIVNÍ" %></span><h3><%= employee.fullName() %></h3><p><%= employee.jobTitle() %></p></div></div>
           <dl><div><dt>Tým</dt><dd><%= employee.teamName() %></dd></div><div><dt>Nástup</dt><dd><%= employee.employmentStartDate() %></dd></div></dl>
           <% if ("ONBOARDING".equals(employee.status())) { %><form method="post"><input type="hidden" name="id" value="<%= employee.id() %>"><button class="secondary" type="submit">Aktivovat nástup</button></form><% } else { %><span class="active-label">Profil je aktivní</span><% } %>
-          <% if (employee.hasUserAccount()) { %><a href="../users">Účet v Uživatelích</a><% } else { %><a href="../users?employeeId=<%= employee.id() %>">Vytvořit účet</a><% } %>
+          <% if (employee.hasUserAccount()) { %><a href="users">Účet v Uživatelích</a><% } else { %><a href="users?employeeId=<%= employee.id() %>">Vytvořit účet</a><% } %>
         </article>
         <% } %>
       </div>

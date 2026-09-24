@@ -15,7 +15,9 @@ const openUserDialog = (user) => {
     });
   }
   document.getElementById('user-full-name').value = user?.dataset.fullName || '';
-  document.getElementById('user-username').value = user?.dataset.username || '';
+  const usernameInput = document.getElementById('user-username');
+  usernameInput.value = user?.dataset.username || '';
+  usernameInput.readOnly = Boolean(user);
   const passwordInput = document.getElementById('user-password');
   passwordInput.value = '';
   passwordInput.required = !user;

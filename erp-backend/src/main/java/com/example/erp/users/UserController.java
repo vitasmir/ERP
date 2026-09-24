@@ -52,10 +52,9 @@ public class UserController {
 
     @PutMapping("/{id}")
     public UserResponse update(@PathVariable UUID id, @RequestBody UserRequest request) {
-        UserData data = validate(request, id);
         ErpUser user = findUser(id);
-        user.update(data.employee(), data.fullName(), data.roleName(), data.companyName(), data.username(),
-            data.passwordHash(), data.status());
+        UserData data = validate(request, user);
+        user.update(data.employee(), data.fullName(), data.roleName(), data.companyName(), data.passwordHash(), data.status());
         return UserResponse.from(users.save(user));
     }
 
@@ -70,7 +69,7 @@ public class UserController {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User was not found."));
     }
 
-    private UserData validate(UserRequest request, UUID currentUserId) {
+    private UserData validate(UserRequest request, ErpUser currentUser) {
         if (request == null || isBlank(request.fullName()) || isBlank(request.roleName()) || isBlank(request.companyName())) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "User fields are required.");
         }
@@ -81,16 +80,16 @@ public class UserController {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Unknown user status.");
         }
         Employee employee = findEmployee(request.employeeId());
-        if ((currentUserId == null
+        if ((currentUser == null
                 ? users.existsByEmployee_Id(employee.getId())
-                : users.existsByEmployee_IdAndIdNot(employee.getId(), currentUserId))) {
+                : users.existsByEmployee_IdAndIdNot(employee.getId(), currentUser.getId()))) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Employee already has a user account.");
         }
-        String username = normalizeUsername(request.username());
-        if ((currentUserId == null ? users.existsByUsername(username) : users.existsByUsernameAndIdNot(username, currentUserId))) {
+        String username = currentUser == null ? normalizeUsername(request.username()) : currentUser.getUsername();
+        if (currentUser == null && users.existsByUsername(username)) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Username is already in use.");
         }
-        String passwordHash = passwordHash(request.password(), currentUserId == null);
+        String passwordHash = passwordHash(request.password(), currentUser == null);
         return new UserData(employee, request.fullName().trim(), request.roleName().trim(), request.companyName().trim(),
             username, passwordHash, status);
     }

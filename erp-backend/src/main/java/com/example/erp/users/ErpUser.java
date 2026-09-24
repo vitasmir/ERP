@@ -62,13 +62,12 @@ public class ErpUser {
         return user;
     }
 
-        public void update(Employee employee, String fullName, String roleName, String companyName, String username,
+    public void update(Employee employee, String fullName, String roleName, String companyName,
             String passwordHash, UserStatus status) {
         this.employee = employee;
         this.fullName = fullName;
         this.roleName = roleName;
         this.companyName = companyName;
-        this.username = username;
         if (passwordHash != null) this.passwordHash = passwordHash;
         this.status = status;
     }

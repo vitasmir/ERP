@@ -2,6 +2,20 @@ document.getElementById('user-search')?.addEventListener('input', (event) => {
   const query = event.target.value.toLowerCase();
   document.querySelectorAll('#user-table tr').forEach((row) => row.classList.toggle('hidden', !row.textContent.toLowerCase().includes(query)));
 });
+const companyModal = document.getElementById('company-modal');
+const closeCompanyDialog = () => {
+  companyModal?.classList.remove('open');
+  companyModal?.setAttribute('aria-hidden', 'true');
+  document.getElementById('company-form')?.reset();
+};
+document.getElementById('add-company')?.addEventListener('click', () => {
+  companyModal?.classList.add('open');
+  companyModal?.setAttribute('aria-hidden', 'false');
+  companyModal?.querySelector('input')?.focus();
+});
+document.getElementById('close-company-dialog')?.addEventListener('click', closeCompanyDialog);
+document.getElementById('cancel-company-dialog')?.addEventListener('click', closeCompanyDialog);
+companyModal?.querySelector('.company-modal-backdrop')?.addEventListener('click', closeCompanyDialog);
 const userModal = document.getElementById('user-modal');
 const userForm = document.getElementById('user-form');
 const openUserDialog = (user) => {

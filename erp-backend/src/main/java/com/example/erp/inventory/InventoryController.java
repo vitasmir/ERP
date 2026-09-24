@@ -3,8 +3,8 @@ package com.example.erp.inventory;
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.HashSet;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -40,11 +40,11 @@ public class InventoryController {
 
     @GetMapping("/overview")
     public InventoryOverview overview() {
-        Map<UUID, ProductCategory> categoriesById = categoriesById();
+        CategoryTree categoryTree = categoryTree();
         List<InventoryItemResponse> rows = items.findAllByOrderByQuantityAsc().stream()
                 .map(item -> {
                     Product product = product(item.getProductId());
-                    return InventoryItemResponse.from(item, product, categoryDetails(product.getCategoryId(), categoriesById));
+                    return InventoryItemResponse.from(item, product, categoryTree.detailsFor(product.getCategoryId()));
                 }).sorted(Comparator.comparing(InventoryItemResponse::categoryPath)
                         .thenComparing(InventoryItemResponse::productName)
                         .thenComparing(InventoryItemResponse::locationName)).toList();
@@ -65,7 +65,7 @@ public class InventoryController {
         item.receive(request.quantity());
         InventoryItem saved = items.save(item);
         Product product = product(saved.getProductId());
-        return InventoryItemResponse.from(saved, product, categoryDetails(product.getCategoryId(), categoriesById()));
+        return InventoryItemResponse.from(saved, product, categoryTree().detailsFor(product.getCategoryId()));
     }
 
     private Product product(UUID id) {
@@ -73,26 +73,58 @@ public class InventoryController {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Product was not found."));
     }
 
-    private Map<UUID, ProductCategory> categoriesById() {
-        Map<UUID, ProductCategory> result = new LinkedHashMap<>();
+    private CategoryTree categoryTree() {
+        Map<UUID, CategoryNode> nodesById = new HashMap<>();
         for (ProductCategory category : categories.findAllByOrderBySortOrderAscNameAsc()) {
-            result.put(category.getId(), category);
+            nodesById.put(category.getId(), new CategoryNode(category));
         }
-        return result;
+
+        List<CategoryNode> roots = new ArrayList<>();
+        for (CategoryNode child : nodesById.values()) {
+            CategoryNode parent = nodesById.get(child.category().getParentId());
+            if (parent == null) {
+                roots.add(child);
+            } else {
+                parent.children().add(child);
+            }
+        }
+
+        Map<UUID, CategoryDetails> detailsByCategoryId = new HashMap<>();
+        for (CategoryNode root : roots) {
+            addCategoryDetails(root, "", 0, detailsByCategoryId, new HashSet<>());
+        }
+        return new CategoryTree(detailsByCategoryId);
     }
 
-    private CategoryDetails categoryDetails(UUID categoryId, Map<UUID, ProductCategory> categoriesById) {
-        if (categoryId == null || !categoriesById.containsKey(categoryId)) {
-            return new CategoryDetails("Bez kategorie", 0);
+    private void addCategoryDetails(CategoryNode node, String parentPath, int depth,
+            Map<UUID, CategoryDetails> detailsByCategoryId, Set<UUID> visited) {
+        UUID categoryId = node.category().getId();
+        if (!visited.add(categoryId)) {
+            return;
         }
-        List<String> names = new ArrayList<>();
-        Set<UUID> visited = new HashSet<>();
-        ProductCategory category = categoriesById.get(categoryId);
-        while (category != null && visited.add(category.getId())) {
-            names.addFirst(category.getName());
-            category = categoriesById.get(category.getParentId());
+        String path = parentPath.isEmpty() ? node.category().getName() : parentPath + " / " + node.category().getName();
+        detailsByCategoryId.put(categoryId, new CategoryDetails(path, depth));
+        for (CategoryNode child : node.children()) {
+            addCategoryDetails(child, path, depth + 1, detailsByCategoryId, visited);
         }
-        return new CategoryDetails(String.join(" / ", names), names.size() - 1);
+    }
+
+    private static final class CategoryTree {
+        private final Map<UUID, CategoryDetails> detailsByCategoryId;
+
+        private CategoryTree(Map<UUID, CategoryDetails> detailsByCategoryId) {
+            this.detailsByCategoryId = detailsByCategoryId;
+        }
+
+        CategoryDetails detailsFor(UUID categoryId) {
+            return detailsByCategoryId.getOrDefault(categoryId, new CategoryDetails("Bez kategorie", 0));
+        }
+    }
+
+    private record CategoryNode(ProductCategory category, List<CategoryNode> children) {
+        CategoryNode(ProductCategory category) {
+            this(category, new ArrayList<>());
+        }
     }
 
     public record ReceiveStockRequest(int quantity) { }

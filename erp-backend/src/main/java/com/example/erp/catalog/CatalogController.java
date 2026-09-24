@@ -26,6 +26,8 @@ import com.example.erp.inventory.InventoryItemRepository;
 @RestController
 @RequestMapping("/api/v1/catalog")
 public class CatalogController {
+    private static final String DEFAULT_INVENTORY_LOCATION = "Centrální sklad";
+
     private final ProductRepository products;
     private final ProductCategoryRepository categories;
     private final HomepageSettingsRepository homepage;
@@ -97,21 +99,27 @@ public class CatalogController {
     }
 
     @PostMapping("/products")
+    @Transactional
     public ProductResponse createProduct(@RequestBody ProductRequest request) {
         validateProduct(request, null);
-        return ProductResponse.from(products.save(Product.create(request.sku().trim(), request.name().trim(),
+        Product saved = products.save(Product.create(request.sku().trim(), request.name().trim(),
                 request.unit().trim(), text(request.description()), request.price(), request.categoryId(),
-                textOrNull(request.imageUrl()), request.active())));
+                textOrNull(request.imageUrl()), request.active()));
+        ensureInventory(saved.getId());
+        return ProductResponse.from(saved);
     }
 
     @PutMapping("/products/{id}")
+    @Transactional
     public ProductResponse updateProduct(@PathVariable UUID id, @RequestBody ProductRequest request) {
         Product product = products.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Product was not found."));
         validateProduct(request, id);
         product.update(request.sku().trim(), request.name().trim(), request.unit().trim(), text(request.description()),
                 request.price(), request.categoryId(), textOrNull(request.imageUrl()), request.active());
-        return ProductResponse.from(products.save(product));
+        Product saved = products.save(product);
+        ensureInventory(saved.getId());
+        return ProductResponse.from(saved);
     }
 
     @PostMapping("/products/import")
@@ -132,6 +140,7 @@ public class CatalogController {
                         request.price(), request.categoryId(), textOrNull(request.imageUrl()), request.active());
             }
             products.save(product);
+            ensureInventory(product.getId());
             imported++;
         }
         return new ImportResponse(imported);
@@ -173,6 +182,12 @@ public class CatalogController {
                 .map(child -> toCategoryResponse(child, children)).toList();
         return new CategoryResponse(category.getId(), category.getParentId(), category.getName(), category.getSlug(),
                 category.getSortOrder(), category.isActive(), nested);
+    }
+
+    private void ensureInventory(UUID productId) {
+        if (!inventory.existsByProductId(productId)) {
+            inventory.save(InventoryItem.create(productId, DEFAULT_INVENTORY_LOCATION));
+        }
     }
 
     private ProductCategory findCategory(UUID id) {

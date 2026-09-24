@@ -30,6 +30,17 @@ public class InventoryItem {
 
     protected InventoryItem() { }
 
+    public static InventoryItem create(UUID productId, String locationName) {
+        InventoryItem item = new InventoryItem();
+        item.id = UUID.randomUUID();
+        item.productId = productId;
+        item.locationName = locationName;
+        item.quantity = 0;
+        item.reorderLevel = 0;
+        item.unitCost = BigDecimal.ZERO;
+        return item;
+    }
+
     public UUID getId() { return id; }
     public UUID getProductId() { return productId; }
     public String getLocationName() { return locationName; }

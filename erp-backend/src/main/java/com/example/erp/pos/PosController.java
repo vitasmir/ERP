@@ -10,6 +10,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -34,6 +35,19 @@ public class PosController {
                 items.stream().mapToInt(PosTransactionResponse::itemCount).sum(), items);
     }
 
+        @PostMapping("/transactions")
+        @org.springframework.web.bind.annotation.ResponseStatus(HttpStatus.CREATED)
+        public PosTransactionResponse createFromEshop(@RequestBody EshopTransactionRequest request) {
+                if (request == null || request.itemCount() <= 0 || request.totalAmount() == null
+                                || request.totalAmount().signum() < 0 || !PAYMENT_METHODS.contains(request.paymentMethod())) {
+                        throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "E-shop transaction contains invalid values.");
+                }
+                String receiptNumber = "ESH-" + UUID.randomUUID().toString().substring(0, 12).toUpperCase();
+                PosTransaction transaction = PosTransaction.fromEshop(receiptNumber, request.itemCount(),
+                                request.totalAmount(), request.paymentMethod(), request.paid());
+                return PosTransactionResponse.from(transactions.save(transaction));
+        }
+
     @PatchMapping("/transactions/{id}/pay")
     public PosTransactionResponse pay(@PathVariable UUID id, @RequestBody PaymentRequest request) {
         if (!PAYMENT_METHODS.contains(request.method())) {
@@ -46,6 +60,8 @@ public class PosController {
     }
 
     public record PaymentRequest(String method) { }
+
+        public record EshopTransactionRequest(int itemCount, BigDecimal totalAmount, String paymentMethod, boolean paid) { }
 
     public record PosOverview(BigDecimal paidToday, long openTransactionCount, int itemCount,
             List<PosTransactionResponse> transactions) { }

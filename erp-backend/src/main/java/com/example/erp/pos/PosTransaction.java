@@ -40,6 +40,20 @@ public class PosTransaction {
 
     protected PosTransaction() { }
 
+    public static PosTransaction fromEshop(String receiptNumber, int itemCount, BigDecimal totalAmount,
+            String paymentMethod, boolean paid) {
+        PosTransaction transaction = new PosTransaction();
+        transaction.id = UUID.randomUUID();
+        transaction.receiptNumber = receiptNumber;
+        transaction.storeName = "E-shop";
+        transaction.openedAt = LocalDateTime.now();
+        transaction.itemCount = itemCount;
+        transaction.totalAmount = totalAmount;
+        transaction.paymentMethod = paid ? paymentMethod : null;
+        transaction.status = paid ? PosTransactionStatus.PAID : PosTransactionStatus.OPEN;
+        return transaction;
+    }
+
     public UUID getId() { return id; }
     public String getReceiptNumber() { return receiptNumber; }
     public String getStoreName() { return storeName; }

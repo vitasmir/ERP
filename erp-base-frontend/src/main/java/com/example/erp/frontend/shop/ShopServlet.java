@@ -204,7 +204,7 @@ public class ShopServlet extends HttpServlet {
         response.sendRedirect("eshop?checkout=payment#payment-step");
     }
 
-    private void savePayment(HttpServletRequest request, HttpServletResponse response) throws IOException {
+    private void savePayment(HttpServletRequest request, HttpServletResponse response) throws IOException, InterruptedException {
         String paymentMethod = text(request.getParameter("paymentMethod"));
         if (!"card".equals(paymentMethod) && !"cod".equals(paymentMethod)) {
             response.sendRedirect("eshop?checkout=payment&error=" + java.net.URLEncoder.encode(
@@ -224,11 +224,43 @@ public class ShopServlet extends HttpServlet {
             }
         }
         HttpSession session = request.getSession();
+            Map<UUID, Integer> cart = cart(session);
+            if (cart.isEmpty()) {
+                response.sendRedirect("eshop?error=" + java.net.URLEncoder.encode(
+                    "Košík je prázdný.", java.nio.charset.StandardCharsets.UTF_8));
+                return;
+            }
+            List<EcommerceView.Product> sourceProducts = getList("/api/v1/catalog/products", new TypeReference<>() { });
+            Map<UUID, EcommerceView.Product> products = sourceProducts.stream()
+                .collect(Collectors.toMap(EcommerceView.Product::id, product -> product));
+            BigDecimal total = BigDecimal.ZERO;
+            int itemCount = 0;
+            for (Map.Entry<UUID, Integer> entry : cart.entrySet()) {
+                EcommerceView.Product product = products.get(entry.getKey());
+                if (product == null || entry.getValue() <= 0) continue;
+                itemCount += entry.getValue();
+                total = total.add(product.price().multiply(BigDecimal.valueOf(entry.getValue())));
+            }
+            if (itemCount <= 0) {
+                response.sendRedirect("eshop?error=" + java.net.URLEncoder.encode(
+                    "Produkty v košíku již nejsou dostupné.", java.nio.charset.StandardCharsets.UTF_8));
+                return;
+            }
+            boolean paid = "card".equals(paymentMethod);
+            PosTransactionRequest posTransaction = new PosTransactionRequest(itemCount, total, paid ? "CARD" : "CASH", paid);
+            HttpResponse<String> posResponse = send("POST", "/api/v1/pos/transactions", mapper.writeValueAsString(posTransaction));
+            if (posResponse.statusCode() != HttpServletResponse.SC_CREATED) {
+                response.sendRedirect("eshop?checkout=payment&error=" + java.net.URLEncoder.encode(
+                    "Prodej se nepodařilo předat do Pokladny.", java.nio.charset.StandardCharsets.UTF_8));
+                return;
+            }
         session.removeAttribute(CART_ATTRIBUTE);
         session.removeAttribute(DELIVERY_ATTRIBUTE);
         session.removeAttribute(PAYMENT_ATTRIBUTE);
         response.sendRedirect("eshop?order=completed");
     }
+
+    private record PosTransactionRequest(int itemCount, BigDecimal totalAmount, String paymentMethod, boolean paid) { }
 
     private String text(String value) {
         return value == null ? "" : value.trim();
@@ -257,6 +289,15 @@ public class ShopServlet extends HttpServlet {
             throw new IOException("Backend returned HTTP " + response.statusCode());
         }
         return mapper.readValue(response.body(), type);
+    }
+
+    private HttpResponse<String> send(String method, String path, String body) throws IOException, InterruptedException {
+        HttpRequest request = HttpRequest.newBuilder(URI.create(backendUrl + path))
+                .timeout(Duration.ofSeconds(5))
+                .header("Content-Type", "application/json")
+                .method(method, HttpRequest.BodyPublishers.ofString(body))
+                .build();
+        return client.send(request, HttpResponse.BodyHandlers.ofString());
     }
 
     @JsonIgnoreProperties(ignoreUnknown = true)

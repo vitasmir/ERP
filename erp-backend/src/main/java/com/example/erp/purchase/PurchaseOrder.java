@@ -37,6 +37,19 @@ public class PurchaseOrder {
 
     protected PurchaseOrder() { }
 
+    public static PurchaseOrder create(String orderNumber, String supplierName, LocalDate requestedOn,
+            LocalDate expectedDeliveryDate, BigDecimal totalAmount) {
+        PurchaseOrder order = new PurchaseOrder();
+        order.id = UUID.randomUUID();
+        order.orderNumber = orderNumber;
+        order.supplierName = supplierName;
+        order.requestedOn = requestedOn;
+        order.expectedDeliveryDate = expectedDeliveryDate;
+        order.totalAmount = totalAmount;
+        order.status = PurchaseOrderStatus.REQUESTED;
+        return order;
+    }
+
     public UUID getId() { return id; }
     public String getOrderNumber() { return orderNumber; }
     public String getSupplierName() { return supplierName; }

@@ -9,6 +9,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
@@ -32,6 +34,21 @@ public class PurchaseController {
                 items.stream().filter(item -> item.status() == PurchaseOrderStatus.REQUESTED).count(), items);
     }
 
+        @PostMapping("/orders")
+        @org.springframework.web.bind.annotation.ResponseStatus(HttpStatus.CREATED)
+        public PurchaseOrderResponse create(@RequestBody CreatePurchaseOrderRequest request) {
+                if (request == null || request.supplierName() == null || request.supplierName().isBlank()
+                                || request.requestedOn() == null || request.expectedDeliveryDate() == null
+                                || request.expectedDeliveryDate().isBefore(request.requestedOn()) || request.totalAmount() == null
+                                || request.totalAmount().signum() < 0) {
+                        throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Purchase order contains invalid values.");
+                }
+                PurchaseOrder purchaseOrder = PurchaseOrder.create("POZ-" + LocalDate.now().getYear() + "-"
+                                + UUID.randomUUID().toString().substring(0, 8).toUpperCase(), request.supplierName().trim(),
+                                request.requestedOn(), request.expectedDeliveryDate(), request.totalAmount());
+                return PurchaseOrderResponse.from(orders.save(purchaseOrder));
+        }
+
     @PatchMapping("/orders/{id}/order")
     public PurchaseOrderResponse order(@PathVariable UUID id) {
         PurchaseOrder purchaseOrder = orders.findById(id)
@@ -42,6 +59,9 @@ public class PurchaseController {
 
     public record PurchaseOverview(BigDecimal requestedValue, BigDecimal orderedValue, long requestedCount,
             List<PurchaseOrderResponse> orders) { }
+
+    public record CreatePurchaseOrderRequest(String supplierName, LocalDate requestedOn,
+            LocalDate expectedDeliveryDate, BigDecimal totalAmount) { }
 
     public record PurchaseOrderResponse(UUID id, String orderNumber, String supplierName, LocalDate requestedOn,
             LocalDate expectedDeliveryDate, BigDecimal totalAmount, PurchaseOrderStatus status) {

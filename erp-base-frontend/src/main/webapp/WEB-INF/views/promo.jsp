@@ -51,19 +51,18 @@
                                         <div class="campaign-table-wrap">
                                             <table class="campaign-table">
                                                 <thead>
-                                                    <tr><th>Produkt</th><th>Kampaň</th><th>Období</th><th>Běžná cena</th><th>Akční cena</th><th>Plán / skutečnost</th><th>Stav</th><th>Akce</th></tr>
+                                                    <tr><th>Produkt</th><th>Kampaň</th><th>Období</th><th>Běžná cena</th><th>Akční cena</th><th>Plán / skutečnost</th><th>Stav</th></tr>
                                                 </thead>
                                                 <tbody>
                                                     <% List<PromoCampaignView> campaigns = (List<PromoCampaignView>) request.getAttribute("campaigns"); if (campaigns != null) for (PromoCampaignView campaign : campaigns) { %>
                                                     <tr>
-                                                        <td data-label="Produkt"><div class="campaign-product-photo"><% if (campaign.imageUrl() != null && !campaign.imageUrl().isBlank()) { %><img src="<%= campaign.imageUrl() %>" alt="<%= campaign.name() %>"><% } else { %><span aria-hidden="true">Bez fotografie</span><% } %></div></td>
+                                                        <td data-label="Produkt"><div class="campaign-product-photo"><% if (campaign.imageUrl() != null && !campaign.imageUrl().isBlank()) { %><img src="<%= campaign.imageUrl() %>" data-image="<%= campaign.imageUrl() %>" alt="<%= campaign.name() %>"><% } else { %><span aria-hidden="true">Bez fotografie</span><% } %></div></td>
                                                         <td data-label="Kampaň"><strong><%= campaign.name() %></strong><span class="status-chip status-<%= campaign.status().toLowerCase() %>"><%= campaign.status() %></span></td>
                                                         <td data-label="Období"><%= campaign.startsOn() %><br> až <%= campaign.endsOn() %></td>
                                                         <td data-label="Běžná cena"><%= campaign.regularPrice() %> Kč</td>
                                                         <td data-label="Akční cena"><strong><%= campaign.promoPrice() %> Kč</strong></td>
                                                         <td data-label="Plán / skutečnost"><%= campaign.plannedQuantity() %> / <%= campaign.actualQuantity() %></td>
-                                                        <td data-label="Stav"><form id="campaign-status-<%= campaign.id() %>" method="post" class="campaign-form"><input type="hidden" name="id" value="<%= campaign.id() %>"><select name="status" aria-label="Stav kampaně"><% for (String status : List.of("PLANNED", "ACTIVE", "COMPLETED", "CANCELLED")) { %><option value="<%= status %>" <%= status.equals(campaign.status()) ? "selected" : "" %>><%= status %></option><% } %></select></form></td>
-                                                        <td data-label="Akce"><button class="secondary campaign-save" type="submit" form="campaign-status-<%= campaign.id() %>">Uložit</button></td>
+                                                        <td data-label="Stav"><form id="campaign-status-<%= campaign.id() %>" method="post" class="campaign-form"><input type="hidden" name="id" value="<%= campaign.id() %>"><select name="status" aria-label="Stav kampaně" onchange="this.form.submit()"><% for (String status : List.of("PLANNED", "ACTIVE", "COMPLETED", "CANCELLED")) { %><option value="<%= status %>" <%= status.equals(campaign.status()) ? "selected" : "" %>><%= status %></option><% } %></select></form></td>
                                                     </tr>
                                                     <% } %>
                                                 </tbody>
@@ -92,7 +91,7 @@
                                                                     <%= product.name() %> (<%= product.unit() %>)
                                                                 </option>
                                                                 <% } %>
-                                                        </select></label><div class="product-preview" id="product-preview" aria-live="polite"><span>Vyberte produkt pro náhled fotografie</span><img id="product-preview-image" alt="" hidden></div><label>Dodavatel<select name="supplierId"
+                                                        </select></label><div class="product-preview" id="product-preview" aria-live="polite"><span>Vyberte produkt pro náhled fotografie</span><img id="product-preview-image" class="product-preview-image" alt="" hidden></div><label>Dodavatel<select name="supplierId"
                                                             required>
                                                             <option value="">Vyberte dodavatele</option>
                                                             <% if (options !=null) for (PromoOptionsView.SupplierOption

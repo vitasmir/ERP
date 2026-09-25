@@ -49,6 +49,7 @@ public class PromoCampaign {
         this.plannedQuantity = plannedQuantity;
         this.actualQuantity = 0;
         this.marketingContribution = marketingContribution;
+        this.createdAt = LocalDateTime.now();
     }
 
     public UUID getId() { return id; }

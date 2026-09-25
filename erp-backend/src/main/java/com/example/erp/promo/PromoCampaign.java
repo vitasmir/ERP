@@ -54,15 +54,32 @@ public class PromoCampaign {
 
     public UUID getId() { return id; }
     public UUID getProductId() { return productId; }
+    public UUID getSupplierId() { return supplierId; }
     public String getName() { return name; }
     public CampaignStatus getStatus() { return status; }
     public LocalDate getStartsOn() { return startsOn; }
     public LocalDate getEndsOn() { return endsOn; }
     public BigDecimal getRegularPrice() { return regularPrice; }
     public BigDecimal getPromoPrice() { return promoPrice; }
+    public BigDecimal getSupplierPurchasePrice() { return supplierPurchasePrice; }
     public int getPlannedQuantity() { return plannedQuantity; }
     public int getActualQuantity() { return actualQuantity; }
     public BigDecimal getMarketingContribution() { return marketingContribution; }
+
+    public void updateDetails(String name, UUID productId, UUID supplierId, LocalDate startsOn, LocalDate endsOn,
+            BigDecimal regularPrice, BigDecimal promoPrice, BigDecimal supplierPurchasePrice, int plannedQuantity,
+            BigDecimal marketingContribution) {
+        this.name = name;
+        this.productId = productId;
+        this.supplierId = supplierId;
+        this.startsOn = startsOn;
+        this.endsOn = endsOn;
+        this.regularPrice = regularPrice;
+        this.promoPrice = promoPrice;
+        this.supplierPurchasePrice = supplierPurchasePrice;
+        this.plannedQuantity = plannedQuantity;
+        this.marketingContribution = marketingContribution;
+    }
 
     public void changeStatus(CampaignStatus status) { this.status = status; }
 }

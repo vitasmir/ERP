@@ -54,7 +54,7 @@ public class PromoCampaignServlet extends HttpServlet {
 
     @Override
     protected void doPost(HttpServletRequest request, HttpServletResponse response) throws IOException {
-        if ("create".equals(request.getParameter("action"))) {
+        if ("create".equals(request.getParameter("action")) || "edit".equals(request.getParameter("action"))) {
             createCampaign(request, response);
             return;
         }
@@ -80,6 +80,7 @@ public class PromoCampaignServlet extends HttpServlet {
 
     private void createCampaign(HttpServletRequest request, HttpServletResponse response) throws IOException {
         try {
+            boolean editing = "edit".equals(request.getParameter("action"));
             String body = mapper.writeValueAsString(Map.of(
                     "name", request.getParameter("name"),
                     "productId", UUID.fromString(request.getParameter("productId")),
@@ -91,12 +92,16 @@ public class PromoCampaignServlet extends HttpServlet {
                     "supplierPurchasePrice", new java.math.BigDecimal(request.getParameter("supplierPurchasePrice")),
                     "plannedQuantity", Integer.parseInt(request.getParameter("plannedQuantity")),
                     "marketingContribution", new java.math.BigDecimal(request.getParameter("marketingContribution"))));
-            HttpResponse<Void> backendResponse = client.send(HttpRequest.newBuilder(URI.create(backendUrl + "/api/v1/promo-campaigns"))
+                String endpoint = backendUrl + "/api/v1/promo-campaigns" + (editing ? "/" + UUID.fromString(request.getParameter("id")) : "");
+                HttpRequest.Builder backendRequest = HttpRequest.newBuilder(URI.create(endpoint))
                     .header("Content-Type", "application/json")
-                    .POST(HttpRequest.BodyPublishers.ofString(body)).build(), HttpResponse.BodyHandlers.discarding());
-            String parameter = backendResponse.statusCode() == HttpServletResponse.SC_CREATED ? "message" : "error";
-            String message = backendResponse.statusCode() == HttpServletResponse.SC_CREATED
-                    ? "Promo kampaň byla přidána." : "Backend odmítl vytvoření kampaně.";
+                    .method(editing ? "PUT" : "POST", HttpRequest.BodyPublishers.ofString(body));
+                HttpResponse<Void> backendResponse = client.send(backendRequest.build(), HttpResponse.BodyHandlers.discarding());
+                int successStatus = editing ? HttpServletResponse.SC_OK : HttpServletResponse.SC_CREATED;
+                String parameter = backendResponse.statusCode() == successStatus ? "message" : "error";
+                String message = backendResponse.statusCode() == successStatus
+                    ? (editing ? "Promo kampaň byla upravena." : "Promo kampaň byla přidána.")
+                    : (editing ? "Backend odmítl úpravu kampaně." : "Backend odmítl vytvoření kampaně.");
             response.sendRedirect("promo?" + parameter + "=" + URLEncoder.encode(message, StandardCharsets.UTF_8));
         } catch (IllegalArgumentException | NullPointerException exception) {
             response.sendRedirect("promo?error=" + URLEncoder.encode("Vyplňte platné údaje kampaně.", StandardCharsets.UTF_8));

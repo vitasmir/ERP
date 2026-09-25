@@ -1,13 +1,32 @@
 (() => {
   const modal = document.getElementById('campaign-modal');
   const open = document.getElementById('add-campaign');
+  const form = modal?.querySelector('.campaign-create-form');
+  const dialogTitle = document.getElementById('campaign-dialog-title');
+  const submitButton = document.getElementById('campaign-submit');
+  const setField = (name, value) => {
+    const field = form?.querySelector(`[name="${name}"]`);
+    if (field) field.value = value ?? '';
+  };
+  const showDialog = () => {
+    modal.classList.add('is-open');
+    modal.setAttribute('aria-hidden', 'false');
+  };
   const close = () => {
     modal.classList.remove('is-open');
     modal.setAttribute('aria-hidden', 'true');
   };
   open?.addEventListener('click', () => {
-    modal.classList.add('is-open');
-    modal.setAttribute('aria-hidden', 'false');
+    form.reset();
+    setField('action', 'create');
+    setField('id', '');
+    dialogTitle.textContent = 'Nová promo kampaň';
+    submitButton.textContent = 'Přidat kampaň';
+    previewImage?.removeAttribute('src');
+    if (previewImage) delete previewImage.dataset.image;
+    previewImage.hidden = true;
+    previewText.hidden = false;
+    showDialog();
     modal.querySelector('input[name="name"]')?.focus();
   });
   document.getElementById('close-campaign')?.addEventListener('click', close);
@@ -59,6 +78,27 @@
       previewImage.hidden = true;
       previewText.hidden = false;
     }
+  });
+  document.querySelectorAll('.campaign-edit').forEach((button) => {
+    button.addEventListener('click', () => {
+      setField('action', 'edit');
+      setField('id', button.dataset.id);
+      setField('name', button.dataset.name);
+      setField('productId', button.dataset.productId);
+      setField('supplierId', button.dataset.supplierId);
+      setField('startsOn', button.dataset.startsOn);
+      setField('endsOn', button.dataset.endsOn);
+      setField('regularPrice', button.dataset.regularPrice);
+      setField('promoPrice', button.dataset.promoPrice);
+      setField('supplierPurchasePrice', button.dataset.supplierPurchasePrice);
+      setField('plannedQuantity', button.dataset.plannedQuantity);
+      setField('marketingContribution', button.dataset.marketingContribution);
+      dialogTitle.textContent = 'Upravit promo kampaň';
+      submitButton.textContent = 'Uložit změny';
+      productSelect.dispatchEvent(new Event('change'));
+      showDialog();
+      modal.querySelector('input[name="name"]')?.focus();
+    });
   });
   document.querySelectorAll('.campaign-product-photo img[data-image]').forEach(setupImagePopup);
   if (previewImage) setupImagePopup(previewImage);

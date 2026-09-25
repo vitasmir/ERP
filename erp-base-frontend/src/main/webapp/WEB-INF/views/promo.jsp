@@ -51,7 +51,7 @@
                                         <div class="campaign-table-wrap">
                                             <table class="campaign-table">
                                                 <thead>
-                                                    <tr><th>Produkt</th><th>Kampaň</th><th>Období</th><th>Běžná cena</th><th>Akční cena</th><th>Plán / skutečnost</th><th>Stav</th></tr>
+                                                    <tr><th>Produkt</th><th>Kampaň</th><th>Období</th><th>Běžná cena</th><th>Akční cena</th><th>Plán / skutečnost</th><th>Stav</th><th>Akce</th></tr>
                                                 </thead>
                                                 <tbody>
                                                     <% List<PromoCampaignView> campaigns = (List<PromoCampaignView>) request.getAttribute("campaigns"); if (campaigns != null) for (PromoCampaignView campaign : campaigns) { %>
@@ -63,6 +63,7 @@
                                                         <td data-label="Akční cena"><strong><%= campaign.promoPrice() %> Kč</strong></td>
                                                         <td data-label="Plán / skutečnost"><%= campaign.plannedQuantity() %> / <%= campaign.actualQuantity() %></td>
                                                         <td data-label="Stav"><form id="campaign-status-<%= campaign.id() %>" method="post" class="campaign-form"><input type="hidden" name="id" value="<%= campaign.id() %>"><select name="status" aria-label="Stav kampaně" onchange="this.form.submit()"><% for (String status : List.of("PLANNED", "ACTIVE", "COMPLETED", "CANCELLED")) { %><option value="<%= status %>" <%= status.equals(campaign.status()) ? "selected" : "" %>><%= status %></option><% } %></select></form></td>
+                                                        <td data-label="Akce"><button type="button" class="secondary campaign-edit" data-id="<%= campaign.id() %>" data-name="<%= campaign.name() %>" data-product-id="<%= campaign.productId() %>" data-supplier-id="<%= campaign.supplierId() %>" data-starts-on="<%= campaign.startsOn() %>" data-ends-on="<%= campaign.endsOn() %>" data-regular-price="<%= campaign.regularPrice() %>" data-promo-price="<%= campaign.promoPrice() %>" data-supplier-purchase-price="<%= campaign.supplierPurchasePrice() %>" data-planned-quantity="<%= campaign.plannedQuantity() %>" data-marketing-contribution="<%= campaign.marketingContribution() %>">Upravit</button></td>
                                                     </tr>
                                                     <% } %>
                                                 </tbody>
@@ -80,7 +81,7 @@
                                                 <h2 id="campaign-dialog-title">Nová promo kampaň</h2>
                                                 <p>Zadejte plán akce, ceny a plánované množství.</p>
                                                 <form method="post" action="promo" class="campaign-create-form"><input
-                                                        type="hidden" name="action" value="create"><label>Název
+                                                    type="hidden" name="action" value="create"><input type="hidden" name="id" value=""><label>Název
                                                         kampaně<input name="name" required
                                                             maxlength="200"></label><label>Produkt<select
                                                             name="productId" required>
@@ -114,9 +115,9 @@
                                                                 required></label><label>Příspěvek dodavatele<input
                                                                 type="number" name="marketingContribution" min="0"
                                                                 step="0.01" value="0" required></label></div>
-                                                    <div class="dialog-actions"><button type="button" class="secondary"
+                                                        <div class="dialog-actions"><button type="button" class="secondary"
                                                             id="cancel-campaign">Zrušit</button><button type="submit"
-                                                            class="primary">Přidat kampaň</button></div>
+                                                            class="primary" id="campaign-submit">Přidat kampaň</button></div>
                                                 </form>
                                             </section>
                                         </div>

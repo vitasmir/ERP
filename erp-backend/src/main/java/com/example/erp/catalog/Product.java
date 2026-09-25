@@ -48,6 +48,10 @@ public class Product {
         this.active = active;
     }
 
+    public void removeFromCategory() {
+        this.categoryId = null;
+    }
+
     public UUID getId() { return id; }
     public String getSku() { return sku; }
     public String getName() { return name; }

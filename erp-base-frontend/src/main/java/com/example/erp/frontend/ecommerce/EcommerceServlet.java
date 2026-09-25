@@ -40,7 +40,11 @@ public class EcommerceServlet extends HttpServlet {
                 enriched.add(new EcommerceView.Product(product.id(), product.sku(), product.name(), product.unit(), product.description(),
                         product.price(), product.categoryId(), product.imageUrl(), product.active(), availability));
             }
-            request.setAttribute("ecommerce", new EcommerceView(homepage, categories, enriched));
+                UUID selectedCategoryId = categoryId(request.getParameter("categoryId"));
+                List<EcommerceView.Product> visibleProducts = selectedCategoryId == null ? enriched : enriched.stream()
+                    .filter(product -> selectedCategoryId.equals(product.categoryId())).toList();
+                request.setAttribute("selectedCategoryId", selectedCategoryId);
+                request.setAttribute("ecommerce", new EcommerceView(homepage, categories, visibleProducts));
         } catch (InterruptedException exception) {
             Thread.currentThread().interrupt();
             request.setAttribute("error", "Načítání eCommerce bylo přerušeno.");
@@ -50,6 +54,15 @@ public class EcommerceServlet extends HttpServlet {
         request.getRequestDispatcher("/WEB-INF/views/ecommerce/index.jsp").forward(request, response);
     }
 
+    private UUID categoryId(String value) {
+        if (value == null || value.isBlank()) return null;
+        try {
+            return UUID.fromString(value);
+        } catch (IllegalArgumentException exception) {
+            return null;
+        }
+    }
+
     @Override
     protected void doPost(HttpServletRequest request, HttpServletResponse response) throws IOException {
         try {
@@ -57,7 +70,11 @@ public class EcommerceServlet extends HttpServlet {
             switch (action) {
                 case "homepage" -> { updateHomepage(request); redirect(response, "Homepage byla uložena.", null); }
                 case "category" -> { createCategory(request); redirect(response, "Kategorie byla přidána.", null); }
+                case "updateCategory" -> { updateCategory(request); redirect(response, "Kategorie byla přejmenována.", null); }
+                case "deleteCategory" -> { deleteCategory(request); redirect(response, "Kategorie byla smazána.", null); }
                 case "product" -> { saveProduct(request); redirect(response, "Produkt byl uložen.", null); }
+                case "removeFromCategory" -> { removeFromCategory(request); redirect(response, "Produkt byl odebrán z kategorie.", null); }
+                case "deleteProduct" -> { deleteProduct(request); redirect(response, "Produkt byl smazán.", null); }
                 case "import" -> { importProducts(request); redirect(response, "Produkty byly naimportovány.", null); }
                 case "estimate" -> redirect(response, estimate(request), null);
                 default -> redirect(response, null, "Neznámá eCommerce akce.");
@@ -73,19 +90,31 @@ public class EcommerceServlet extends HttpServlet {
     private void updateHomepage(HttpServletRequest request) throws IOException, InterruptedException {
         HomepageRequest body = new HomepageRequest(request.getParameter("design"), request.getParameter("headline"),
                 request.getParameter("subheadline"), new BigDecimal(request.getParameter("textX")), new BigDecimal(request.getParameter("textY")));
-        send("PUT", "/api/v1/catalog/homepage", mapper.writeValueAsString(body));
+        sendMutation("PUT", "/api/v1/catalog/homepage", mapper.writeValueAsString(body));
     }
 
     private void createCategory(HttpServletRequest request) throws IOException, InterruptedException {
         String parent = request.getParameter("parentId");
         CategoryRequest body = new CategoryRequest(request.getParameter("name"), request.getParameter("slug"),
                 parent == null || parent.isBlank() ? null : UUID.fromString(parent), 10, true);
-        send("POST", "/api/v1/catalog/categories", mapper.writeValueAsString(body));
+        sendMutation("POST", "/api/v1/catalog/categories", mapper.writeValueAsString(body));
+    }
+
+    private void updateCategory(HttpServletRequest request) throws IOException, InterruptedException {
+        String categoryId = request.getParameter("categoryId");
+        CategoryRequest body = new CategoryRequest(request.getParameter("name"), request.getParameter("slug"),
+                request.getParameter("parentId") == null || request.getParameter("parentId").isBlank()
+                        ? null : UUID.fromString(request.getParameter("parentId")), 10, true);
+        sendMutation("PUT", "/api/v1/catalog/categories/" + UUID.fromString(categoryId), mapper.writeValueAsString(body));
+    }
+
+    private void deleteCategory(HttpServletRequest request) throws IOException, InterruptedException {
+        sendMutation("DELETE", "/api/v1/catalog/categories/" + UUID.fromString(request.getParameter("categoryId")), "");
     }
 
     private void importProducts(HttpServletRequest request) throws IOException, InterruptedException {
         List<ProductRequest> body = mapper.readValue(request.getParameter("products"), new TypeReference<>() { });
-        send("POST", "/api/v1/catalog/products/import", mapper.writeValueAsString(body));
+        sendMutation("POST", "/api/v1/catalog/products/import", mapper.writeValueAsString(body));
     }
 
     private void saveProduct(HttpServletRequest request) throws IOException, InterruptedException {
@@ -96,7 +125,15 @@ public class EcommerceServlet extends HttpServlet {
                 category == null || category.isBlank() ? null : UUID.fromString(category), request.getParameter("imageUrl"),
                 "on".equals(request.getParameter("active")));
         String path = productId == null || productId.isBlank() ? "/api/v1/catalog/products" : "/api/v1/catalog/products/" + UUID.fromString(productId);
-        send(productId == null || productId.isBlank() ? "POST" : "PUT", path, mapper.writeValueAsString(body));
+        sendMutation(productId == null || productId.isBlank() ? "POST" : "PUT", path, mapper.writeValueAsString(body));
+    }
+
+    private void removeFromCategory(HttpServletRequest request) throws IOException, InterruptedException {
+        sendMutation("PUT", "/api/v1/catalog/products/" + UUID.fromString(request.getParameter("productId")) + "/category", "");
+    }
+
+    private void deleteProduct(HttpServletRequest request) throws IOException, InterruptedException {
+        sendMutation("DELETE", "/api/v1/catalog/products/" + UUID.fromString(request.getParameter("productId")), "");
     }
 
     private String estimate(HttpServletRequest request) throws IOException, InterruptedException {
@@ -124,6 +161,13 @@ public class EcommerceServlet extends HttpServlet {
         HttpRequest request = HttpRequest.newBuilder(URI.create(backendUrl + path)).header("Content-Type", "application/json")
                 .method(method, HttpRequest.BodyPublishers.ofString(body)).build();
         return client.send(request, HttpResponse.BodyHandlers.ofString());
+    }
+
+    private void sendMutation(String method, String path, String body) throws IOException, InterruptedException {
+        HttpResponse<String> response = send(method, path, body);
+        if (response.statusCode() < 200 || response.statusCode() >= 300) {
+            throw new IllegalArgumentException("Backend mutation failed: " + response.statusCode());
+        }
     }
 
     private void redirect(HttpServletResponse response, String message, String error) throws IOException {

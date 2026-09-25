@@ -122,6 +122,24 @@ public class CatalogController {
         return ProductResponse.from(saved);
     }
 
+    @PutMapping("/products/{id}/category")
+    @Transactional
+    public ProductResponse removeProductFromCategory(@PathVariable UUID id) {
+        Product product = products.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Product was not found."));
+        product.removeFromCategory();
+        return ProductResponse.from(products.save(product));
+    }
+
+    @DeleteMapping("/products/{id}")
+    @Transactional
+    public void deleteProduct(@PathVariable UUID id) {
+        Product product = products.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Product was not found."));
+        inventory.deleteAllByProductId(product.getId());
+        products.delete(product);
+    }
+
     @PostMapping("/products/import")
     @Transactional
     public ImportResponse importProducts(@RequestBody List<ProductRequest> requests) {

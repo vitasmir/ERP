@@ -12,6 +12,7 @@
   <title>ERP | Pokladna</title>
   <link rel="stylesheet" href="assets/base.css">
   <link rel="stylesheet" href="assets/pos.css">
+  <link rel="stylesheet" href="assets/pos-table.css">
 </head>
 <body>
   <% PosOverviewView overview = (PosOverviewView) request.getAttribute("overview"); String error = (String) request.getAttribute("error"); String message = request.getParameter("message"); String actionError = request.getParameter("error"); %>
@@ -29,14 +30,22 @@
     </section>
     <section id="receipts" class="pos-section">
       <div class="section-head"><div><span class="eyebrow">AKTUÁLNÍ ÚČTENKY</span><h2>Obsluha prodejen</h2></div><span class="receipt-count"><%= overview == null ? 0 : overview.transactions().size() %> účtenky</span></div>
-      <div class="receipt-list">
-        <% if (overview != null) for (PosTransactionView transaction : overview.transactions()) { %>
-        <article class="receipt-card">
-          <div class="receipt-main"><span class="status-chip status-<%= transaction.status().toLowerCase() %>"><%= transaction.status().equals("OPEN") ? "OTEVŘENO" : "UHRAZENO" %></span><h3><%= transaction.receiptNumber() %></h3><p><%= transaction.storeName() %> · <%= transaction.openedAt().replace('T', ' ') %></p></div>
-          <dl><div><dt>Položky</dt><dd><%= transaction.itemCount() %></dd></div><div><dt>Celkem</dt><dd><%= amount(transaction.totalAmount()) %> Kč</dd></div><div><dt>Platba</dt><dd><%= transaction.paymentMethod() == null ? "-" : transaction.paymentMethod() %></dd></div></dl>
-          <% if ("OPEN".equals(transaction.status())) { %><form method="post" class="payment-form"><input type="hidden" name="id" value="<%= transaction.id() %>"><label>Platba<select name="method"><option value="CARD">Karta</option><option value="CASH">Hotovost</option><option value="VOUCHER">Poukázka</option></select></label><button class="secondary" type="submit">Přijmout platbu</button></form><% } else { %><span class="paid-label">Platba přijata</span><% } %>
-        </article>
-        <% } %>
+      <div class="receipt-table-wrap">
+        <table class="receipt-table">
+          <thead><tr><th>Účtenka</th><th>Prodejna a čas</th><th>Položky</th><th>Celkem</th><th>Platba</th><th>Obsluha</th></tr></thead>
+          <tbody>
+            <% if (overview != null) for (PosTransactionView transaction : overview.transactions()) { %>
+            <tr>
+              <td data-label="Účtenka"><strong><%= transaction.receiptNumber() %></strong><span class="status-chip status-<%= transaction.status().toLowerCase() %>"><%= transaction.status().equals("OPEN") ? "OTEVŘENO" : "UHRAZENO" %></span></td>
+              <td data-label="Prodejna a čas"><strong><%= transaction.storeName() %></strong><span><%= transaction.openedAt().replace('T', ' ') %></span></td>
+              <td data-label="Položky"><%= transaction.itemCount() %></td>
+              <td data-label="Celkem"><strong><%= amount(transaction.totalAmount()) %> Kč</strong></td>
+              <td data-label="Platba"><%= transaction.paymentMethod() == null ? "-" : transaction.paymentMethod() %></td>
+              <td data-label="Obsluha"><% if ("OPEN".equals(transaction.status())) { %><form method="post" class="payment-form"><input type="hidden" name="id" value="<%= transaction.id() %>"><label>Platba<select name="method"><option value="CARD">Karta</option><option value="CASH">Hotovost</option><option value="VOUCHER">Poukázka</option></select></label><button class="secondary" type="submit">Přijmout platbu</button></form><% } else { %><span class="paid-label">Platba přijata</span><% } %></td>
+            </tr>
+            <% } %>
+          </tbody>
+        </table>
       </div>
     </section>
   </main>

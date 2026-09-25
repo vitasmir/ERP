@@ -120,8 +120,9 @@ public class ShopServlet extends HttpServlet {
         private ShopView buildView(List<ShopView.Category> categories, List<ShopView.Product> allProducts,
             UUID selectedCategoryId, Map<UUID, Integer> cart, boolean checkoutOpen, boolean paymentOpen,
             BigDecimal deliveryFee, ShopView.DeliveryDetails delivery) {
-        List<ShopView.Product> visibleProducts = selectedCategoryId == null ? allProducts : allProducts.stream()
-            .filter(product -> selectedCategoryId.equals(product.categoryId())).toList();
+        List<ShopView.Product> visibleProducts = selectedCategoryId == null
+            ? allProducts.stream().filter(product -> product.categoryId() != null).toList()
+            : allProducts.stream().filter(product -> selectedCategoryId.equals(product.categoryId())).toList();
         Map<UUID, ShopView.Product> productsById = allProducts.stream()
                 .collect(Collectors.toMap(ShopView.Product::id, product -> product));
         List<ShopView.CartLine> lines = new ArrayList<>();
@@ -139,7 +140,7 @@ public class ShopServlet extends HttpServlet {
         }
         List<ShopView.CategoryOption> categoryOptions = new ArrayList<>();
         flattenCategories(categories, 0, categoryOptions);
-        return new ShopView(categories, categoryOptions, visibleProducts, allProducts.size(), selectedCategoryId,
+        return new ShopView(categories, categoryOptions, visibleProducts, visibleProducts.size(), selectedCategoryId,
             lines, cartCount, cartTotal.setScale(2), checkoutOpen, paymentOpen, deliveryFee, delivery);
     }
 

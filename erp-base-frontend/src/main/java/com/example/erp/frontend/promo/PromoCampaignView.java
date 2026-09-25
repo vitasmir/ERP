@@ -5,4 +5,4 @@ import java.util.UUID;
 
 public record PromoCampaignView(UUID id, String name, String status, String startsOn, String endsOn,
         BigDecimal regularPrice, BigDecimal promoPrice, int plannedQuantity, int actualQuantity,
-        BigDecimal marketingContribution) { }
+        BigDecimal marketingContribution, String imageUrl) { }

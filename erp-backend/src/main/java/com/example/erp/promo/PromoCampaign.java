@@ -53,6 +53,7 @@ public class PromoCampaign {
     }
 
     public UUID getId() { return id; }
+    public UUID getProductId() { return productId; }
     public String getName() { return name; }
     public CampaignStatus getStatus() { return status; }
     public LocalDate getStartsOn() { return startsOn; }

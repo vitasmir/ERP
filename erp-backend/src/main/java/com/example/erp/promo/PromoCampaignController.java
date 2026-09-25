@@ -37,13 +37,16 @@ public class PromoCampaignController {
 
     @GetMapping
     public List<PromoCampaignResponse> list() {
-        return campaigns.findAllByOrderByStartsOnDesc().stream().map(PromoCampaignResponse::from).toList();
+        return campaigns.findAllByOrderByStartsOnDesc().stream()
+            .map(campaign -> PromoCampaignResponse.from(campaign, products.findById(campaign.getProductId())
+                .map(Product::getImageUrl).orElse(null)))
+            .toList();
     }
 
         @GetMapping("/options")
         public CampaignOptions options() {
         return new CampaignOptions(products.findAllByOrderByNameAsc().stream()
-            .map(product -> new ProductOption(product.getId(), product.getName(), product.getUnit())).toList(),
+            .map(product -> new ProductOption(product.getId(), product.getName(), product.getUnit(), product.getImageUrl())).toList(),
             suppliers.findAllByOrderByNameAsc().stream()
                 .map(supplier -> new SupplierOption(supplier.getId(), supplier.getName())).toList());
         }
@@ -68,7 +71,7 @@ public class PromoCampaignController {
         PromoCampaign campaign = new PromoCampaign(UUID.randomUUID(), request.name().trim(), product.getId(),
             supplier.getId(), request.startsOn(), request.endsOn(), request.regularPrice(), request.promoPrice(),
             request.supplierPurchasePrice(), request.plannedQuantity(), request.marketingContribution());
-        return PromoCampaignResponse.from(campaigns.save(campaign));
+        return PromoCampaignResponse.from(campaigns.save(campaign), product.getImageUrl());
         }
 
     @PatchMapping("/{id}/status")
@@ -76,7 +79,8 @@ public class PromoCampaignController {
         PromoCampaign campaign = campaigns.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Promo campaign was not found."));
         campaign.changeStatus(update.status());
-        return PromoCampaignResponse.from(campaigns.save(campaign));
+        String imageUrl = products.findById(campaign.getProductId()).map(Product::getImageUrl).orElse(null);
+        return PromoCampaignResponse.from(campaigns.save(campaign), imageUrl);
     }
 
     public record CampaignStatusUpdate(CampaignStatus status) { }
@@ -86,16 +90,16 @@ public class PromoCampaignController {
             int plannedQuantity, BigDecimal marketingContribution) { }
 
         public record CampaignOptions(List<ProductOption> products, List<SupplierOption> suppliers) { }
-        public record ProductOption(UUID id, String name, String unit) { }
+        public record ProductOption(UUID id, String name, String unit, String imageUrl) { }
         public record SupplierOption(UUID id, String name) { }
 
     public record PromoCampaignResponse(UUID id, String name, CampaignStatus status, LocalDate startsOn,
             LocalDate endsOn, BigDecimal regularPrice, BigDecimal promoPrice, int plannedQuantity,
-            int actualQuantity, BigDecimal marketingContribution) {
-        static PromoCampaignResponse from(PromoCampaign campaign) {
+            int actualQuantity, BigDecimal marketingContribution, String imageUrl) {
+        static PromoCampaignResponse from(PromoCampaign campaign, String imageUrl) {
             return new PromoCampaignResponse(campaign.getId(), campaign.getName(), campaign.getStatus(),
                     campaign.getStartsOn(), campaign.getEndsOn(), campaign.getRegularPrice(), campaign.getPromoPrice(),
-                    campaign.getPlannedQuantity(), campaign.getActualQuantity(), campaign.getMarketingContribution());
+                    campaign.getPlannedQuantity(), campaign.getActualQuantity(), campaign.getMarketingContribution(), imageUrl);
         }
     }
 }

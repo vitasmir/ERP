@@ -56,6 +56,13 @@ public class UsersServlet extends HttpServlet {
                 throw new IOException("Backend returned HTTP " + roleResponse.statusCode());
             }
             request.setAttribute("roleOptions", mapper.readValue(roleResponse.body(), RoleOption[].class));
+            HttpRequest companyRequest = com.example.erp.frontend.base.BackendRequests.newBuilder(URI.create(backendUrl + "/api/v1/companies"))
+                    .timeout(Duration.ofSeconds(5)).GET().build();
+            HttpResponse<String> companyResponse = client.send(companyRequest, HttpResponse.BodyHandlers.ofString());
+            if (companyResponse.statusCode() != HttpServletResponse.SC_OK) {
+                throw new IOException("Backend returned HTTP " + companyResponse.statusCode());
+            }
+            request.setAttribute("companyOptions", mapper.readValue(companyResponse.body(), CompanyOption[].class));
         } catch (InterruptedException exception) {
             Thread.currentThread().interrupt();
             request.setAttribute("error", "Načítání uživatelů bylo přerušeno.");
@@ -169,4 +176,7 @@ public class UsersServlet extends HttpServlet {
 
     @JsonIgnoreProperties(ignoreUnknown = true)
     public record RoleOption(UUID id, String name) { }
+
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    public record CompanyOption(UUID id, String name) { }
 }

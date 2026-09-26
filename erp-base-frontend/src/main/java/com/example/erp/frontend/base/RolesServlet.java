@@ -8,7 +8,9 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
@@ -20,7 +22,7 @@ import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 
-@WebServlet("/roles")
+@WebServlet({"/roles", "/role-modules"})
 public class RolesServlet extends HttpServlet {
     private final HttpClient client = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(3)).build();
     private final ObjectMapper mapper = new ObjectMapper();
@@ -28,6 +30,7 @@ public class RolesServlet extends HttpServlet {
 
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
+        boolean moduleRoles = "/role-modules".equals(request.getServletPath());
         try {
             HttpRequest backendRequest = com.example.erp.frontend.base.BackendRequests.newBuilder(URI.create(backendUrl + "/api/v1/roles"))
                     .timeout(Duration.ofSeconds(5)).GET().build();
@@ -36,6 +39,13 @@ public class RolesServlet extends HttpServlet {
                 throw new IOException("Backend returned HTTP " + backendResponse.statusCode());
             }
             request.setAttribute("roles", Arrays.asList(mapper.readValue(backendResponse.body(), RoleView[].class)));
+            HttpRequest matrixRequest = com.example.erp.frontend.base.BackendRequests.newBuilder(URI.create(backendUrl + "/api/v1/roles/matrix"))
+                    .timeout(Duration.ofSeconds(5)).GET().build();
+            HttpResponse<String> matrixResponse = client.send(matrixRequest, HttpResponse.BodyHandlers.ofString());
+            if (matrixResponse.statusCode() != HttpServletResponse.SC_OK) {
+                throw new IOException("Backend returned HTTP " + matrixResponse.statusCode());
+            }
+            request.setAttribute("matrix", mapper.readValue(matrixResponse.body(), MatrixView.class));
         } catch (InterruptedException exception) {
             Thread.currentThread().interrupt();
             request.setAttribute("error", "Načítání rolí bylo přerušeno.");
@@ -44,10 +54,12 @@ public class RolesServlet extends HttpServlet {
         }
         request.setAttribute("message", request.getParameter("message"));
         request.setAttribute("error", request.getParameter("error"));
-        request.setAttribute("activePage", "roles");
-        request.setAttribute("pageTitle", "Role a oprávnění");
-        request.setAttribute("breadcrumb", "BASE / ACCESS");
-        request.getRequestDispatcher("/WEB-INF/views/base/roles/index.jsp").forward(request, response);
+        request.setAttribute("activePage", moduleRoles ? "role-modules" : "roles");
+        request.setAttribute("pageTitle", moduleRoles ? "Role pro moduly" : "Role a oprávnění");
+        request.setAttribute("breadcrumb", moduleRoles ? "BASE / MODULE ACCESS" : "BASE / ACCESS");
+        request.getRequestDispatcher(moduleRoles
+            ? "/WEB-INF/views/base/role-modules/index.jsp"
+            : "/WEB-INF/views/base/roles/index.jsp").forward(request, response);
     }
 
     @Override
@@ -55,6 +67,10 @@ public class RolesServlet extends HttpServlet {
         request.setCharacterEncoding(StandardCharsets.UTF_8.name());
         String action = request.getParameter("action");
         try {
+            if ("save-module-permissions".equals(action)) {
+                saveModulePermissions(request, response);
+                return;
+            }
             String body = mapper.writeValueAsString(Map.of(
                     "name", request.getParameter("name"),
                     "initial", request.getParameter("initial"),
@@ -82,6 +98,25 @@ public class RolesServlet extends HttpServlet {
         }
     }
 
+    private void saveModulePermissions(HttpServletRequest request, HttpServletResponse response)
+            throws IOException, InterruptedException {
+        List<PermissionRequest> permissions = new ArrayList<>();
+        for (String parameter : request.getParameterMap().keySet()) {
+            if (!parameter.startsWith("permission_")) continue;
+            String[] parts = parameter.substring("permission_".length()).split("_", 2);
+            if (parts.length == 2) permissions.add(new PermissionRequest(UUID.fromString(parts[0]), parts[1]));
+        }
+        String body = mapper.writeValueAsString(Map.of("permissions", permissions));
+        HttpRequest backendRequest = com.example.erp.frontend.base.BackendRequests
+                .newBuilder(URI.create(backendUrl + "/api/v1/roles/matrix"))
+                .header("Content-Type", "application/json")
+                .PUT(HttpRequest.BodyPublishers.ofString(body)).build();
+        HttpResponse<String> backendResponse = client.send(backendRequest, HttpResponse.BodyHandlers.ofString());
+        String parameter = backendResponse.statusCode() >= 200 && backendResponse.statusCode() < 300 ? "message" : "error";
+        String message = "message".equals(parameter) ? "Oprávnění modulů byla uložena." : "Oprávnění se nepodařilo uložit.";
+        response.sendRedirect("role-modules?" + parameter + "=" + encode(message));
+    }
+
     private URI roleUri(String action, String id) {
         if ("update".equals(action)) {
             UUID roleId = UUID.fromString(id);
@@ -99,4 +134,9 @@ public class RolesServlet extends HttpServlet {
 
     public record RoleView(UUID id, String name, String initial, String description,
             boolean canRead, boolean canEdit, boolean canManage, String color, long userCount) { }
+
+    public record MatrixView(List<ModuleView> modules, List<PermissionView> permissions) { }
+    public record ModuleView(String key, String name) { }
+    public record PermissionView(UUID roleId, String moduleKey) { }
+    public record PermissionRequest(UUID roleId, String moduleKey) { }
 }

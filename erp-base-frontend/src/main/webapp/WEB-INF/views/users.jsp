@@ -3,8 +3,10 @@
 <%@ page import="com.example.erp.frontend.users.UsersServlet.UserView" %>
 <%@ page import="com.example.erp.frontend.users.UsersServlet.EmployeeOption" %>
 <%@ page import="com.example.erp.frontend.users.UsersServlet.RoleOption" %>
+<%@ page import="com.example.erp.frontend.users.UsersServlet.CompanyOption" %>
 <%@ include file="fragments/base-header.jspf" %>
 <link rel="stylesheet" href="assets/users.css">
+<style>.user-dialog input[type="color"]{height:42px;padding:4px;cursor:pointer}.user-dialog input[type="color"]::-webkit-color-swatch-wrapper{padding:0}.user-dialog input[type="color"]::-webkit-color-swatch{border:1px solid #8b9e94;border-radius:3px}</style>
 <style>.topbar .breadcrumb{display:none !important}</style>
 <style>.table-avatar{background:var(--card-color,#dce9d7)}</style>
 <%
@@ -14,6 +16,8 @@
 	List<EmployeeOption> employees = loadedEmployees == null ? List.of() : List.of(loadedEmployees);
 	RoleOption[] loadedRoles = (RoleOption[]) request.getAttribute("roleOptions");
 	List<RoleOption> roles = loadedRoles == null ? List.of() : List.of(loadedRoles);
+	CompanyOption[] loadedCompanies = (CompanyOption[]) request.getAttribute("companyOptions");
+	List<CompanyOption> companies = loadedCompanies == null ? List.of() : List.of(loadedCompanies);
 	String message = (String) request.getAttribute("message");
 	String error = (String) request.getAttribute("error");
 	String requestedEmployeeId = request.getParameter("employeeId");
@@ -34,6 +38,7 @@
 <% } %>
 </tbody></table></div></section>
 <div class="user-modal<%= requestedEmployeeId == null || requestedEmployeeId.isBlank() ? "" : " open" %>" id="user-modal" data-requested-employee-id="<%= escapeHtml(requestedEmployeeId) %>" aria-hidden="<%= requestedEmployeeId == null || requestedEmployeeId.isBlank() %>"><div class="user-modal-backdrop"></div><section class="user-dialog" role="dialog" aria-modal="true" aria-labelledby="user-dialog-title"><button class="dialog-close" id="close-user-dialog" type="button" aria-label="Zavřít">×</button><span class="eyebrow">BASE / USERS</span><h2 id="user-dialog-title">Nový uživatel</h2><p>Účet bude propojený se zaměstnancem v modulu Lidé.</p><form method="post" action="users" id="user-form"><input type="hidden" name="action" id="user-action" value="create"><input type="hidden" name="id" id="user-id"><label>Zaměstnanec<select name="employeeId" id="user-employee-id" required><option value="" disabled>Vyberte zaměstnance</option><% for (EmployeeOption employee : employees) { %><option value="<%= employee.id() %>" data-has-account="<%= employee.hasAccount() %>"<%= employee.id().toString().equals(requestedEmployeeId) ? " selected" : "" %>><%= escapeHtml(employee.fullName()) %> · <%= escapeHtml(employee.teamName()) %><%= employee.hasAccount() ? " · účet již existuje" : "" %></option><% } %></select></label><label>Jméno a příjmení<input name="fullName" id="user-full-name" value="<%= escapeHtml(requestedEmployeeName) %>" required maxlength="200"></label><label>Uživatelské jméno<input name="username" id="user-username" required maxlength="64" pattern="[A-Za-z0-9._-]{3,64}"></label><label>Heslo<input name="password" id="user-password" type="password" minlength="10" required autocomplete="new-password"></label><label>Role<select name="roleName" id="user-role-name" required><option value="" disabled>Vyberte roli</option><% for (RoleOption role : roles) { %><option value="<%= escapeHtml(role.name()) %>"><%= escapeHtml(role.name()) %></option><% } %></select></label><label>Společnost<input name="companyName" id="user-company-name" required maxlength="200"></label><label>Stav<select name="status" id="user-status"><option value="ACTIVE">Aktivní</option><option value="INVITED">Pozvánka čeká</option><option value="SUSPENDED">Pozastavený</option></select></label><div class="dialog-actions"><button class="secondary-button" id="cancel-user-dialog" type="button">Zrušit</button><button class="primary" type="submit" id="save-user">Přidat uživatele</button></div></form></section></div>
+<template id="company-options-source"><option value="" disabled>Vyberte společnost</option><% for (CompanyOption company : companies) { %><option value="<%= escapeHtml(company.name()) %>"><%= escapeHtml(company.name()) %></option><% } %></template>
 <%@ include file="fragments/base-footer.jspf" %>
 <%!
 	private String escapeHtml(String value) {

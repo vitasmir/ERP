@@ -84,6 +84,16 @@ document.getElementById('cancel-company-dialog')?.addEventListener('click', clos
 companyModal?.querySelector('.company-modal-backdrop')?.addEventListener('click', closeCompanyDialog);
 const userModal = document.getElementById('user-modal');
 const userForm = document.getElementById('user-form');
+const companyNameField = document.getElementById('user-company-name');
+const companyOptionsSource = document.getElementById('company-options-source');
+if (companyNameField?.tagName === 'INPUT' && companyOptionsSource) {
+  const companySelect = document.createElement('select');
+  companySelect.id = companyNameField.id;
+  companySelect.name = companyNameField.name;
+  companySelect.required = companyNameField.required;
+  companySelect.innerHTML = companyOptionsSource.innerHTML;
+  companyNameField.replaceWith(companySelect);
+}
 const openUserDialog = (user) => {
   document.getElementById('user-action').value = user ? 'update' : 'create';
   document.getElementById('user-id').value = user?.dataset.userId || '';
@@ -217,6 +227,16 @@ roleForm?.addEventListener('submit', (event) => {
       submit.disabled = false;
       window.alert('Role se nepodařilo uložit. Zkontrolujte dostupnost backendu.');
     });
+});
+
+const modulePermissionsForm = document.getElementById('module-permissions-form');
+modulePermissionsForm?.addEventListener('submit', (event) => {
+  event.preventDefault();
+  const submit = document.getElementById('save-module-permissions');
+  submit.disabled = true;
+  fetch('roles', { method: 'POST', body: new URLSearchParams(new FormData(modulePermissionsForm)) })
+    .then((response) => { if (!response.ok) throw new Error(`HTTP ${response.status}`); window.location.reload(); })
+    .catch(() => { submit.disabled = false; window.alert('Oprávnění se nepodařilo uložit.'); });
 });
 
 const drawer = document.getElementById('module-drawer');

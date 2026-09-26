@@ -3,6 +3,7 @@
 <%@ page import="com.example.erp.frontend.companies.CompaniesServlet.CompanyView" %>
 <%@ include file="fragments/base-header.jspf" %>
 <link rel="stylesheet" href="assets/companies.css">
+<style>.company-dialog input[type="color"]{height:42px;padding:4px;cursor:pointer}.company-dialog input[type="color"]::-webkit-color-swatch-wrapper{padding:0}.company-dialog input[type="color"]::-webkit-color-swatch{border:1px solid #8b9e94;border-radius:3px}</style>
 <style>.topbar .breadcrumb{display:none !important}</style>
 <style>.company-logo{background:var(--card-color,#d9ed62)}</style>
 <%

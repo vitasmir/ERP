@@ -66,6 +66,87 @@ document.querySelectorAll('.delete-user-form').forEach((form) => form.addEventLi
   if (!window.confirm('Opravdu chcete tohoto uživatele smazat?')) event.preventDefault();
 }));
 
+const roleModal = document.getElementById('role-modal');
+const roleForm = document.getElementById('role-form');
+let roleBeingEdited;
+const roleCards = () => [...document.querySelectorAll('.role-card')];
+const updateRoleForm = (card) => {
+  roleBeingEdited = card;
+  document.getElementById('role-name').value = card?.querySelector('h3')?.textContent || '';
+  document.getElementById('role-initial').value = card?.querySelector('.role-mark')?.textContent.trim() || '';
+  document.getElementById('role-description').value = card?.querySelector('p')?.textContent || '';
+};
+const ensureRoleSelector = () => {
+  let selector = document.getElementById('role-edit-select');
+  if (selector) return selector;
+  const label = document.createElement('label');
+  label.id = 'role-edit-field';
+  label.textContent = 'Role k úpravě';
+  selector = document.createElement('select');
+  selector.id = 'role-edit-select';
+  selector.required = true;
+  label.appendChild(selector);
+  roleForm?.prepend(label);
+  selector.addEventListener('change', () => updateRoleForm(roleCards()[Number(selector.value)]));
+  return selector;
+};
+const openRoleDialog = (edit = false) => {
+  const selector = document.getElementById('role-edit-field');
+  selector?.remove();
+  roleBeingEdited = undefined;
+  if (edit) {
+    const editSelector = ensureRoleSelector();
+    roleCards().forEach((card, index) => {
+      const option = document.createElement('option');
+      option.value = index;
+      option.textContent = card.querySelector('h3')?.textContent || 'Role';
+      editSelector.appendChild(option);
+    });
+    updateRoleForm(roleCards()[0]);
+    document.getElementById('role-dialog-title').textContent = 'Upravit roli';
+    roleForm.querySelector('button[type="submit"]').textContent = 'Uložit změny';
+  } else {
+    document.getElementById('role-dialog-title').textContent = 'Nová role';
+    roleForm.querySelector('button[type="submit"]').textContent = 'Vytvořit roli';
+  }
+  roleModal?.classList.add('open');
+  roleModal?.setAttribute('aria-hidden', 'false');
+  document.getElementById('role-name')?.focus();
+};
+const closeRoleDialog = () => {
+  roleModal?.classList.remove('open');
+  roleModal?.setAttribute('aria-hidden', 'true');
+  roleForm?.reset();
+  roleBeingEdited = undefined;
+};
+document.getElementById('add-role')?.addEventListener('click', () => openRoleDialog());
+document.getElementById('edit-role')?.addEventListener('click', () => openRoleDialog(true));
+document.getElementById('close-role-dialog')?.addEventListener('click', closeRoleDialog);
+document.getElementById('cancel-role-dialog')?.addEventListener('click', closeRoleDialog);
+roleModal?.querySelector('.role-modal-backdrop')?.addEventListener('click', closeRoleDialog);
+roleForm?.addEventListener('submit', (event) => {
+  event.preventDefault();
+  const name = document.getElementById('role-name').value.trim();
+  const initial = document.getElementById('role-initial').value.trim().toUpperCase();
+  const description = document.getElementById('role-description').value.trim() || 'Nová pracovní role v ERP systému.';
+  if (roleBeingEdited) {
+    roleBeingEdited.querySelector('.role-mark').textContent = initial;
+    roleBeingEdited.querySelector('h3').textContent = name;
+    roleBeingEdited.querySelector('p').textContent = description;
+    const selector = document.getElementById('role-edit-select');
+    if (selector) selector.options[selector.selectedIndex].textContent = name;
+  } else {
+    const card = document.createElement('article');
+    card.className = 'role-card';
+    card.innerHTML = `<span class="role-mark custom"></span><h3></h3><p></p><b>0 uživatelů</b>`;
+    card.querySelector('.role-mark').textContent = initial;
+    card.querySelector('h3').textContent = name;
+    card.querySelector('p').textContent = description;
+    document.querySelector('.role-grid')?.appendChild(card);
+  }
+  closeRoleDialog();
+});
+
 const drawer = document.getElementById('module-drawer');
 const backdrop = document.createElement('div');
 backdrop.className = 'drawer-backdrop';

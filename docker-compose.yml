@@ -1,10 +1,13 @@
 services:
   postgres:
     image: postgres:18
+    restart: unless-stopped
     environment:
       POSTGRES_DB: erp
       POSTGRES_USER: erp
       POSTGRES_PASSWORD: erp
+    networks:
+      - projects-network
     ports:
       - "5434:5432"
     volumes:
@@ -17,6 +20,9 @@ services:
 
   backend:
     build: ./erp-backend
+    restart: on-failure:5
+    networks:
+      - projects-network
     environment:
       DB_URL: jdbc:postgresql://postgres:5432/erp
       DB_USERNAME: erp
@@ -29,12 +35,19 @@ services:
 
   frontend:
     build: ./erp-base-frontend
+    restart: unless-stopped
     environment:
       BACKEND_URL: http://backend:8080
     ports:
       - "4201:8080"
     depends_on:
       - backend
+    networks:
+      - projects-network
 
 volumes:
   erp-postgres-data:
+
+networks:
+  projects-network:
+    external: true

@@ -5,7 +5,7 @@ MVP životního cyklu letákové akce pro retailový řetězec.
 ## Stack
 
 - `erp-backend`: Spring Boot 4.1.1, Java 21, JPA, Flyway
-- `erp-frontend`: Angular 22
+- `erp-frontend`: JSP
 - PostgreSQL 18
 - Docker Compose
 
@@ -15,7 +15,7 @@ MVP životního cyklu letákové akce pro retailový řetězec.
 docker compose up --build
 ```
 
-Aplikace bude na `http://localhost:4200`, API na `http://localhost:8080`.
+Aplikace bude na `http://localhost:4201`, API na `http://localhost:8080`.
 
 ## Lokální vývoj
 

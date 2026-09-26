@@ -30,7 +30,7 @@ public class PurchaseServlet extends HttpServlet {
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
         try {
-            HttpRequest backendRequest = HttpRequest.newBuilder(URI.create(backendUrl + "/api/v1/purchase/overview"))
+            HttpRequest backendRequest = com.example.erp.frontend.base.BackendRequests.newBuilder(URI.create(backendUrl + "/api/v1/purchase/overview"))
                     .timeout(Duration.ofSeconds(5)).GET().build();
             HttpResponse<String> backendResponse = client.send(backendRequest, HttpResponse.BodyHandlers.ofString());
             if (backendResponse.statusCode() != HttpServletResponse.SC_OK) {
@@ -54,7 +54,7 @@ public class PurchaseServlet extends HttpServlet {
             String body = mapper.writeValueAsString(new CreatePurchaseOrderRequest(request.getParameter("supplierName"),
                 LocalDate.parse(request.getParameter("requestedOn")), LocalDate.parse(request.getParameter("expectedDeliveryDate")),
                 new BigDecimal(request.getParameter("totalAmount"))));
-            HttpRequest backendRequest = HttpRequest.newBuilder(URI.create(backendUrl + "/api/v1/purchase/orders"))
+            HttpRequest backendRequest = com.example.erp.frontend.base.BackendRequests.newBuilder(URI.create(backendUrl + "/api/v1/purchase/orders"))
                 .header("Content-Type", "application/json").POST(HttpRequest.BodyPublishers.ofString(body)).build();
             HttpResponse<Void> backendResponse = client.send(backendRequest, HttpResponse.BodyHandlers.discarding());
                 String message = backendResponse.statusCode() == HttpServletResponse.SC_CREATED
@@ -63,7 +63,7 @@ public class PurchaseServlet extends HttpServlet {
             return;
             }
             UUID.fromString(id);
-            HttpRequest backendRequest = HttpRequest.newBuilder(URI.create(backendUrl + "/api/v1/purchase/orders/" + id + "/order"))
+            HttpRequest backendRequest = com.example.erp.frontend.base.BackendRequests.newBuilder(URI.create(backendUrl + "/api/v1/purchase/orders/" + id + "/order"))
                     .method("PATCH", HttpRequest.BodyPublishers.noBody()).build();
             HttpResponse<Void> backendResponse = client.send(backendRequest, HttpResponse.BodyHandlers.discarding());
             String message = backendResponse.statusCode() == HttpServletResponse.SC_OK

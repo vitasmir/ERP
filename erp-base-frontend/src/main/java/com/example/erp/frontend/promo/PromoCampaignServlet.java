@@ -32,13 +32,13 @@ public class PromoCampaignServlet extends HttpServlet {
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
         try {
-            HttpRequest backendRequest = HttpRequest.newBuilder(URI.create(backendUrl + "/api/v1/promo-campaigns"))
+            HttpRequest backendRequest = com.example.erp.frontend.base.BackendRequests.newBuilder(URI.create(backendUrl + "/api/v1/promo-campaigns"))
                     .timeout(Duration.ofSeconds(5)).GET().build();
             HttpResponse<String> backendResponse = client.send(backendRequest, HttpResponse.BodyHandlers.ofString());
             if (backendResponse.statusCode() != HttpServletResponse.SC_OK) throw new IOException("Backend returned HTTP " + backendResponse.statusCode());
             List<PromoCampaignView> campaigns = mapper.readValue(backendResponse.body(), new TypeReference<>() { });
             request.setAttribute("campaigns", campaigns);
-                HttpResponse<String> optionsResponse = client.send(HttpRequest.newBuilder(
+                HttpResponse<String> optionsResponse = client.send(com.example.erp.frontend.base.BackendRequests.newBuilder(
                     URI.create(backendUrl + "/api/v1/promo-campaigns/options")).timeout(Duration.ofSeconds(5)).GET().build(),
                     HttpResponse.BodyHandlers.ofString());
                 if (optionsResponse.statusCode() != HttpServletResponse.SC_OK) throw new IOException("Backend returned HTTP " + optionsResponse.statusCode());
@@ -64,7 +64,7 @@ public class PromoCampaignServlet extends HttpServlet {
             response.sendRedirect("promo?error=" + URLEncoder.encode("Neplatná změna stavu.", StandardCharsets.UTF_8));
             return;
         }
-        HttpRequest backendRequest = HttpRequest.newBuilder(URI.create(backendUrl + "/api/v1/promo-campaigns/" + id + "/status"))
+        HttpRequest backendRequest = com.example.erp.frontend.base.BackendRequests.newBuilder(URI.create(backendUrl + "/api/v1/promo-campaigns/" + id + "/status"))
                 .header("Content-Type", "application/json")
                 .method("PATCH", HttpRequest.BodyPublishers.ofString("{\"status\":\"" + status + "\"}"))
                 .build();
@@ -93,7 +93,7 @@ public class PromoCampaignServlet extends HttpServlet {
                     "plannedQuantity", Integer.parseInt(request.getParameter("plannedQuantity")),
                     "marketingContribution", new java.math.BigDecimal(request.getParameter("marketingContribution"))));
                 String endpoint = backendUrl + "/api/v1/promo-campaigns" + (editing ? "/" + UUID.fromString(request.getParameter("id")) : "");
-                HttpRequest.Builder backendRequest = HttpRequest.newBuilder(URI.create(endpoint))
+                HttpRequest.Builder backendRequest = com.example.erp.frontend.base.BackendRequests.newBuilder(URI.create(endpoint))
                     .header("Content-Type", "application/json")
                     .method(editing ? "PUT" : "POST", HttpRequest.BodyPublishers.ofString(body));
                 HttpResponse<Void> backendResponse = client.send(backendRequest.build(), HttpResponse.BodyHandlers.discarding());

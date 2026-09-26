@@ -29,7 +29,7 @@ public class CompaniesServlet extends HttpServlet {
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
         try {
-            HttpRequest backendRequest = HttpRequest.newBuilder(URI.create(backendUrl + "/api/v1/companies"))
+            HttpRequest backendRequest = com.example.erp.frontend.base.BackendRequests.newBuilder(URI.create(backendUrl + "/api/v1/companies"))
                     .timeout(Duration.ofSeconds(5)).GET().build();
             HttpResponse<String> backendResponse = client.send(backendRequest, HttpResponse.BodyHandlers.ofString());
             if (backendResponse.statusCode() != HttpServletResponse.SC_OK) {
@@ -81,7 +81,7 @@ public class CompaniesServlet extends HttpServlet {
             "status", value(request, "status"),
             "color", value(request, "color")));
         String path = update ? "/api/v1/companies/" + value(request, "id") : "/api/v1/companies";
-        HttpRequest.Builder builder = HttpRequest.newBuilder(URI.create(backendUrl + path))
+        HttpRequest.Builder builder = com.example.erp.frontend.base.BackendRequests.newBuilder(URI.create(backendUrl + path))
             .timeout(Duration.ofSeconds(5)).header("Content-Type", "application/json");
         HttpRequest backendRequest = (update ? builder.PUT(HttpRequest.BodyPublishers.ofString(body))
             : builder.POST(HttpRequest.BodyPublishers.ofString(body))).build();

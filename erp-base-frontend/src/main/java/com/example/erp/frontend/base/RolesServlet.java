@@ -29,7 +29,7 @@ public class RolesServlet extends HttpServlet {
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
         try {
-            HttpRequest backendRequest = HttpRequest.newBuilder(URI.create(backendUrl + "/api/v1/roles"))
+            HttpRequest backendRequest = com.example.erp.frontend.base.BackendRequests.newBuilder(URI.create(backendUrl + "/api/v1/roles"))
                     .timeout(Duration.ofSeconds(5)).GET().build();
             HttpResponse<String> backendResponse = client.send(backendRequest, HttpResponse.BodyHandlers.ofString());
             if (backendResponse.statusCode() != HttpServletResponse.SC_OK) {
@@ -63,7 +63,7 @@ public class RolesServlet extends HttpServlet {
                     "canEdit", request.getParameter("canEdit") != null,
                     "canManage", request.getParameter("canManage") != null,
                     "color", request.getParameter("color")));
-            HttpRequest.Builder builder = HttpRequest.newBuilder(roleUri(action, request.getParameter("id")))
+            HttpRequest.Builder builder = com.example.erp.frontend.base.BackendRequests.newBuilder(roleUri(action, request.getParameter("id")))
                     .header("Content-Type", "application/json");
             HttpRequest backendRequest = "update".equals(action)
                     ? builder.PUT(HttpRequest.BodyPublishers.ofString(body)).build()

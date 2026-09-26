@@ -28,7 +28,7 @@ public class PlanningServlet extends HttpServlet {
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
         try {
-            HttpRequest backendRequest = HttpRequest.newBuilder(URI.create(backendUrl + "/api/v1/planning/overview"))
+            HttpRequest backendRequest = com.example.erp.frontend.base.BackendRequests.newBuilder(URI.create(backendUrl + "/api/v1/planning/overview"))
                     .timeout(Duration.ofSeconds(5)).GET().build();
             HttpResponse<String> backendResponse = client.send(backendRequest, HttpResponse.BodyHandlers.ofString());
             if (backendResponse.statusCode() != HttpServletResponse.SC_OK) {
@@ -59,7 +59,7 @@ public class PlanningServlet extends HttpServlet {
                 backendRequest = jsonRequest(backendUrl + "/api/v1/planning/shifts/" + id + "/assign", "PATCH", body);
             } else {
                 UUID.fromString(id);
-                backendRequest = HttpRequest.newBuilder(URI.create(backendUrl + "/api/v1/planning/shifts/" + id + "/publish"))
+                backendRequest = com.example.erp.frontend.base.BackendRequests.newBuilder(URI.create(backendUrl + "/api/v1/planning/shifts/" + id + "/publish"))
                         .method("PATCH", HttpRequest.BodyPublishers.noBody()).build();
             }
             HttpResponse<Void> backendResponse = client.send(backendRequest, HttpResponse.BodyHandlers.discarding());
@@ -75,7 +75,7 @@ public class PlanningServlet extends HttpServlet {
     }
 
     private HttpRequest jsonRequest(String url, String method, String body) {
-        return HttpRequest.newBuilder(URI.create(url)).header("Content-Type", "application/json")
+        return com.example.erp.frontend.base.BackendRequests.newBuilder(URI.create(url)).header("Content-Type", "application/json")
                 .method(method, HttpRequest.BodyPublishers.ofString(body)).build();
     }
 }

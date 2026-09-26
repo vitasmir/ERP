@@ -39,8 +39,8 @@ public class DashboardController {
         List<CrmLead> leadItems = leads.findAllByOrderByExpectedCloseDateAsc();
         List<PromoCampaign> campaignItems = campaigns.findAllByOrderByStartsOnDesc();
 
-        BigDecimal receivables = invoiceItems.stream().filter(invoice -> invoice.getStatus() != InvoiceStatus.PAID)
-                .map(invoice -> invoice.getTotalAmount().subtract(invoice.getPaidAmount()))
+        BigDecimal receivables = invoiceItems.stream()
+                .map(AccountInvoice::outstandingAmount)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
         BigDecimal overdue = invoiceItems.stream().filter(invoice -> invoice.getStatus() == InvoiceStatus.OVERDUE)
                 .map(invoice -> invoice.getTotalAmount().subtract(invoice.getPaidAmount()))
@@ -53,7 +53,7 @@ public class DashboardController {
 
         return new DashboardOverview(receivables, overdue, pipeline, forecast,
                 campaignItems.stream().filter(campaign -> campaign.getStatus() == CampaignStatus.ACTIVE).count(),
-                invoiceItems.stream().filter(invoice -> invoice.getStatus() != InvoiceStatus.PAID).limit(3)
+                invoiceItems.stream().filter(invoice -> invoice.outstandingAmount().signum() > 0).limit(3)
                         .map(InvoiceItem::from).toList(),
                 leadItems.stream().filter(lead -> lead.getStage() != LeadStage.WON).limit(3).map(LeadItem::from).toList(),
                 campaignItems.stream().filter(campaign -> campaign.getStatus() != CampaignStatus.COMPLETED)

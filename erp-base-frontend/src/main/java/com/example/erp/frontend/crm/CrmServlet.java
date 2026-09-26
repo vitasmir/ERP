@@ -26,7 +26,7 @@ public class CrmServlet extends HttpServlet {
 
     @Override protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
         try {
-            HttpResponse<String> backendResponse = client.send(HttpRequest.newBuilder(URI.create(backendUrl + "/api/v1/crm/overview")).timeout(Duration.ofSeconds(5)).GET().build(), HttpResponse.BodyHandlers.ofString());
+            HttpResponse<String> backendResponse = client.send(com.example.erp.frontend.base.BackendRequests.newBuilder(URI.create(backendUrl + "/api/v1/crm/overview")).timeout(Duration.ofSeconds(5)).GET().build(), HttpResponse.BodyHandlers.ofString());
             if (backendResponse.statusCode() != HttpServletResponse.SC_OK) throw new IOException("Backend returned HTTP " + backendResponse.statusCode());
             request.setAttribute("overview", mapper.readValue(backendResponse.body(), CrmOverviewView.class));
         } catch (InterruptedException exception) { Thread.currentThread().interrupt(); request.setAttribute("error", "Načítání CRM bylo přerušeno."); }
@@ -41,7 +41,7 @@ public class CrmServlet extends HttpServlet {
         }
         try {
             String id = request.getParameter("id"); UUID.fromString(id);
-            HttpResponse<Void> backendResponse = client.send(HttpRequest.newBuilder(URI.create(backendUrl + "/api/v1/crm/leads/" + id + "/won")).method("PATCH", HttpRequest.BodyPublishers.noBody()).build(), HttpResponse.BodyHandlers.discarding());
+            HttpResponse<Void> backendResponse = client.send(com.example.erp.frontend.base.BackendRequests.newBuilder(URI.create(backendUrl + "/api/v1/crm/leads/" + id + "/won")).method("PATCH", HttpRequest.BodyPublishers.noBody()).build(), HttpResponse.BodyHandlers.discarding());
             String message = backendResponse.statusCode() == HttpServletResponse.SC_OK ? "Příležitost byla označena jako vyhraná." : "Změnu stavu backend odmítl.";
             response.sendRedirect("crm?message=" + URLEncoder.encode(message, StandardCharsets.UTF_8));
         } catch (IllegalArgumentException exception) { response.sendRedirect("crm?error=" + URLEncoder.encode("Neplatná příležitost.", StandardCharsets.UTF_8)); }
@@ -56,7 +56,7 @@ public class CrmServlet extends HttpServlet {
                     "expectedRevenue", new java.math.BigDecimal(request.getParameter("expectedRevenue")),
                     "probability", Integer.parseInt(request.getParameter("probability")),
                     "expectedCloseDate", request.getParameter("expectedCloseDate")));
-            HttpResponse<Void> backendResponse = client.send(HttpRequest.newBuilder(URI.create(backendUrl + "/api/v1/crm/leads"))
+            HttpResponse<Void> backendResponse = client.send(com.example.erp.frontend.base.BackendRequests.newBuilder(URI.create(backendUrl + "/api/v1/crm/leads"))
                     .header("Content-Type", "application/json")
                     .POST(HttpRequest.BodyPublishers.ofString(body)).build(), HttpResponse.BodyHandlers.discarding());
             String message = backendResponse.statusCode() == HttpServletResponse.SC_OK
@@ -76,7 +76,7 @@ public class CrmServlet extends HttpServlet {
         try {
             UUID.fromString(id);
             String body = mapper.writeValueAsString(java.util.Map.of("stage", stage));
-            HttpResponse<String> backendResponse = client.send(HttpRequest.newBuilder(URI.create(backendUrl + "/api/v1/crm/leads/" + id + "/stage"))
+            HttpResponse<String> backendResponse = client.send(com.example.erp.frontend.base.BackendRequests.newBuilder(URI.create(backendUrl + "/api/v1/crm/leads/" + id + "/stage"))
                     .header("Content-Type", "application/json").method("PATCH", HttpRequest.BodyPublishers.ofString(body)).build(), HttpResponse.BodyHandlers.ofString());
             response.setStatus(backendResponse.statusCode());
             response.setContentType("application/json");

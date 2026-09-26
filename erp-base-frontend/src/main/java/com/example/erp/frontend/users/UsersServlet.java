@@ -33,14 +33,14 @@ public class UsersServlet extends HttpServlet {
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
         try {
-            HttpRequest backendRequest = HttpRequest.newBuilder(URI.create(backendUrl + "/api/v1/users"))
+            HttpRequest backendRequest = com.example.erp.frontend.base.BackendRequests.newBuilder(URI.create(backendUrl + "/api/v1/users"))
                     .timeout(Duration.ofSeconds(5)).GET().build();
             HttpResponse<String> backendResponse = client.send(backendRequest, HttpResponse.BodyHandlers.ofString());
             if (backendResponse.statusCode() != HttpServletResponse.SC_OK) {
                 throw new IOException("Backend returned HTTP " + backendResponse.statusCode());
             }
             request.setAttribute("users", mapper.readValue(backendResponse.body(), UserView[].class));
-            HttpRequest employeeRequest = HttpRequest.newBuilder(URI.create(backendUrl + "/api/v1/users/employee-options"))
+            HttpRequest employeeRequest = com.example.erp.frontend.base.BackendRequests.newBuilder(URI.create(backendUrl + "/api/v1/users/employee-options"))
                     .timeout(Duration.ofSeconds(5)).GET().build();
             HttpResponse<String> employeeResponse = client.send(employeeRequest, HttpResponse.BodyHandlers.ofString());
             if (employeeResponse.statusCode() != HttpServletResponse.SC_OK) {
@@ -95,7 +95,7 @@ public class UsersServlet extends HttpServlet {
                 "password", request.getParameter("password"),
                 "status", request.getParameter("status"),
                 "color", request.getParameter("color")));
-        HttpRequest.Builder builder = HttpRequest.newBuilder(userUri(action, request.getParameter("id")))
+        HttpRequest.Builder builder = com.example.erp.frontend.base.BackendRequests.newBuilder(userUri(action, request.getParameter("id")))
                 .header("Content-Type", "application/json");
         HttpRequest backendRequest = "update".equals(action)
                 ? builder.PUT(HttpRequest.BodyPublishers.ofString(body)).build()
@@ -105,7 +105,7 @@ public class UsersServlet extends HttpServlet {
 
     private HttpResponse<String> sendDelete(String id) throws IOException, InterruptedException {
         UUID.fromString(id);
-        HttpRequest backendRequest = HttpRequest.newBuilder(userUri("delete", id))
+        HttpRequest backendRequest = com.example.erp.frontend.base.BackendRequests.newBuilder(userUri("delete", id))
                 .DELETE().build();
         return client.send(backendRequest, HttpResponse.BodyHandlers.ofString());
     }

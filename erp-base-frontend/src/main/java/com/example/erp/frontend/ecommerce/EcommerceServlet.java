@@ -146,19 +146,19 @@ public class EcommerceServlet extends HttpServlet {
     }
 
     private <T> T get(String path, Class<T> type) throws IOException, InterruptedException {
-        HttpResponse<String> response = client.send(HttpRequest.newBuilder(URI.create(backendUrl + path)).GET().build(), HttpResponse.BodyHandlers.ofString());
+        HttpResponse<String> response = client.send(com.example.erp.frontend.base.BackendRequests.newBuilder(URI.create(backendUrl + path)).GET().build(), HttpResponse.BodyHandlers.ofString());
         if (response.statusCode() != HttpServletResponse.SC_OK) throw new IOException("Backend returned HTTP " + response.statusCode());
         return mapper.readValue(response.body(), type);
     }
 
     private <T> T getList(String path, TypeReference<T> type) throws IOException, InterruptedException {
-        HttpResponse<String> response = client.send(HttpRequest.newBuilder(URI.create(backendUrl + path)).GET().build(), HttpResponse.BodyHandlers.ofString());
+        HttpResponse<String> response = client.send(com.example.erp.frontend.base.BackendRequests.newBuilder(URI.create(backendUrl + path)).GET().build(), HttpResponse.BodyHandlers.ofString());
         if (response.statusCode() != HttpServletResponse.SC_OK) throw new IOException("Backend returned HTTP " + response.statusCode());
         return mapper.readValue(response.body(), type);
     }
 
     private HttpResponse<String> send(String method, String path, String body) throws IOException, InterruptedException {
-        HttpRequest request = HttpRequest.newBuilder(URI.create(backendUrl + path)).header("Content-Type", "application/json")
+        HttpRequest request = com.example.erp.frontend.base.BackendRequests.newBuilder(URI.create(backendUrl + path)).header("Content-Type", "application/json")
                 .method(method, HttpRequest.BodyPublishers.ofString(body)).build();
         return client.send(request, HttpResponse.BodyHandlers.ofString());
     }

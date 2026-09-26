@@ -27,7 +27,7 @@ public class ManufacturingServlet extends HttpServlet {
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
         try {
-            HttpRequest backendRequest = HttpRequest.newBuilder(URI.create(backendUrl + "/api/v1/manufacturing/overview"))
+            HttpRequest backendRequest = com.example.erp.frontend.base.BackendRequests.newBuilder(URI.create(backendUrl + "/api/v1/manufacturing/overview"))
                     .timeout(Duration.ofSeconds(5)).GET().build();
             HttpResponse<String> backendResponse = client.send(backendRequest, HttpResponse.BodyHandlers.ofString());
             if (backendResponse.statusCode() != HttpServletResponse.SC_OK) {
@@ -48,7 +48,7 @@ public class ManufacturingServlet extends HttpServlet {
         String id = request.getParameter("id");
         try {
             UUID.fromString(id);
-            HttpRequest backendRequest = HttpRequest.newBuilder(URI.create(backendUrl + "/api/v1/manufacturing/orders/" + id + "/complete"))
+            HttpRequest backendRequest = com.example.erp.frontend.base.BackendRequests.newBuilder(URI.create(backendUrl + "/api/v1/manufacturing/orders/" + id + "/complete"))
                     .method("PATCH", HttpRequest.BodyPublishers.noBody()).build();
             HttpResponse<Void> backendResponse = client.send(backendRequest, HttpResponse.BodyHandlers.discarding());
             String message = backendResponse.statusCode() == HttpServletResponse.SC_OK

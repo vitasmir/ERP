@@ -16,6 +16,7 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.UUID;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import jakarta.servlet.ServletException;
@@ -166,5 +167,6 @@ public class UsersServlet extends HttpServlet {
 
     public record EmployeeOption(UUID id, String fullName, String teamName, boolean hasAccount) { }
 
+    @JsonIgnoreProperties(ignoreUnknown = true)
     public record RoleOption(UUID id, String name) { }
 }

@@ -76,6 +76,7 @@ public class RolesServlet extends HttpServlet {
                     "initial", request.getParameter("initial"),
                     "description", request.getParameter("description"),
                     "canRead", request.getParameter("canRead") != null,
+                    "canInsert", request.getParameter("canInsert") != null,
                     "canEdit", request.getParameter("canEdit") != null,
                     "canManage", request.getParameter("canManage") != null,
                     "color", request.getParameter("color")));
@@ -133,7 +134,7 @@ public class RolesServlet extends HttpServlet {
     }
 
     public record RoleView(UUID id, String name, String initial, String description,
-            boolean canRead, boolean canEdit, boolean canManage, String color, long userCount) { }
+            boolean canRead, boolean canInsert, boolean canEdit, boolean canManage, String color, long userCount) { }
 
     public record MatrixView(List<ModuleView> modules, List<PermissionView> permissions) { }
     public record ModuleView(String key, String name) { }

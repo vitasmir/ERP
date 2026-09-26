@@ -105,6 +105,8 @@ public class UsersServlet extends HttpServlet {
         Map<String, String> values = new HashMap<>();
         values.put("employeeId", request.getParameter("employeeId"));
         values.put("fullName", request.getParameter("fullName"));
+        values.put("username", request.getParameter("username"));
+        values.put("password", request.getParameter("password"));
         values.put("roleName", request.getParameter("roleName"));
         values.put("companyName", request.getParameter("companyName"));
         values.put("status", request.getParameter("status"));

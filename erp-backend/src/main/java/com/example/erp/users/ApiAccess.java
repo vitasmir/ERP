@@ -61,22 +61,11 @@ public class ApiAccess implements HandlerInterceptor {
         ErpUser user = users.findById(userId).orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED));
         if (user.getStatus() != UserStatus.ACTIVE) unauthorized();
         String module = path.substring("/api/v1/".length()).split("/")[0];
-        boolean receipt = "PATCH".equals(request.getMethod())
-            && path.matches("/api/v1/planning/notifications/[0-9a-fA-F-]{36}/read");
-        if (!allowedConfigured(user.getRoleName(), module, receipt || Set.of("GET", "HEAD").contains(request.getMethod()))) {
+        if (!allowed(user.getRoleName(), module, Set.of("GET", "HEAD").contains(request.getMethod()))) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Role does not permit this operation.");
         }
         request.setAttribute("erpUser", user);
         return true;
-    }
-
-    private boolean allowedConfigured(String role, String module, boolean read) {
-        if (isAdmin(role) || "auth".equals(module)) return true;
-        UUID roleId = jdbc.query("SELECT id FROM role_definitions WHERE name = ?",
-                (row, index) -> row.getObject("id", UUID.class), role).stream().findFirst().orElse(null);
-        if (roleId == null) return allowed(role, module, read);
-        return jdbc.queryForObject("SELECT COUNT(*) FROM role_module_permissions WHERE role_id = ? AND module_key = ?",
-                Long.class, roleId, module) > 0;
     }
 
     public static boolean allowed(String role, String module, boolean read) {

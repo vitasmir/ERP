@@ -156,6 +156,7 @@ const updateRoleForm = (card) => {
   document.getElementById('role-description').value = card?.querySelector('p')?.textContent || '';
   document.getElementById('role-color').value = card?.dataset.color || '#D9ED62';
   document.getElementById('permission-read').checked = card?.dataset.canRead === 'true';
+  document.getElementById('permission-insert').checked = card?.dataset.canInsert === 'true';
   document.getElementById('permission-edit').checked = card?.dataset.canEdit === 'true';
   document.getElementById('permission-manage').checked = card?.dataset.canManage === 'true';
 };
@@ -195,6 +196,7 @@ const openRoleDialog = (edit = false) => {
     document.getElementById('role-id').value = '';
     document.getElementById('role-color').value = '#D9ED62';
     document.getElementById('permission-read').checked = true;
+    document.getElementById('permission-insert').checked = false;
     document.getElementById('permission-edit').checked = false;
     document.getElementById('permission-manage').checked = false;
     roleForm.querySelector('button[type="submit"]').textContent = 'Vytvořit roli';

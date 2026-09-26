@@ -51,16 +51,25 @@ public class ErpUser {
 
     protected ErpUser() { }
 
-    public static ErpUser create(Employee employee, String fullName, String roleName, String companyName, UserStatus status, String color) {
+    public static ErpUser create(Employee employee, String fullName, String username, String password,
+            String roleName, String companyName, UserStatus status, String color) {
         ErpUser user = new ErpUser();
         user.id = UUID.randomUUID();
         user.employee = employee;
         user.fullName = fullName;
+        user.username = username;
+        user.passwordHash = PasswordHasher.hash(password);
         user.roleName = roleName;
         user.companyName = companyName;
         user.status = status;
         user.color = color;
         return user;
+    }
+
+    public static ErpUser create(Employee employee, String fullName, String roleName,
+            String companyName, UserStatus status, String color) {
+        return create(employee, fullName, "user-" + employee.getId(), "test-password",
+                roleName, companyName, status, color);
     }
 
     public void update(Employee employee, String fullName, String roleName, String companyName, UserStatus status, String color) {

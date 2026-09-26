@@ -1,6 +1,7 @@
 package com.example.erp.users;
 
 import java.util.List;
+import java.util.Locale;
 import java.util.UUID;
 
 import org.springframework.http.HttpStatus;
@@ -46,7 +47,8 @@ public class UserController {
     @ResponseStatus(HttpStatus.CREATED)
     public UserResponse create(@RequestBody UserRequest request) {
         UserData data = validate(request, null);
-        return UserResponse.from(users.save(ErpUser.create(data.employee(), data.fullName(), data.roleName(), data.companyName(), data.status(), data.color())));
+        return UserResponse.from(users.save(ErpUser.create(data.employee(), data.fullName(), data.username(), data.password(),
+            data.roleName(), data.companyName(), data.status(), data.color())));
     }
 
     @PutMapping("/{id}")
@@ -69,8 +71,16 @@ public class UserController {
     }
 
     private UserData validate(UserRequest request, UUID currentUserId) {
-        if (request == null || isBlank(request.fullName()) || isBlank(request.roleName()) || isBlank(request.companyName())) {
+        if (request == null || isBlank(request.fullName()) || isBlank(request.username())
+                || isBlank(request.roleName()) || isBlank(request.companyName())) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "User fields are required.");
+        }
+        String username = request.username().trim().toLowerCase(Locale.ROOT);
+        if (!username.matches("[a-z0-9._-]{3,64}")) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid username.");
+        }
+        if (currentUserId == null && (request.password() == null || request.password().length() < 10)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Password must contain at least 10 characters.");
         }
         UserStatus status;
         try {
@@ -84,7 +94,7 @@ public class UserController {
                 : users.existsByEmployee_IdAndIdNot(employee.getId(), currentUserId))) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Employee already has a user account.");
         }
-        return new UserData(employee, request.fullName().trim(), request.roleName().trim(), request.companyName().trim(), status,
+        return new UserData(employee, request.fullName().trim(), username, request.password(), request.roleName().trim(), request.companyName().trim(), status,
             validColor(request.color(), "#DCE9D7"));
     }
 
@@ -106,16 +116,18 @@ public class UserController {
         return value != null && value.matches("#[0-9A-Fa-f]{6}") ? value.toUpperCase() : fallback;
     }
 
-    public record UserRequest(String employeeId, String fullName, String roleName, String companyName, String status, String color) { }
+    public record UserRequest(String employeeId, String fullName, String username, String password,
+            String roleName, String companyName, String status, String color) { }
 
-    private record UserData(Employee employee, String fullName, String roleName, String companyName, UserStatus status, String color) { }
+    private record UserData(Employee employee, String fullName, String username, String password,
+            String roleName, String companyName, UserStatus status, String color) { }
 
     public record UserResponse(UUID id, String fullName, String roleName, String companyName,
-            UserStatus status, String lastAccessAt, UUID employeeId, String color) {
+            UserStatus status, String lastAccessAt, UUID employeeId, String username, String color) {
         static UserResponse from(ErpUser user) {
             return new UserResponse(user.getId(), user.getFullName(), user.getRoleName(), user.getCompanyName(),
                     user.getStatus(), user.getLastAccessAt() == null ? null : user.getLastAccessAt().toString(),
-                    user.getEmployeeId(), user.getColor());
+                    user.getEmployeeId(), user.getUsername(), user.getColor());
         }
     }
 

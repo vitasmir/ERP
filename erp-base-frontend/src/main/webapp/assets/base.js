@@ -72,9 +72,13 @@ let roleBeingEdited;
 const roleCards = () => [...document.querySelectorAll('.role-card')];
 const updateRoleForm = (card) => {
   roleBeingEdited = card;
+  document.getElementById('role-id').value = card?.dataset.roleId || '';
   document.getElementById('role-name').value = card?.querySelector('h3')?.textContent || '';
   document.getElementById('role-initial').value = card?.querySelector('.role-mark')?.textContent.trim() || '';
   document.getElementById('role-description').value = card?.querySelector('p')?.textContent || '';
+  document.getElementById('permission-read').checked = card?.dataset.canRead === 'true';
+  document.getElementById('permission-edit').checked = card?.dataset.canEdit === 'true';
+  document.getElementById('permission-manage').checked = card?.dataset.canManage === 'true';
 };
 const ensureRoleSelector = () => {
   let selector = document.getElementById('role-edit-select');
@@ -95,6 +99,7 @@ const openRoleDialog = (edit = false) => {
   selector?.remove();
   roleBeingEdited = undefined;
   if (edit) {
+    document.getElementById('role-action').value = 'update';
     const editSelector = ensureRoleSelector();
     roleCards().forEach((card, index) => {
       const option = document.createElement('option');
@@ -107,6 +112,11 @@ const openRoleDialog = (edit = false) => {
     roleForm.querySelector('button[type="submit"]').textContent = 'Uložit změny';
   } else {
     document.getElementById('role-dialog-title').textContent = 'Nová role';
+    document.getElementById('role-action').value = 'create';
+    document.getElementById('role-id').value = '';
+    document.getElementById('permission-read').checked = true;
+    document.getElementById('permission-edit').checked = false;
+    document.getElementById('permission-manage').checked = false;
     roleForm.querySelector('button[type="submit"]').textContent = 'Vytvořit roli';
   }
   roleModal?.classList.add('open');
@@ -126,25 +136,17 @@ document.getElementById('cancel-role-dialog')?.addEventListener('click', closeRo
 roleModal?.querySelector('.role-modal-backdrop')?.addEventListener('click', closeRoleDialog);
 roleForm?.addEventListener('submit', (event) => {
   event.preventDefault();
-  const name = document.getElementById('role-name').value.trim();
-  const initial = document.getElementById('role-initial').value.trim().toUpperCase();
-  const description = document.getElementById('role-description').value.trim() || 'Nová pracovní role v ERP systému.';
-  if (roleBeingEdited) {
-    roleBeingEdited.querySelector('.role-mark').textContent = initial;
-    roleBeingEdited.querySelector('h3').textContent = name;
-    roleBeingEdited.querySelector('p').textContent = description;
-    const selector = document.getElementById('role-edit-select');
-    if (selector) selector.options[selector.selectedIndex].textContent = name;
-  } else {
-    const card = document.createElement('article');
-    card.className = 'role-card';
-    card.innerHTML = `<span class="role-mark custom"></span><h3></h3><p></p><b>0 uživatelů</b>`;
-    card.querySelector('.role-mark').textContent = initial;
-    card.querySelector('h3').textContent = name;
-    card.querySelector('p').textContent = description;
-    document.querySelector('.role-grid')?.appendChild(card);
-  }
-  closeRoleDialog();
+  const submit = roleForm.querySelector('button[type="submit"]');
+  submit.disabled = true;
+  fetch('roles', { method: 'POST', body: new URLSearchParams(new FormData(roleForm)) })
+    .then((response) => {
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      window.location.reload();
+    })
+    .catch(() => {
+      submit.disabled = false;
+      window.alert('Role se nepodařilo uložit. Zkontrolujte dostupnost backendu.');
+    });
 });
 
 const drawer = document.getElementById('module-drawer');

@@ -9,12 +9,11 @@ import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 
-@WebServlet({"", "/apps", "/roles"})
+@WebServlet({"", "/apps"})
 public class AppPageServlet extends HttpServlet {
     private static final Map<String, Page> PAGES = Map.of(
             "", new Page("apps", "Přehled systému", "BASE / ADMINISTRATION", "apps/index.jsp"),
-            "/apps", new Page("apps", "Přehled systému", "BASE / ADMINISTRATION", "apps/index.jsp"),
-            "/roles", new Page("roles", "Role a oprávnění", "BASE / ACCESS", "base/roles/index.jsp"));
+            "/apps", new Page("apps", "Přehled systému", "BASE / ADMINISTRATION", "apps/index.jsp"));
 
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {

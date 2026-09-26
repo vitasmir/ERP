@@ -71,7 +71,7 @@ public class RoleDefinitionController {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Role already exists.");
         }
         return toResponse(roles.save(RoleDefinition.create(data.name(), data.initial(), data.description(),
-            data.canRead(), data.canInsert(), data.canEdit(), data.canManage(), data.color())));
+            data.canRead(), data.canInsert(), data.canEdit(), data.canManage(), data.canDelete(), data.color())));
     }
 
     @PutMapping("/{id}")
@@ -82,7 +82,7 @@ public class RoleDefinitionController {
         roles.findByNameIgnoreCase(data.name()).filter(existing -> !existing.getId().equals(id)).ifPresent(existing -> {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Role already exists.");
         });
-        role.update(data.name(), data.initial(), data.description(), data.canRead(), data.canInsert(), data.canEdit(), data.canManage(), data.color());
+        role.update(data.name(), data.initial(), data.description(), data.canRead(), data.canInsert(), data.canEdit(), data.canManage(), data.canDelete(), data.color());
         return toResponse(roles.save(role));
     }
 
@@ -105,12 +105,12 @@ public class RoleDefinitionController {
         }
         return new RoleData(request.name().trim(), initial,
                 isBlank(request.description()) ? "Nová pracovní role v ERP systému." : request.description().trim(),
-            request.canRead(), request.canInsert(), request.canEdit(), request.canManage(), validColor(request.color(), "#D9ED62"));
+            request.canRead(), request.canInsert(), request.canEdit(), request.canManage(), request.canDelete(), validColor(request.color(), "#D9ED62"));
     }
 
     private RoleResponse toResponse(RoleDefinition role) {
         return new RoleResponse(role.getId(), role.getName(), role.getInitial(), role.getDescription(),
-            role.isCanRead(), role.isCanInsert(), role.isCanEdit(), role.isCanManage(), role.getColor(), roles.countByName(role.getName()));
+            role.isCanRead(), role.isCanInsert(), role.isCanEdit(), role.isCanManage(), role.isCanDelete(), role.getColor(), roles.countByName(role.getName()));
     }
 
     private boolean isBlank(String value) { return value == null || value.isBlank(); }
@@ -120,13 +120,13 @@ public class RoleDefinitionController {
         }
 
     public record RoleRequest(String name, String initial, String description,
-            boolean canRead, boolean canInsert, boolean canEdit, boolean canManage, String color) { }
+            boolean canRead, boolean canInsert, boolean canEdit, boolean canManage, boolean canDelete, String color) { }
 
     private record RoleData(String name, String initial, String description,
-            boolean canRead, boolean canInsert, boolean canEdit, boolean canManage, String color) { }
+            boolean canRead, boolean canInsert, boolean canEdit, boolean canManage, boolean canDelete, String color) { }
 
     public record RoleResponse(UUID id, String name, String initial, String description,
-            boolean canRead, boolean canInsert, boolean canEdit, boolean canManage, String color, long userCount) { }
+            boolean canRead, boolean canInsert, boolean canEdit, boolean canManage, boolean canDelete, String color, long userCount) { }
 
     public record MatrixResponse(List<ModuleResponse> modules, List<PermissionResponse> permissions) { }
 

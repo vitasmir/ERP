@@ -79,6 +79,7 @@ public class RolesServlet extends HttpServlet {
                     "canInsert", request.getParameter("canInsert") != null,
                     "canEdit", request.getParameter("canEdit") != null,
                     "canManage", request.getParameter("canManage") != null,
+                    "canDelete", request.getParameter("canDelete") != null,
                     "color", request.getParameter("color")));
             HttpRequest.Builder builder = com.example.erp.frontend.base.BackendRequests.newBuilder(roleUri(action, request.getParameter("id")))
                     .header("Content-Type", "application/json");
@@ -134,7 +135,7 @@ public class RolesServlet extends HttpServlet {
     }
 
     public record RoleView(UUID id, String name, String initial, String description,
-            boolean canRead, boolean canInsert, boolean canEdit, boolean canManage, String color, long userCount) { }
+            boolean canRead, boolean canInsert, boolean canEdit, boolean canManage, boolean canDelete, String color, long userCount) { }
 
     public record MatrixView(List<ModuleView> modules, List<PermissionView> permissions) { }
     public record ModuleView(String key, String name) { }

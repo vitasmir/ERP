@@ -34,21 +34,24 @@ public class RoleDefinition {
     @Column(name = "can_manage", nullable = false)
     private boolean canManage;
 
+    @Column(name = "can_delete", nullable = false)
+    private boolean canDelete;
+
     @Column(nullable = false, length = 7)
     private String color;
 
     protected RoleDefinition() { }
 
     public static RoleDefinition create(String name, String initial, String description,
-            boolean canRead, boolean canInsert, boolean canEdit, boolean canManage, String color) {
+            boolean canRead, boolean canInsert, boolean canEdit, boolean canManage, boolean canDelete, String color) {
         RoleDefinition role = new RoleDefinition();
         role.id = UUID.randomUUID();
-        role.update(name, initial, description, canRead, canInsert, canEdit, canManage, color);
+        role.update(name, initial, description, canRead, canInsert, canEdit, canManage, canDelete, color);
         return role;
     }
 
     public void update(String name, String initial, String description,
-            boolean canRead, boolean canInsert, boolean canEdit, boolean canManage, String color) {
+            boolean canRead, boolean canInsert, boolean canEdit, boolean canManage, boolean canDelete, String color) {
         this.name = name;
         this.initial = initial;
         this.description = description;
@@ -56,6 +59,7 @@ public class RoleDefinition {
         this.canInsert = canInsert;
         this.canEdit = canEdit;
         this.canManage = canManage;
+        this.canDelete = canDelete;
         this.color = color;
     }
 
@@ -67,5 +71,6 @@ public class RoleDefinition {
     public boolean isCanInsert() { return canInsert; }
     public boolean isCanEdit() { return canEdit; }
     public boolean isCanManage() { return canManage; }
+    public boolean isCanDelete() { return canDelete; }
     public String getColor() { return color; }
 }

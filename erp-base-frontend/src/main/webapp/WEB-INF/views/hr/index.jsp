@@ -3,6 +3,7 @@
 <%@ page import="com.example.erp.frontend.hr.HrOverviewView.EmployeeView" %>
 <%@ page import="com.fasterxml.jackson.databind.JsonNode" %>
 <%@ page import="static com.example.erp.frontend.base.RolesServlet.escapeHtml" %>
+<%@ page import="java.time.LocalDate" %>
 <!doctype html>
 <html lang="cs">
 <head>
@@ -57,14 +58,15 @@
         <% if (overview != null) for (EmployeeView employee : overview.employees()) {
              String initials = employee.fullName().chars().filter(character -> character == ' ').count() > 0
                  ? employee.fullName().substring(0, 1) + employee.fullName().substring(employee.fullName().lastIndexOf(' ') + 1, employee.fullName().lastIndexOf(' ') + 2)
-                 : employee.fullName().substring(0, Math.min(2, employee.fullName().length())); %>
+             : employee.fullName().substring(0, Math.min(2, employee.fullName().length()));
+           boolean employmentStarted = !LocalDate.parse(employee.employmentStartDate()).isAfter(LocalDate.now()); %>
         <tr>
           <td><span class="status-chip status-<%= escapeHtml(employee.status().toLowerCase()) %>"><%= employee.status().equals("ONBOARDING") ? "NÁSTUP" : employee.status().equals("ACTIVE") ? "AKTIVNÍ" : "NEAKTIVNÍ" %></span></td>
           <td><div class="employee-main"><span class="employee-avatar"><%= escapeHtml(initials.toUpperCase()) %></span><strong><%= escapeHtml(employee.fullName()) %></strong></div></td>
           <td><%= escapeHtml(employee.jobTitle()) %></td>
           <td><%= escapeHtml(employee.teamName()) %></td>
           <td><%= escapeHtml(employee.employmentStartDate()) %></td>
-          <td class="employee-action-cell"><% if (edit) { %><form method="post"><input type="hidden" name="id" value="<%= employee.id() %>"><input type="hidden" name="action" value="<%= "ACTIVE".equals(employee.status()) ? "deactivate" : "activate" %>"><button class="secondary" type="submit"><%= "ACTIVE".equals(employee.status()) ? "Ukončit pracovní poměr" : "Aktivovat nástup" %></button></form><% } %></td>
+          <td class="employee-action-cell"><% if (edit) { %><form method="post"><input type="hidden" name="id" value="<%= employee.id() %>"><input type="hidden" name="action" value="<%= "ACTIVE".equals(employee.status()) ? "deactivate" : "activate" %>"><% if ("ACTIVE".equals(employee.status()) || employmentStarted) { %><button class="secondary" type="submit"><%= "ACTIVE".equals(employee.status()) ? "Ukončit pracovní poměr" : "Aktivovat nástup" %></button><% } else { %><button class="secondary" type="button" disabled title="Aktivace bude možná po datu nástupu">Aktivovat po nástupu</button><% } %></form><% } %></td>
           <td class="employee-action-cell"><a href="hr?employeeId=<%= employee.id() %>#availability">Dostupnost a kvalifikace</a></td>
           <td class="employee-action-cell"><% if (admin) { if (employee.hasUserAccount()) { %><a href="users">Účet v Uživatelích</a><% } else { %><a href="users?employeeId=<%= employee.id() %>">Vytvořit účet</a><% } } %></td>
         </tr>

@@ -20,16 +20,65 @@ ensureColorPicker(document.getElementById('role-form'), 'role-color', '#D9ED62')
 ensureColorPicker(document.getElementById('company-form'), 'company-color', '#D9ED62');
 ensureColorPicker(document.getElementById('user-form'), 'user-color', '#DCE9D7');
 const companyModal = document.getElementById('company-modal');
+const companyForm = document.getElementById('company-form');
+const companyCards = () => [...document.querySelectorAll('.company-grid article')];
+const ensureCompanySelector = () => {
+  let selector = document.getElementById('company-edit-field');
+  if (selector) return selector.querySelector('select');
+  const label = document.createElement('label');
+  label.id = 'company-edit-field';
+  label.textContent = 'Společnost k úpravě';
+  const select = document.createElement('select');
+  select.id = 'company-edit-select';
+  select.required = true;
+  label.appendChild(select);
+  companyForm?.prepend(label);
+  return select;
+};
+const openCompanyDialog = (edit = false) => {
+  document.getElementById('company-edit-field')?.remove();
+  companyForm?.reset();
+  document.getElementById('company-action').value = edit ? 'update' : 'create';
+  document.getElementById('company-id').value = '';
+  if (edit) {
+    const selector = ensureCompanySelector();
+    companyCards().forEach((card, index) => {
+      const option = document.createElement('option');
+      option.value = index;
+      option.textContent = card.dataset.name;
+      selector.appendChild(option);
+    });
+    const fillCompany = (card) => {
+      document.getElementById('company-id').value = card.dataset.companyId;
+      document.getElementById('company-name').value = card.dataset.name;
+      document.getElementById('company-type').value = card.dataset.type;
+      document.getElementById('company-currency').value = card.dataset.currency;
+      document.getElementById('company-status').value = card.dataset.status;
+      document.getElementById('company-color').value = card.dataset.color || '#D9ED62';
+    };
+    selector.addEventListener('change', () => fillCompany(companyCards()[Number(selector.value)]));
+    fillCompany(companyCards()[0]);
+    document.getElementById('company-dialog-title').textContent = 'Upravit společnost';
+    document.getElementById('company-dialog-description').textContent = 'Upravte údaje organizační jednotky.';
+    document.getElementById('save-company').textContent = 'Uložit změny';
+  } else {
+    document.getElementById('company-dialog-title').textContent = 'Nová společnost';
+    document.getElementById('company-dialog-description').textContent = 'Přidejte organizační jednotku do ERP.';
+    document.getElementById('company-color').value = '#D9ED62';
+    document.getElementById('save-company').textContent = 'Vytvořit společnost';
+  }
+  companyModal?.classList.add('open');
+  companyModal?.setAttribute('aria-hidden', 'false');
+  document.getElementById('company-name')?.focus();
+};
 const closeCompanyDialog = () => {
   companyModal?.classList.remove('open');
   companyModal?.setAttribute('aria-hidden', 'true');
-  document.getElementById('company-form')?.reset();
+  companyForm?.reset();
+  document.getElementById('company-edit-field')?.remove();
 };
-document.getElementById('add-company')?.addEventListener('click', () => {
-  companyModal?.classList.add('open');
-  companyModal?.setAttribute('aria-hidden', 'false');
-  companyModal?.querySelector('input')?.focus();
-});
+document.getElementById('add-company')?.addEventListener('click', () => openCompanyDialog());
+document.getElementById('edit-company')?.addEventListener('click', () => openCompanyDialog(true));
 document.getElementById('close-company-dialog')?.addEventListener('click', closeCompanyDialog);
 document.getElementById('cancel-company-dialog')?.addEventListener('click', closeCompanyDialog);
 companyModal?.querySelector('.company-modal-backdrop')?.addEventListener('click', closeCompanyDialog);

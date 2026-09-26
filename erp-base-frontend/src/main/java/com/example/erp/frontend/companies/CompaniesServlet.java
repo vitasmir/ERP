@@ -55,18 +55,11 @@ public class CompaniesServlet extends HttpServlet {
     protected void doPost(HttpServletRequest request, HttpServletResponse response) throws IOException {
         request.setCharacterEncoding(StandardCharsets.UTF_8.name());
         try {
-            String body = mapper.writeValueAsString(Map.of(
-                    "name", value(request, "name"),
-                    "type", value(request, "type"),
-                    "currency", value(request, "currency"),
-                    "status", value(request, "status"),
-                    "color", value(request, "color")));
-            HttpRequest backendRequest = HttpRequest.newBuilder(URI.create(backendUrl + "/api/v1/companies"))
-                    .timeout(Duration.ofSeconds(5)).header("Content-Type", "application/json")
-                    .POST(HttpRequest.BodyPublishers.ofString(body)).build();
-            HttpResponse<String> backendResponse = client.send(backendRequest, HttpResponse.BodyHandlers.ofString());
+            boolean update = "update".equals(value(request, "action"));
+            HttpResponse<String> backendResponse = sendCompanyRequest(request, update);
             if (backendResponse.statusCode() >= 200 && backendResponse.statusCode() < 300) {
-                response.sendRedirect("companies?message=" + encode("Společnost byla vytvořena."));
+                response.sendRedirect("companies?message=" + encode(update
+                        ? "Společnost byla upravena." : "Společnost byla vytvořena."));
             } else if (backendResponse.statusCode() == HttpServletResponse.SC_CONFLICT) {
                 response.sendRedirect("companies?error=" + encode("Společnost s tímto názvem již existuje."));
             } else {
@@ -78,6 +71,22 @@ public class CompaniesServlet extends HttpServlet {
             response.sendRedirect("companies?error=" + encode("Vytvoření společnosti bylo přerušeno."));
         }
     }
+
+        private HttpResponse<String> sendCompanyRequest(HttpServletRequest request, boolean update)
+            throws IOException, InterruptedException {
+        String body = mapper.writeValueAsString(Map.of(
+            "name", value(request, "name"),
+            "type", value(request, "type"),
+            "currency", value(request, "currency"),
+            "status", value(request, "status"),
+            "color", value(request, "color")));
+        String path = update ? "/api/v1/companies/" + value(request, "id") : "/api/v1/companies";
+        HttpRequest.Builder builder = HttpRequest.newBuilder(URI.create(backendUrl + path))
+            .timeout(Duration.ofSeconds(5)).header("Content-Type", "application/json");
+        HttpRequest backendRequest = (update ? builder.PUT(HttpRequest.BodyPublishers.ofString(body))
+            : builder.POST(HttpRequest.BodyPublishers.ofString(body))).build();
+        return client.send(backendRequest, HttpResponse.BodyHandlers.ofString());
+        }
 
     private String value(HttpServletRequest request, String name) {
         String value = request.getParameter(name);

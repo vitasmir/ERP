@@ -6,7 +6,9 @@ import java.util.UUID;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
@@ -45,6 +47,29 @@ public class CompanyController {
         }
         return CompanyResponse.from(companies.save(Company.create(name, request.type().trim(), currency, status,
             validColor(request.color(), "#D9ED62"))));
+    }
+
+    @PutMapping("/{id}")
+    public CompanyResponse update(@PathVariable UUID id, @RequestBody CompanyRequest request) {
+        if (request == null || blank(request.name()) || blank(request.type()) || blank(request.currency())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Company name, type, and currency are required.");
+        }
+        Company company = companies.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Company not found."));
+        String name = request.name().trim();
+        if (companies.existsByNameIgnoreCaseAndIdNot(name, id)) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "A company with this name already exists.");
+        }
+        String currency = request.currency().trim().toUpperCase(Locale.ROOT);
+        if (!currency.matches("[A-Z]{3}")) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Currency must be a three-letter code.");
+        }
+        String status = blank(request.status()) ? "ACTIVE" : request.status().trim().toUpperCase(Locale.ROOT);
+        if (!status.equals("ACTIVE") && !status.equals("INACTIVE")) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Unknown company status.");
+        }
+        company.update(name, request.type().trim(), currency, status, validColor(request.color(), "#D9ED62"));
+        return CompanyResponse.from(companies.save(company));
     }
 
     private boolean blank(String value) { return value == null || value.isBlank(); }

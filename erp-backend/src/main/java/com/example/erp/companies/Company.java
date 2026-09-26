@@ -47,4 +47,12 @@ public class Company {
     public String getCurrency() { return currency; }
     public String getStatus() { return status; }
     public String getColor() { return color; }
+
+    public void update(String name, String type, String currency, String status, String color) {
+        this.name = name;
+        this.type = type;
+        this.currency = currency;
+        this.status = status;
+        this.color = color;
+    }
 }

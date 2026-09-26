@@ -50,28 +50,26 @@
     <% } %>
     <section id="employees" class="hr-section">
       <div class="section-head"><div><span class="eyebrow">ZAMĚSTNANCI</span><h2>Organizace a nástupy</h2></div><span class="employee-count"><%= overview == null ? 0 : overview.employees().size() %> zaměstnanci</span></div>
-      <div class="employee-list">
+      <div class="employee-table-wrap">
+        <table class="employee-table">
+          <thead><tr><th>STAV</th><th>ZAMĚSTNANEC</th><th>PRACOVNÍ ROLE</th><th>TÝM</th><th>NÁSTUP</th><th>AKTIVACE</th><th>DOSTUPNOST</th><th>ÚČET</th></tr></thead>
+          <tbody>
         <% if (overview != null) for (EmployeeView employee : overview.employees()) {
              String initials = employee.fullName().chars().filter(character -> character == ' ').count() > 0
                  ? employee.fullName().substring(0, 1) + employee.fullName().substring(employee.fullName().lastIndexOf(' ') + 1, employee.fullName().lastIndexOf(' ') + 2)
                  : employee.fullName().substring(0, Math.min(2, employee.fullName().length())); %>
-        <article class="employee-card">
-          <div class="employee-main">
-            <span class="employee-avatar"><%= escapeHtml(initials.toUpperCase()) %></span>
-            <div>
-              <span class="status-chip status-<%= escapeHtml(employee.status().toLowerCase()) %>"><%= employee.status().equals("ONBOARDING") ? "NÁSTUP" : employee.status().equals("ACTIVE") ? "AKTIVNÍ" : "NEAKTIVNÍ" %></span>
-              <h3><%= escapeHtml(employee.fullName()) %></h3>
-              <p><%= escapeHtml(employee.jobTitle()) %></p>
-            </div>
-          </div>
-          <dl><div><dt>Tým</dt><dd><%= escapeHtml(employee.teamName()) %></dd></div><div><dt>Nástup</dt><dd><%= escapeHtml(employee.employmentStartDate()) %></dd></div></dl>
-          <div class="workforce-actions">
-            <% if (edit) { %><form method="post"><input type="hidden" name="id" value="<%= employee.id() %>"><input type="hidden" name="action" value="<%= "ACTIVE".equals(employee.status()) ? "deactivate" : "activate" %>"><button class="secondary" type="submit"><%= "ACTIVE".equals(employee.status()) ? "Ukončit pracovní poměr" : "Aktivovat nástup" %></button></form><% } %>
-            <a href="hr?employeeId=<%= employee.id() %>#availability">Dostupnost a kvalifikace</a>
-            <% if (admin) { if (employee.hasUserAccount()) { %><a href="users">Účet v Uživatelích</a><% } else { %><a href="users?employeeId=<%= employee.id() %>">Vytvořit účet</a><% } } %>
-          </div>
+        <tr>
+          <td><span class="status-chip status-<%= escapeHtml(employee.status().toLowerCase()) %>"><%= employee.status().equals("ONBOARDING") ? "NÁSTUP" : employee.status().equals("ACTIVE") ? "AKTIVNÍ" : "NEAKTIVNÍ" %></span></td>
+          <td><div class="employee-main"><span class="employee-avatar"><%= escapeHtml(initials.toUpperCase()) %></span><strong><%= escapeHtml(employee.fullName()) %></strong></div></td>
+          <td><%= escapeHtml(employee.jobTitle()) %></td>
+          <td><%= escapeHtml(employee.teamName()) %></td>
+          <td><%= escapeHtml(employee.employmentStartDate()) %></td>
+          <td class="employee-action-cell"><% if (edit) { %><form method="post"><input type="hidden" name="id" value="<%= employee.id() %>"><input type="hidden" name="action" value="<%= "ACTIVE".equals(employee.status()) ? "deactivate" : "activate" %>"><button class="secondary" type="submit"><%= "ACTIVE".equals(employee.status()) ? "Ukončit pracovní poměr" : "Aktivovat nástup" %></button></form><% } %></td>
+          <td class="employee-action-cell"><a href="hr?employeeId=<%= employee.id() %>#availability">Dostupnost a kvalifikace</a></td>
+          <td class="employee-action-cell"><% if (admin) { if (employee.hasUserAccount()) { %><a href="users">Účet v Uživatelích</a><% } else { %><a href="users?employeeId=<%= employee.id() %>">Vytvořit účet</a><% } } %></td>
+        </tr>
           <% if (edit) { %>
-          <details class="workforce-edit"><summary>Upravit zaměstnance</summary>
+        <tr class="employee-edit-row"><td colspan="8"><details class="workforce-edit"><summary>Upravit zaměstnance</summary>
             <form method="post" class="workforce-form">
               <input type="hidden" name="action" value="update"><input type="hidden" name="id" value="<%= employee.id() %>">
               <label>Jméno a příjmení<input name="fullName" maxlength="200" value="<%= escapeHtml(employee.fullName()) %>" required></label>
@@ -80,10 +78,11 @@
               <label>Nástup<input type="date" name="employmentStartDate" value="<%= escapeHtml(employee.employmentStartDate()) %>" required></label>
               <button type="submit" class="secondary">Uložit profil</button>
             </form>
-          </details>
+          </details></td></tr>
           <% } %>
-        </article>
         <% } %>
+          </tbody>
+        </table>
       </div>
     </section>
     <% if (availability != null) { %>

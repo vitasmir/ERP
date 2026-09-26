@@ -2,21 +2,21 @@ package com.example.erp.accounting;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
-import java.util.UUID;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 
-import jakarta.persistence.Column;
 import jakarta.persistence.CollectionTable;
+import jakarta.persistence.Column;
 import jakarta.persistence.ElementCollection;
-import jakarta.persistence.JoinColumn;
-import jakarta.persistence.OrderColumn;
-import jakarta.persistence.Version;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.OrderColumn;
 import jakarta.persistence.Table;
+import jakarta.persistence.Version;
 
 @Entity
 @Table(name = "account_invoices")
@@ -33,7 +33,7 @@ public class AccountInvoice {
     @ElementCollection
     @CollectionTable(name = "invoice_lines", joinColumns = @JoinColumn(name = "invoice_id"))
     @OrderColumn(name = "line_index")
-    private List<InvoiceLine> lines = new ArrayList<>();
+    private final List<InvoiceLine> lines = new ArrayList<>();
 
     @Column(name = "invoice_number")
     private String invoiceNumber;
@@ -94,6 +94,7 @@ public class AccountInvoice {
         this.lines.addAll(items);
         this.totalAmount = total;
     }
+
     public String getInvoiceNumber() { return invoiceNumber; }
     public String getPartnerName() { return partnerName; }
     public LocalDate getIssueDate() { return issueDate; }

@@ -93,7 +93,8 @@ public class HrServlet extends HttpServlet {
             Thread.currentThread().interrupt();
             response.sendRedirect("hr?error=" + URLEncoder.encode("Aktivace nástupu byla přerušena.", StandardCharsets.UTF_8));
         } catch (IOException exception) {
-            response.sendRedirect("hr?error=" + URLEncoder.encode(exception.getMessage(), StandardCharsets.UTF_8));
+            String message = exception.getMessage();
+            response.sendRedirect("hr?error=" + URLEncoder.encode(message == null ? "Uložení zaměstnance selhalo." : message, StandardCharsets.UTF_8));
         }
     }
 

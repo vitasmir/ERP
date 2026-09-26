@@ -19,6 +19,40 @@
       preview.appendChild(image);
     });
   });
+  document.querySelectorAll('.product-image').forEach((thumbnail) => {
+    let popup;
+    const removePopup = () => {
+      popup?.remove();
+      popup = undefined;
+    };
+    const showPopup = () => {
+      removePopup();
+      popup = document.createElement('div');
+      popup.className = 'product-image-popup';
+      popup.setAttribute('role', 'img');
+      popup.setAttribute('aria-label', thumbnail.alt);
+      const fullImage = document.createElement('img');
+      fullImage.src = thumbnail.currentSrc || thumbnail.src;
+      fullImage.alt = thumbnail.alt;
+      popup.appendChild(fullImage);
+      document.body.appendChild(popup);
+      const positionPopup = () => {
+        if (!popup) return;
+        const bounds = thumbnail.getBoundingClientRect();
+        const popupBounds = popup.getBoundingClientRect();
+        const left = Math.max(16, Math.min(
+          bounds.left + (bounds.width - popupBounds.width) / 2,
+          window.innerWidth - popupBounds.width - 16));
+        popup.style.left = `${left}px`;
+        popup.style.top = `${Math.max(16, bounds.top - popupBounds.height - 14)}px`;
+      };
+      fullImage.addEventListener('load', positionPopup, { once: true });
+      if (fullImage.complete) positionPopup();
+    };
+    thumbnail.style.cursor = 'zoom-in';
+    thumbnail.addEventListener('mouseenter', showPopup);
+    thumbnail.addEventListener('mouseleave', removePopup);
+  });
   document.querySelectorAll('.danger-button').forEach((button) => {
     button.style.backgroundColor = '#a8463d';
     button.style.borderColor = '#a8463d';

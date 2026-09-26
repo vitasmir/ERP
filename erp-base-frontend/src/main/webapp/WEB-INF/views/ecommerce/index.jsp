@@ -47,5 +47,5 @@
   {"sku":"PORK-NECK-01","name":"Vepřová krkovice bez kosti","unit":"kg","description":"Čerstvé maso","price":189.90,"categoryId":"60000000-0000-0000-0000-000000000002","active":true}
 ]</textarea><button class="primary" type="submit">Importovat produkty</button></form></section>
   <% } %>
-</main><script src="assets/ecommerce.js"></script>
+</main>
 </body></html>

@@ -5,6 +5,43 @@
   const empty = document.getElementById('empty-products');
   const checkoutButton = document.querySelector('.checkout-button');
 
+  document.querySelectorAll('.shop-product-image, .cart-product-image').forEach((thumbnail) => {
+    let popup;
+    const removePopup = () => {
+      popup?.remove();
+      popup = undefined;
+    };
+    const showPopup = () => {
+      removePopup();
+      popup = document.createElement('div');
+      popup.className = 'product-image-popup';
+      popup.setAttribute('role', 'img');
+      popup.setAttribute('aria-label', thumbnail.alt);
+      const fullImage = document.createElement('img');
+      fullImage.src = thumbnail.currentSrc || thumbnail.src;
+      fullImage.alt = thumbnail.alt;
+      popup.appendChild(fullImage);
+      document.body.appendChild(popup);
+
+      const positionPopup = () => {
+        const bounds = thumbnail.getBoundingClientRect();
+        const popupBounds = popup.getBoundingClientRect();
+        const left = Math.max(16, Math.min(
+          bounds.left + (bounds.width - popupBounds.width) / 2,
+          window.innerWidth - popupBounds.width - 16));
+        const aboveTop = bounds.top - popupBounds.height - 14;
+        popup.style.left = `${left}px`;
+        popup.style.top = `${Math.max(16, aboveTop)}px`;
+      };
+      fullImage.addEventListener('load', positionPopup, { once: true });
+      if (fullImage.complete) positionPopup();
+    };
+    thumbnail.style.cursor = 'zoom-in';
+    thumbnail.addEventListener('mouseenter', showPopup);
+    thumbnail.addEventListener('mouseleave', removePopup);
+  });
+
+        if (!popup) return;
   filters.forEach((filter) => filter.addEventListener('click', () => {
     filters.forEach((item) => item.classList.toggle('active', item === filter));
     const selected = filter.dataset.categoryFilter;

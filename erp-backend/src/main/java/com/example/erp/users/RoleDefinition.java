@@ -31,24 +31,28 @@ public class RoleDefinition {
     @Column(name = "can_manage", nullable = false)
     private boolean canManage;
 
+    @Column(nullable = false, length = 7)
+    private String color;
+
     protected RoleDefinition() { }
 
     public static RoleDefinition create(String name, String initial, String description,
-            boolean canRead, boolean canEdit, boolean canManage) {
+            boolean canRead, boolean canEdit, boolean canManage, String color) {
         RoleDefinition role = new RoleDefinition();
         role.id = UUID.randomUUID();
-        role.update(name, initial, description, canRead, canEdit, canManage);
+        role.update(name, initial, description, canRead, canEdit, canManage, color);
         return role;
     }
 
     public void update(String name, String initial, String description,
-            boolean canRead, boolean canEdit, boolean canManage) {
+            boolean canRead, boolean canEdit, boolean canManage, String color) {
         this.name = name;
         this.initial = initial;
         this.description = description;
         this.canRead = canRead;
         this.canEdit = canEdit;
         this.canManage = canManage;
+        this.color = color;
     }
 
     public UUID getId() { return id; }
@@ -58,4 +62,5 @@ public class RoleDefinition {
     public boolean isCanRead() { return canRead; }
     public boolean isCanEdit() { return canEdit; }
     public boolean isCanManage() { return canManage; }
+    public String getColor() { return color; }
 }

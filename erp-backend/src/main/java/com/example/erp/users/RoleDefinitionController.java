@@ -37,7 +37,7 @@ public class RoleDefinitionController {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Role already exists.");
         }
         return toResponse(roles.save(RoleDefinition.create(data.name(), data.initial(), data.description(),
-                data.canRead(), data.canEdit(), data.canManage())));
+            data.canRead(), data.canEdit(), data.canManage(), data.color())));
     }
 
     @PutMapping("/{id}")
@@ -48,7 +48,7 @@ public class RoleDefinitionController {
         roles.findByNameIgnoreCase(data.name()).filter(existing -> !existing.getId().equals(id)).ifPresent(existing -> {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Role already exists.");
         });
-        role.update(data.name(), data.initial(), data.description(), data.canRead(), data.canEdit(), data.canManage());
+        role.update(data.name(), data.initial(), data.description(), data.canRead(), data.canEdit(), data.canManage(), data.color());
         return toResponse(roles.save(role));
     }
 
@@ -71,22 +71,26 @@ public class RoleDefinitionController {
         }
         return new RoleData(request.name().trim(), initial,
                 isBlank(request.description()) ? "Nová pracovní role v ERP systému." : request.description().trim(),
-                request.canRead(), request.canEdit(), request.canManage());
+            request.canRead(), request.canEdit(), request.canManage(), validColor(request.color(), "#D9ED62"));
     }
 
     private RoleResponse toResponse(RoleDefinition role) {
         return new RoleResponse(role.getId(), role.getName(), role.getInitial(), role.getDescription(),
-                role.isCanRead(), role.isCanEdit(), role.isCanManage(), roles.countByName(role.getName()));
+            role.isCanRead(), role.isCanEdit(), role.isCanManage(), role.getColor(), roles.countByName(role.getName()));
     }
 
     private boolean isBlank(String value) { return value == null || value.isBlank(); }
 
+        private String validColor(String value, String fallback) {
+        return value != null && value.matches("#[0-9A-Fa-f]{6}") ? value.toUpperCase() : fallback;
+        }
+
     public record RoleRequest(String name, String initial, String description,
-            boolean canRead, boolean canEdit, boolean canManage) { }
+            boolean canRead, boolean canEdit, boolean canManage, String color) { }
 
     private record RoleData(String name, String initial, String description,
-            boolean canRead, boolean canEdit, boolean canManage) { }
+            boolean canRead, boolean canEdit, boolean canManage, String color) { }
 
     public record RoleResponse(UUID id, String name, String initial, String description,
-            boolean canRead, boolean canEdit, boolean canManage, long userCount) { }
+            boolean canRead, boolean canEdit, boolean canManage, String color, long userCount) { }
 }

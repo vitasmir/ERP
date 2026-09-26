@@ -46,14 +46,14 @@ public class UserController {
     @ResponseStatus(HttpStatus.CREATED)
     public UserResponse create(@RequestBody UserRequest request) {
         UserData data = validate(request, null);
-        return UserResponse.from(users.save(ErpUser.create(data.employee(), data.fullName(), data.roleName(), data.companyName(), data.status())));
+        return UserResponse.from(users.save(ErpUser.create(data.employee(), data.fullName(), data.roleName(), data.companyName(), data.status(), data.color())));
     }
 
     @PutMapping("/{id}")
     public UserResponse update(@PathVariable UUID id, @RequestBody UserRequest request) {
         UserData data = validate(request, id);
         ErpUser user = findUser(id);
-        user.update(data.employee(), data.fullName(), data.roleName(), data.companyName(), data.status());
+        user.update(data.employee(), data.fullName(), data.roleName(), data.companyName(), data.status(), data.color());
         return UserResponse.from(users.save(user));
     }
 
@@ -84,7 +84,8 @@ public class UserController {
                 : users.existsByEmployee_IdAndIdNot(employee.getId(), currentUserId))) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Employee already has a user account.");
         }
-        return new UserData(employee, request.fullName().trim(), request.roleName().trim(), request.companyName().trim(), status);
+        return new UserData(employee, request.fullName().trim(), request.roleName().trim(), request.companyName().trim(), status,
+            validColor(request.color(), "#DCE9D7"));
     }
 
     private Employee findEmployee(String employeeId) {
@@ -101,16 +102,20 @@ public class UserController {
 
     private boolean isBlank(String value) { return value == null || value.isBlank(); }
 
-    public record UserRequest(String employeeId, String fullName, String roleName, String companyName, String status) { }
+    private String validColor(String value, String fallback) {
+        return value != null && value.matches("#[0-9A-Fa-f]{6}") ? value.toUpperCase() : fallback;
+    }
 
-    private record UserData(Employee employee, String fullName, String roleName, String companyName, UserStatus status) { }
+    public record UserRequest(String employeeId, String fullName, String roleName, String companyName, String status, String color) { }
+
+    private record UserData(Employee employee, String fullName, String roleName, String companyName, UserStatus status, String color) { }
 
     public record UserResponse(UUID id, String fullName, String roleName, String companyName,
-            UserStatus status, String lastAccessAt, UUID employeeId) {
+            UserStatus status, String lastAccessAt, UUID employeeId, String color) {
         static UserResponse from(ErpUser user) {
             return new UserResponse(user.getId(), user.getFullName(), user.getRoleName(), user.getCompanyName(),
                     user.getStatus(), user.getLastAccessAt() == null ? null : user.getLastAccessAt().toString(),
-                    user.getEmployeeId());
+                    user.getEmployeeId(), user.getColor());
         }
     }
 

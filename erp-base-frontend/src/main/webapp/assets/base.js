@@ -2,6 +2,23 @@ document.getElementById('user-search')?.addEventListener('input', (event) => {
   const query = event.target.value.toLowerCase();
   document.querySelectorAll('#user-table tr').forEach((row) => row.classList.toggle('hidden', !row.textContent.toLowerCase().includes(query)));
 });
+const ensureColorPicker = (form, id, defaultColor) => {
+  if (!form || document.getElementById(id)) return document.getElementById(id);
+  const label = document.createElement('label');
+  label.className = 'color-picker-field';
+  label.textContent = 'Barva';
+  const input = document.createElement('input');
+  input.type = 'color';
+  input.name = 'color';
+  input.id = id;
+  input.value = defaultColor;
+  label.appendChild(input);
+  form.insertBefore(label, form.querySelector('.dialog-actions'));
+  return input;
+};
+ensureColorPicker(document.getElementById('role-form'), 'role-color', '#D9ED62');
+ensureColorPicker(document.getElementById('company-form'), 'company-color', '#D9ED62');
+ensureColorPicker(document.getElementById('user-form'), 'user-color', '#DCE9D7');
 const companyModal = document.getElementById('company-modal');
 const closeCompanyDialog = () => {
   companyModal?.classList.remove('open');
@@ -37,6 +54,7 @@ const openUserDialog = (user) => {
   passwordInput.required = !user;
   document.getElementById('user-role-name').value = user?.dataset.roleName || '';
   document.getElementById('user-company-name').value = user?.dataset.companyName || '';
+  document.getElementById('user-color').value = user?.dataset.color || '#DCE9D7';
   document.getElementById('user-status').value = user?.dataset.status || 'ACTIVE';
   document.getElementById('user-dialog-title').textContent = user ? 'Upravit uživatele' : 'Nový uživatel';
   document.getElementById('save-user').textContent = user ? 'Uložit změny' : 'Přidat uživatele';
@@ -76,6 +94,7 @@ const updateRoleForm = (card) => {
   document.getElementById('role-name').value = card?.querySelector('h3')?.textContent || '';
   document.getElementById('role-initial').value = card?.querySelector('.role-mark')?.textContent.trim() || '';
   document.getElementById('role-description').value = card?.querySelector('p')?.textContent || '';
+  document.getElementById('role-color').value = card?.dataset.color || '#D9ED62';
   document.getElementById('permission-read').checked = card?.dataset.canRead === 'true';
   document.getElementById('permission-edit').checked = card?.dataset.canEdit === 'true';
   document.getElementById('permission-manage').checked = card?.dataset.canManage === 'true';
@@ -114,6 +133,7 @@ const openRoleDialog = (edit = false) => {
     document.getElementById('role-dialog-title').textContent = 'Nová role';
     document.getElementById('role-action').value = 'create';
     document.getElementById('role-id').value = '';
+    document.getElementById('role-color').value = '#D9ED62';
     document.getElementById('permission-read').checked = true;
     document.getElementById('permission-edit').checked = false;
     document.getElementById('permission-manage').checked = false;
@@ -221,6 +241,21 @@ document.getElementById('drawer-action')?.addEventListener('click', () => {
     window.alert(`Modul ${document.getElementById('drawer-title').textContent} bude napojen v další iteraci.`);
   }
 });
+const browserBackend = `${window.location.protocol}//${window.location.hostname}:8080/api/v1`;
+fetch(`${browserBackend}/companies`).then((response) => response.ok ? response.json() : []).then((companies) => {
+  companies.forEach((company) => {
+    document.querySelectorAll('.company-grid article').forEach((card) => {
+      if (card.querySelector('h3')?.textContent.trim() === company.name) card.style.setProperty('--card-color', company.color);
+    });
+  });
+}).catch(() => {});
+fetch(`${browserBackend}/users`).then((response) => response.ok ? response.json() : []).then((users) => {
+  users.forEach((user) => {
+    const row = document.querySelector(`tr[data-user-id="${user.id}"]`);
+    row?.style.setProperty('--card-color', user.color);
+    if (row) row.dataset.color = user.color;
+  });
+}).catch(() => {});
 const moduleSearch = document.getElementById('module-search');
 const moduleFilters = document.querySelectorAll('.module-filter');
 const filterModules = () => {

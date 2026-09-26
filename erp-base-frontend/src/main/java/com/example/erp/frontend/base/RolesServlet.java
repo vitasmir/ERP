@@ -61,7 +61,8 @@ public class RolesServlet extends HttpServlet {
                     "description", request.getParameter("description"),
                     "canRead", request.getParameter("canRead") != null,
                     "canEdit", request.getParameter("canEdit") != null,
-                    "canManage", request.getParameter("canManage") != null));
+                    "canManage", request.getParameter("canManage") != null,
+                    "color", request.getParameter("color")));
             HttpRequest.Builder builder = HttpRequest.newBuilder(roleUri(action, request.getParameter("id")))
                     .header("Content-Type", "application/json");
             HttpRequest backendRequest = "update".equals(action)
@@ -97,5 +98,5 @@ public class RolesServlet extends HttpServlet {
     }
 
     public record RoleView(UUID id, String name, String initial, String description,
-            boolean canRead, boolean canEdit, boolean canManage, long userCount) { }
+            boolean canRead, boolean canEdit, boolean canManage, String color, long userCount) { }
 }

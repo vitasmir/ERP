@@ -59,7 +59,8 @@ public class CompaniesServlet extends HttpServlet {
                     "name", value(request, "name"),
                     "type", value(request, "type"),
                     "currency", value(request, "currency"),
-                    "status", value(request, "status")));
+                    "status", value(request, "status"),
+                    "color", value(request, "color")));
             HttpRequest backendRequest = HttpRequest.newBuilder(URI.create(backendUrl + "/api/v1/companies"))
                     .timeout(Duration.ofSeconds(5)).header("Content-Type", "application/json")
                     .POST(HttpRequest.BodyPublishers.ofString(body)).build();
@@ -85,7 +86,7 @@ public class CompaniesServlet extends HttpServlet {
 
     private String encode(String value) { return URLEncoder.encode(value, StandardCharsets.UTF_8); }
 
-    public record CompanyView(UUID id, String name, String type, String currency, String status) {
+    public record CompanyView(UUID id, String name, String type, String currency, String status, String color) {
         public String initial() { return name.substring(0, 1).toUpperCase(Locale.ROOT); }
         public String statusLabel() { return "ACTIVE".equals(status) ? "aktivní" : "neaktivní"; }
         public String statusClass() { return status.toLowerCase(Locale.ROOT); }

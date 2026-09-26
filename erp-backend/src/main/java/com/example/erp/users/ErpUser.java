@@ -46,9 +46,12 @@ public class ErpUser {
     @Column(name = "last_access_at")
     private LocalDateTime lastAccessAt;
 
+    @Column(nullable = false, length = 7)
+    private String color;
+
     protected ErpUser() { }
 
-    public static ErpUser create(Employee employee, String fullName, String roleName, String companyName, UserStatus status) {
+    public static ErpUser create(Employee employee, String fullName, String roleName, String companyName, UserStatus status, String color) {
         ErpUser user = new ErpUser();
         user.id = UUID.randomUUID();
         user.employee = employee;
@@ -56,15 +59,17 @@ public class ErpUser {
         user.roleName = roleName;
         user.companyName = companyName;
         user.status = status;
+        user.color = color;
         return user;
     }
 
-    public void update(Employee employee, String fullName, String roleName, String companyName, UserStatus status) {
+    public void update(Employee employee, String fullName, String roleName, String companyName, UserStatus status, String color) {
         this.employee = employee;
         this.fullName = fullName;
         this.roleName = roleName;
         this.companyName = companyName;
         this.status = status;
+        this.color = color;
     }
 
     public UUID getId() { return id; }
@@ -76,6 +81,7 @@ public class ErpUser {
     public String getPasswordHash() { return passwordHash; }
     public UserStatus getStatus() { return status; }
     public LocalDateTime getLastAccessAt() { return lastAccessAt; }
+    public String getColor() { return color; }
 
     public void recordLogin() { lastAccessAt = LocalDateTime.now(); }
 }

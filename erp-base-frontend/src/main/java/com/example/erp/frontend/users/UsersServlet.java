@@ -93,7 +93,8 @@ public class UsersServlet extends HttpServlet {
                 "companyName", request.getParameter("companyName"),
                 "username", request.getParameter("username"),
                 "password", request.getParameter("password"),
-                "status", request.getParameter("status")));
+                "status", request.getParameter("status"),
+                "color", request.getParameter("color")));
         HttpRequest.Builder builder = HttpRequest.newBuilder(userUri(action, request.getParameter("id")))
                 .header("Content-Type", "application/json");
         HttpRequest backendRequest = "update".equals(action)
@@ -128,7 +129,7 @@ public class UsersServlet extends HttpServlet {
     private String encode(String value) { return URLEncoder.encode(value, StandardCharsets.UTF_8); }
 
         public record UserView(UUID id, String fullName, String roleName, String companyName,
-            String status, String lastAccessAt, UUID employeeId, String username) {
+            String status, String lastAccessAt, UUID employeeId, String username, String color) {
         public String initials() {
             String[] words = fullName.trim().split("\\s+");
             return words.length > 1

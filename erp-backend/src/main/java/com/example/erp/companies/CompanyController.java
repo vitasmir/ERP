@@ -43,17 +43,22 @@ public class CompanyController {
         if (!status.equals("ACTIVE") && !status.equals("INACTIVE")) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Unknown company status.");
         }
-        return CompanyResponse.from(companies.save(Company.create(name, request.type().trim(), currency, status)));
+        return CompanyResponse.from(companies.save(Company.create(name, request.type().trim(), currency, status,
+            validColor(request.color(), "#D9ED62"))));
     }
 
     private boolean blank(String value) { return value == null || value.isBlank(); }
 
-    public record CompanyRequest(String name, String type, String currency, String status) { }
+    private String validColor(String value, String fallback) {
+        return value != null && value.matches("#[0-9A-Fa-f]{6}") ? value.toUpperCase(Locale.ROOT) : fallback;
+    }
 
-    public record CompanyResponse(UUID id, String name, String type, String currency, String status) {
+    public record CompanyRequest(String name, String type, String currency, String status, String color) { }
+
+    public record CompanyResponse(UUID id, String name, String type, String currency, String status, String color) {
         static CompanyResponse from(Company company) {
             return new CompanyResponse(company.getId(), company.getName(), company.getType(),
-                    company.getCurrency(), company.getStatus());
+                    company.getCurrency(), company.getStatus(), company.getColor());
         }
     }
 }

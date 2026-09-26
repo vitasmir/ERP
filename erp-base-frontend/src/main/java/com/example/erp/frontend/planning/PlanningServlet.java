@@ -8,6 +8,7 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
+import java.util.Map;
 import java.util.UUID;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -47,9 +48,20 @@ public class PlanningServlet extends HttpServlet {
     protected void doPost(HttpServletRequest request, HttpServletResponse response) throws IOException {
         String id = request.getParameter("id");
         try {
-            UUID.fromString(id);
-            HttpRequest backendRequest = HttpRequest.newBuilder(URI.create(backendUrl + "/api/v1/planning/shifts/" + id + "/publish"))
-                    .method("PATCH", HttpRequest.BodyPublishers.noBody()).build();
+            HttpRequest backendRequest;
+            if ("create".equals(request.getParameter("action"))) {
+                String body = mapper.writeValueAsString(Map.of("employeeName", request.getParameter("employeeName"), "roleName", request.getParameter("roleName"),
+                        "department", request.getParameter("department"), "startAt", request.getParameter("startAt"), "endAt", request.getParameter("endAt")));
+                backendRequest = jsonRequest(backendUrl + "/api/v1/planning/shifts", "POST", body);
+            } else if ("assign".equals(request.getParameter("action"))) {
+                UUID.fromString(id);
+                String body = mapper.writeValueAsString(Map.of("employeeName", request.getParameter("employeeName")));
+                backendRequest = jsonRequest(backendUrl + "/api/v1/planning/shifts/" + id + "/assign", "PATCH", body);
+            } else {
+                UUID.fromString(id);
+                backendRequest = HttpRequest.newBuilder(URI.create(backendUrl + "/api/v1/planning/shifts/" + id + "/publish"))
+                        .method("PATCH", HttpRequest.BodyPublishers.noBody()).build();
+            }
             HttpResponse<Void> backendResponse = client.send(backendRequest, HttpResponse.BodyHandlers.discarding());
             String message = backendResponse.statusCode() == HttpServletResponse.SC_OK
                     ? "Směna byla publikována." : "Publikaci směny backend odmítl.";
@@ -60,5 +72,10 @@ public class PlanningServlet extends HttpServlet {
             Thread.currentThread().interrupt();
             response.sendRedirect("planning?error=" + URLEncoder.encode("Publikace směny byla přerušena.", StandardCharsets.UTF_8));
         }
+    }
+
+    private HttpRequest jsonRequest(String url, String method, String body) {
+        return HttpRequest.newBuilder(URI.create(url)).header("Content-Type", "application/json")
+                .method(method, HttpRequest.BodyPublishers.ofString(body)).build();
     }
 }

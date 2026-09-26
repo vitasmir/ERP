@@ -33,6 +33,15 @@ public class Employee {
 
     protected Employee() { }
 
+    public Employee(UUID id, String fullName, String teamName, String jobTitle, LocalDate employmentStartDate) {
+        this.id = id;
+        this.fullName = fullName;
+        this.teamName = teamName;
+        this.jobTitle = jobTitle;
+        this.employmentStartDate = employmentStartDate;
+        this.status = EmployeeStatus.ONBOARDING;
+    }
+
     public UUID getId() { return id; }
     public String getFullName() { return fullName; }
     public String getTeamName() { return teamName; }
@@ -41,4 +50,11 @@ public class Employee {
     public EmployeeStatus getStatus() { return status; }
 
     public void activate() { status = EmployeeStatus.ACTIVE; }
+    public void update(String fullName, String teamName, String jobTitle, LocalDate employmentStartDate) {
+        this.fullName = fullName;
+        this.teamName = teamName;
+        this.jobTitle = jobTitle;
+        this.employmentStartDate = employmentStartDate;
+    }
+    public void deactivate() { status = EmployeeStatus.INACTIVE; }
 }

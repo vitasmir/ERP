@@ -8,9 +8,15 @@ import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
+
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotBlank;
 
 @RestController
 @RequestMapping("/api/v1/website")
@@ -29,6 +35,20 @@ public class WebsiteController {
                         .mapToInt(PageResponse::monthlyVisits).sum(), items);
     }
 
+    @PostMapping("/pages")
+    public PageResponse create(@Valid @RequestBody PageRequest request) {
+        return PageResponse.from(pages.save(new WebsitePage(UUID.randomUUID(), request.title(), request.slug(),
+                request.contentType(), request.ownerName(), request.content())));
+    }
+
+    @PutMapping("/pages/{id}")
+    public PageResponse update(@PathVariable UUID id, @Valid @RequestBody PageRequest request) {
+        WebsitePage page = pages.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Website page was not found."));
+        page.update(request.title(), request.slug(), request.contentType(), request.ownerName(), request.content());
+        return PageResponse.from(pages.save(page));
+    }
+
     @PatchMapping("/pages/{id}/publish")
     public PageResponse publish(@PathVariable UUID id) {
         WebsitePage page = pages.findById(id)
@@ -41,11 +61,14 @@ public class WebsiteController {
             int monthlyVisits, List<PageResponse> pages) { }
 
     public record PageResponse(UUID id, String title, String slug, String contentType, String ownerName,
-            int monthlyVisits, boolean hasContactForm, WebsitePageStatus status, LocalDateTime updatedAt) {
+            int monthlyVisits, boolean hasContactForm, WebsitePageStatus status, LocalDateTime updatedAt, String content) {
         static PageResponse from(WebsitePage page) {
             return new PageResponse(page.getId(), page.getTitle(), page.getSlug(), page.getContentType(),
                     page.getOwnerName(), page.getMonthlyVisits(), page.hasContactForm(), page.getStatus(),
-                    page.getUpdatedAt());
+                    page.getUpdatedAt(), page.getContent());
         }
     }
+
+    public record PageRequest(@NotBlank String title, @NotBlank String slug, @NotBlank String contentType,
+            @NotBlank String ownerName, String content) { }
 }

@@ -38,6 +38,20 @@ public class MarketingCampaign {
 
     protected MarketingCampaign() { }
 
+    public MarketingCampaign(UUID id, String name, String audience, String channel, String ownerName,
+            BigDecimal budget, LocalDate plannedStartDate) {
+        this.id = id;
+        this.name = name;
+        this.audience = audience;
+        this.channel = channel;
+        this.ownerName = ownerName;
+        this.budget = budget;
+        this.spent = BigDecimal.ZERO;
+        this.leadCount = 0;
+        this.status = CampaignStatus.PLANNED;
+        this.plannedStartDate = plannedStartDate;
+    }
+
     public UUID getId() { return id; }
     public String getName() { return name; }
     public String getAudience() { return audience; }
@@ -50,4 +64,14 @@ public class MarketingCampaign {
     public LocalDate getPlannedStartDate() { return plannedStartDate; }
 
     public void launch() { status = CampaignStatus.RUNNING; }
+    public void update(String name, String audience, String channel, String ownerName, BigDecimal budget,
+            LocalDate plannedStartDate) {
+        this.name = name;
+        this.audience = audience;
+        this.channel = channel;
+        this.ownerName = ownerName;
+        this.budget = budget;
+        this.plannedStartDate = plannedStartDate;
+    }
+    public void complete() { status = CampaignStatus.COMPLETED; }
 }

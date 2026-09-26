@@ -40,6 +40,18 @@ public class AccountInvoice {
 
     protected AccountInvoice() { }
 
+    public AccountInvoice(UUID id, String invoiceNumber, String partnerName, LocalDate issueDate,
+            LocalDate dueDate, BigDecimal totalAmount) {
+        this.id = id;
+        this.invoiceNumber = invoiceNumber;
+        this.partnerName = partnerName;
+        this.issueDate = issueDate;
+        this.dueDate = dueDate;
+        this.totalAmount = totalAmount;
+        this.paidAmount = BigDecimal.ZERO;
+        this.status = InvoiceStatus.OPEN;
+    }
+
     public UUID getId() { return id; }
     public String getInvoiceNumber() { return invoiceNumber; }
     public String getPartnerName() { return partnerName; }
@@ -52,5 +64,13 @@ public class AccountInvoice {
     public void markPaid() {
         this.paidAmount = totalAmount;
         this.status = InvoiceStatus.PAID;
+    }
+
+    public void registerPayment(BigDecimal amount) {
+        if (amount == null || amount.signum() <= 0 || amount.compareTo(totalAmount.subtract(paidAmount)) > 0) {
+            throw new IllegalArgumentException("Payment must be positive and not exceed the outstanding amount.");
+        }
+        paidAmount = paidAmount.add(amount);
+        status = paidAmount.compareTo(totalAmount) == 0 ? InvoiceStatus.PAID : InvoiceStatus.OPEN;
     }
 }

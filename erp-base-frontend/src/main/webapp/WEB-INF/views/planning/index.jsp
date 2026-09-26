@@ -24,6 +24,18 @@
       <article><span>Neobsazené sloty</span><strong><%= overview == null ? "-" : overview.openShiftCount() %></strong><small>čekají na přiřazení</small></article>
       <article><span>Kapacita týmu</span><strong><%= overview == null ? "-" : overview.plannedHours() %> h</strong><small><%= overview == null ? "-" : overview.draftShiftCount() %> směn v návrhu</small></article>
     </section>
+    <section class="workflow-form">
+      <h2>Nová směna</h2>
+      <form method="post">
+        <input type="hidden" name="action" value="create">
+        <input name="employeeName" placeholder="Zaměstnanec (volitelné)">
+        <input name="roleName" placeholder="Role" required>
+        <input name="department" placeholder="Oddělení" required>
+        <input type="datetime-local" name="startAt" required>
+        <input type="datetime-local" name="endAt" required>
+        <button class="primary" type="submit">Vytvořit směnu</button>
+      </form>
+    </section>
     <section id="schedule" class="planning-section">
       <div class="section-head"><div><span class="eyebrow">TÝDENNÍ PLÁN</span><h2>Směny a kapacity</h2></div><span class="shift-count"><%= overview == null ? 0 : overview.shifts().size() %> sloty</span></div>
       <div class="shift-list">

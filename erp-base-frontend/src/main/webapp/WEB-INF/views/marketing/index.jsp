@@ -24,6 +24,23 @@
       <article><span>Plánované kampaně</span><strong><%= overview == null ? "-" : overview.plannedCampaignCount() %></strong><small>připravené ke spuštění</small></article>
       <article><span>Získané leady</span><strong><%= overview == null ? "-" : overview.totalLeadCount() %></strong><small>vyčerpáno <%= overview == null ? "-" : overview.totalSpent().toPlainString() %> Kč</small></article>
     </section>
+    <section class="workflow-form">
+      <h2>Nová kampaň</h2>
+      <form method="post">
+        <input type="hidden" name="action" value="create">
+        <input name="name" placeholder="Název kampaně" required>
+        <input name="audience" placeholder="Segment" required>
+        <select name="channel">
+          <option value="EMAIL">E-mail</option>
+          <option value="SOCIAL">Sociální sítě</option>
+          <option value="EVENT">Událost</option>
+        </select>
+        <input name="ownerName" placeholder="Vlastník" required>
+        <input type="number" step="0.01" name="budget" placeholder="Rozpočet Kč" required>
+        <input type="date" name="plannedStartDate" required>
+        <button class="primary" type="submit">Založit kampaň</button>
+      </form>
+    </section>
     <section id="campaigns" class="marketing-section">
       <div class="section-head"><div><span class="eyebrow">KAMPANĚ A SEGMENTY</span><h2>Marketingový plán</h2></div><span class="campaign-count"><%= overview == null ? 0 : overview.campaigns().size() %> kampaně</span></div>
       <div class="campaign-list">

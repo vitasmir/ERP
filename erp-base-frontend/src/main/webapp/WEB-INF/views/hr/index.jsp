@@ -24,12 +24,33 @@
       <article><span>Nástupy</span><strong><%= overview == null ? "-" : overview.onboardingCount() %></strong><small>čekají na aktivaci</small></article>
       <article><span>Týmy</span><strong><%= overview == null ? "-" : overview.teamCount() %></strong><small>napříč organizací</small></article>
     </section>
+    <section class="workflow-form">
+      <h2>Nový zaměstnanec</h2>
+      <form method="post">
+        <input type="hidden" name="action" value="create">
+        <input name="fullName" placeholder="Jméno a příjmení" required>
+        <input name="teamName" placeholder="Tým" required>
+        <input name="jobTitle" placeholder="Pracovní role" required>
+        <input type="date" name="employmentStartDate" required>
+        <button class="primary" type="submit">Založit zaměstnance</button>
+      </form>
+    </section>
     <section id="employees" class="hr-section">
       <div class="section-head"><div><span class="eyebrow">ZAMĚSTNANCI</span><h2>Organizace a nástupy</h2></div><span class="employee-count"><%= overview == null ? 0 : overview.employees().size() %> zaměstnanci</span></div>
       <div class="employee-list">
-        <% if (overview != null) for (EmployeeView employee : overview.employees()) { String initials = employee.fullName().chars().filter(character -> character == ' ').count() > 0 ? employee.fullName().substring(0, 1) + employee.fullName().substring(employee.fullName().lastIndexOf(' ') + 1, employee.fullName().lastIndexOf(' ') + 2) : employee.fullName().substring(0, Math.min(2, employee.fullName().length())); %>
+        <% if (overview != null) for (EmployeeView employee : overview.employees()) {
+             String initials = employee.fullName().chars().filter(character -> character == ' ').count() > 0
+                 ? employee.fullName().substring(0, 1) + employee.fullName().substring(employee.fullName().lastIndexOf(' ') + 1, employee.fullName().lastIndexOf(' ') + 2)
+                 : employee.fullName().substring(0, Math.min(2, employee.fullName().length())); %>
         <article class="employee-card">
-          <div class="employee-main"><span class="employee-avatar"><%= initials.toUpperCase() %></span><div><span class="status-chip status-<%= employee.status().toLowerCase() %>"><%= employee.status().equals("ONBOARDING") ? "NÁSTUP" : employee.status().equals("ACTIVE") ? "AKTIVNÍ" : "NEAKTIVNÍ" %></span><h3><%= employee.fullName() %></h3><p><%= employee.jobTitle() %></p></div></div>
+          <div class="employee-main">
+            <span class="employee-avatar"><%= initials.toUpperCase() %></span>
+            <div>
+              <span class="status-chip status-<%= employee.status().toLowerCase() %>"><%= employee.status().equals("ONBOARDING") ? "NÁSTUP" : employee.status().equals("ACTIVE") ? "AKTIVNÍ" : "NEAKTIVNÍ" %></span>
+              <h3><%= employee.fullName() %></h3>
+              <p><%= employee.jobTitle() %></p>
+            </div>
+          </div>
           <dl><div><dt>Tým</dt><dd><%= employee.teamName() %></dd></div><div><dt>Nástup</dt><dd><%= employee.employmentStartDate() %></dd></div></dl>
           <% if ("ONBOARDING".equals(employee.status())) { %><form method="post"><input type="hidden" name="id" value="<%= employee.id() %>"><button class="secondary" type="submit">Aktivovat nástup</button></form><% } else { %><span class="active-label">Profil je aktivní</span><% } %>
           <% if (employee.hasUserAccount()) { %><a href="users">Účet v Uživatelích</a><% } else { %><a href="users?employeeId=<%= employee.id() %>">Vytvořit účet</a><% } %>

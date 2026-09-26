@@ -8,6 +8,7 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
+import java.util.Map;
 import java.util.UUID;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -47,9 +48,18 @@ public class MarketingServlet extends HttpServlet {
     protected void doPost(HttpServletRequest request, HttpServletResponse response) throws IOException {
         String id = request.getParameter("id");
         try {
-            UUID.fromString(id);
-            HttpRequest backendRequest = HttpRequest.newBuilder(URI.create(backendUrl + "/api/v1/marketing/campaigns/" + id + "/launch"))
-                    .method("PATCH", HttpRequest.BodyPublishers.noBody()).build();
+            HttpRequest backendRequest;
+            if ("create".equals(request.getParameter("action"))) {
+                String body = mapper.writeValueAsString(Map.of("name", request.getParameter("name"), "audience", request.getParameter("audience"),
+                        "channel", request.getParameter("channel"), "ownerName", request.getParameter("ownerName"),
+                        "budget", request.getParameter("budget"), "plannedStartDate", request.getParameter("plannedStartDate")));
+                backendRequest = jsonRequest(backendUrl + "/api/v1/marketing/campaigns", "POST", body);
+            } else {
+                UUID.fromString(id);
+                String operation = "complete".equals(request.getParameter("action")) ? "complete" : "launch";
+                backendRequest = HttpRequest.newBuilder(URI.create(backendUrl + "/api/v1/marketing/campaigns/" + id + "/" + operation))
+                        .method("PATCH", HttpRequest.BodyPublishers.noBody()).build();
+            }
             HttpResponse<Void> backendResponse = client.send(backendRequest, HttpResponse.BodyHandlers.discarding());
             String message = backendResponse.statusCode() == HttpServletResponse.SC_OK
                     ? "Kampaň byla spuštěna." : "Spuštění kampaně backend odmítl.";
@@ -60,5 +70,10 @@ public class MarketingServlet extends HttpServlet {
             Thread.currentThread().interrupt();
             response.sendRedirect("marketing?error=" + URLEncoder.encode("Spuštění kampaně bylo přerušeno.", StandardCharsets.UTF_8));
         }
+    }
+
+    private HttpRequest jsonRequest(String url, String method, String body) {
+        return HttpRequest.newBuilder(URI.create(url)).header("Content-Type", "application/json")
+                .method(method, HttpRequest.BodyPublishers.ofString(body)).build();
     }
 }

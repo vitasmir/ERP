@@ -35,6 +35,17 @@ public class PlanningShift {
 
     protected PlanningShift() { }
 
+    public PlanningShift(UUID id, String employeeName, String roleName, String department,
+            LocalDateTime startAt, LocalDateTime endAt) {
+        this.id = id;
+        this.employeeName = employeeName;
+        this.roleName = roleName;
+        this.department = department;
+        this.startAt = startAt;
+        this.endAt = endAt;
+        this.status = PlanningShiftStatus.DRAFT;
+    }
+
     public UUID getId() { return id; }
     public String getEmployeeName() { return employeeName; }
     public String getRoleName() { return roleName; }
@@ -44,4 +55,13 @@ public class PlanningShift {
     public PlanningShiftStatus getStatus() { return status; }
 
     public void publish() { status = PlanningShiftStatus.PUBLISHED; }
+    public void update(String employeeName, String roleName, String department, LocalDateTime startAt,
+            LocalDateTime endAt) {
+        this.employeeName = employeeName;
+        this.roleName = roleName;
+        this.department = department;
+        this.startAt = startAt;
+        this.endAt = endAt;
+    }
+    public void assign(String employeeName) { this.employeeName = employeeName; }
 }

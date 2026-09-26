@@ -8,6 +8,7 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
+import java.util.Map;
 import java.util.UUID;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -47,9 +48,17 @@ public class WebsiteServlet extends HttpServlet {
     protected void doPost(HttpServletRequest request, HttpServletResponse response) throws IOException {
         String id = request.getParameter("id");
         try {
-            UUID.fromString(id);
-            HttpRequest backendRequest = HttpRequest.newBuilder(URI.create(backendUrl + "/api/v1/website/pages/" + id + "/publish"))
-                    .method("PATCH", HttpRequest.BodyPublishers.noBody()).build();
+            HttpRequest backendRequest;
+            if ("create".equals(request.getParameter("action"))) {
+                String body = mapper.writeValueAsString(Map.of("title", request.getParameter("title"), "slug", request.getParameter("slug"),
+                        "contentType", request.getParameter("contentType"), "ownerName", request.getParameter("ownerName"),
+                        "content", request.getParameter("content")));
+                backendRequest = jsonRequest(backendUrl + "/api/v1/website/pages", "POST", body);
+            } else {
+                UUID.fromString(id);
+                backendRequest = HttpRequest.newBuilder(URI.create(backendUrl + "/api/v1/website/pages/" + id + "/publish"))
+                        .method("PATCH", HttpRequest.BodyPublishers.noBody()).build();
+            }
             HttpResponse<Void> backendResponse = client.send(backendRequest, HttpResponse.BodyHandlers.discarding());
             String message = backendResponse.statusCode() == HttpServletResponse.SC_OK
                     ? "Stránka byla publikována." : "Publikaci backend odmítl.";
@@ -60,5 +69,10 @@ public class WebsiteServlet extends HttpServlet {
             Thread.currentThread().interrupt();
             response.sendRedirect("website?error=" + URLEncoder.encode("Publikace stránky byla přerušena.", StandardCharsets.UTF_8));
         }
+    }
+
+    private HttpRequest jsonRequest(String url, String method, String body) {
+        return HttpRequest.newBuilder(URI.create(url)).header("Content-Type", "application/json")
+                .method(method, HttpRequest.BodyPublishers.ofString(body)).build();
     }
 }

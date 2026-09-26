@@ -24,6 +24,23 @@
       <article><span>Koncepty k publikaci</span><strong><%= overview == null ? "-" : overview.draftPageCount() %></strong><small>čekají na schválení</small></article>
       <article><span>Návštěvy za měsíc</span><strong><%= overview == null ? "-" : String.format("%,d", overview.monthlyVisits()).replace(',', ' ') %></strong><small><%= overview == null ? "-" : overview.formPageCount() %> stránek s formulářem</small></article>
     </section>
+    <section class="workflow-form">
+      <h2>Nová stránka</h2>
+      <form method="post">
+        <input type="hidden" name="action" value="create">
+        <input name="title" placeholder="Název stránky" required>
+        <input name="slug" placeholder="/url-slug" required>
+        <select name="contentType">
+          <option value="CONTENT">Obsah</option>
+          <option value="LANDING">Úvod</option>
+          <option value="CATALOG">Katalog</option>
+          <option value="CAMPAIGN">Kampaň</option>
+        </select>
+        <input name="ownerName" placeholder="Správce" required>
+        <textarea name="content" placeholder="Obsah stránky"></textarea>
+        <button class="primary" type="submit">Uložit koncept</button>
+      </form>
+    </section>
     <section id="pages" class="website-section">
       <div class="section-head"><div><span class="eyebrow">OBSAH A KATALOG</span><h2>Stránky webu</h2></div><span class="page-count"><%= overview == null ? 0 : overview.pages().size() %> položky</span></div>
       <div class="page-list">

@@ -8,6 +8,7 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
+import java.util.Map;
 import java.util.UUID;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -45,11 +46,23 @@ public class AccountingServlet extends HttpServlet {
     protected void doPost(HttpServletRequest request, HttpServletResponse response) throws IOException {
         String id = request.getParameter("id");
         try {
-            UUID.fromString(id);
-            HttpRequest backendRequest = HttpRequest.newBuilder(URI.create(backendUrl + "/api/v1/accounting/invoices/" + id + "/paid"))
-                    .method("PATCH", HttpRequest.BodyPublishers.noBody()).build();
+            HttpRequest backendRequest;
+            if ("create".equals(request.getParameter("action"))) {
+                String body = mapper.writeValueAsString(Map.of("invoiceNumber", request.getParameter("invoiceNumber"),
+                        "partnerName", request.getParameter("partnerName"), "issueDate", request.getParameter("issueDate"),
+                        "dueDate", request.getParameter("dueDate"), "totalAmount", request.getParameter("totalAmount")));
+                backendRequest = jsonRequest(backendUrl + "/api/v1/accounting/invoices", "POST", body);
+            } else if ("payment".equals(request.getParameter("action"))) {
+                UUID.fromString(id);
+                String body = mapper.writeValueAsString(Map.of("amount", request.getParameter("amount")));
+                backendRequest = jsonRequest(backendUrl + "/api/v1/accounting/invoices/" + id + "/payment", "PATCH", body);
+            } else {
+                UUID.fromString(id);
+                backendRequest = HttpRequest.newBuilder(URI.create(backendUrl + "/api/v1/accounting/invoices/" + id + "/paid"))
+                        .method("PATCH", HttpRequest.BodyPublishers.noBody()).build();
+            }
             HttpResponse<Void> backendResponse = client.send(backendRequest, HttpResponse.BodyHandlers.discarding());
-            String message = backendResponse.statusCode() == HttpServletResponse.SC_OK ? "Faktura byla označena jako uhrazená." : "Změnu stavu backend odmítl.";
+            String message = backendResponse.statusCode() >= 200 && backendResponse.statusCode() < 300 ? "Faktura byla uložena." : "Změnu backend odmítl.";
             response.sendRedirect("accounting?message=" + URLEncoder.encode(message, StandardCharsets.UTF_8));
         } catch (IllegalArgumentException exception) {
             response.sendRedirect("accounting?error=" + URLEncoder.encode("Neplatná faktura.", StandardCharsets.UTF_8));
@@ -57,5 +70,10 @@ public class AccountingServlet extends HttpServlet {
             Thread.currentThread().interrupt();
             response.sendRedirect("accounting?error=" + URLEncoder.encode("Změna stavu byla přerušena.", StandardCharsets.UTF_8));
         }
+    }
+
+    private HttpRequest jsonRequest(String url, String method, String body) {
+        return HttpRequest.newBuilder(URI.create(url)).header("Content-Type", "application/json")
+                .method(method, HttpRequest.BodyPublishers.ofString(body)).build();
     }
 }

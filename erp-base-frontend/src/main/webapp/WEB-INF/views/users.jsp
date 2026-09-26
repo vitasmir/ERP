@@ -4,7 +4,7 @@
 <%@ page import="com.example.erp.frontend.users.UsersServlet.EmployeeOption" %>
 <%@ include file="fragments/base-header.jspf" %>
 <link rel="stylesheet" href="assets/users.css">
-<style>.topbar h1{display:none}</style>
+<style>.topbar .breadcrumb{display:none !important}</style>
 <style>.table-avatar{background:var(--card-color,#dce9d7)}</style>
 <%
 	UserView[] loadedUsers = (UserView[]) request.getAttribute("users");

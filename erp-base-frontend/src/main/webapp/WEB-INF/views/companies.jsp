@@ -3,7 +3,7 @@
 <%@ page import="com.example.erp.frontend.companies.CompaniesServlet.CompanyView" %>
 <%@ include file="fragments/base-header.jspf" %>
 <link rel="stylesheet" href="assets/companies.css">
-<style>.topbar h1{display:none}</style>
+<style>.topbar .breadcrumb{display:none !important}</style>
 <style>.company-logo{background:var(--card-color,#d9ed62)}</style>
 <%
 	CompanyView[] loadedCompanies = (CompanyView[]) request.getAttribute("companies");

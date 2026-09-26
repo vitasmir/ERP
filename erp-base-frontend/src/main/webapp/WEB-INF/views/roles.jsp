@@ -1,7 +1,7 @@
 <%@ page contentType="text/html; charset=UTF-8" pageEncoding="UTF-8" %>
 <%@ include file="fragments/base-header.jspf" %>
 <link rel="stylesheet" href="assets/roles.css?v=20260926-roles2">
-<style>.topbar h1{display:none}</style>
+<style>.topbar .breadcrumb{display:none !important}</style>
 <style>.role-mark.custom{background:var(--card-color,#d9ed62)}</style>
 <div class="role-toolbar"><button class="primary" id="edit-role" type="button">Upravit roli</button></div>
 <section class="section-head"><div><span class="eyebrow">BASE / ACCESS</span><h2>Role a oprávnění</h2><p>Řízení přístupů podle pracovních odpovědností.</p></div><button class="primary" id="add-role" type="button">+ Nová role</button></section><section class="role-grid"><%

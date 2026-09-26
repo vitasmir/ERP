@@ -98,6 +98,7 @@ const openUserDialog = (user) => {
   const usernameInput = document.getElementById('user-username');
   usernameInput.value = user?.dataset.username || '';
   usernameInput.readOnly = Boolean(user);
+  usernameInput.required = !user;
   const passwordInput = document.getElementById('user-password');
   passwordInput.value = '';
   passwordInput.required = !user;

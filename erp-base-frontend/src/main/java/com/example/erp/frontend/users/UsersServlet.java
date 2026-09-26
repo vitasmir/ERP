@@ -11,6 +11,7 @@ import java.time.Duration;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
+import java.util.HashMap;
 import java.util.Locale;
 import java.util.Map;
 import java.util.UUID;
@@ -47,6 +48,13 @@ public class UsersServlet extends HttpServlet {
                 throw new IOException("Backend returned HTTP " + employeeResponse.statusCode());
             }
             request.setAttribute("employeeOptions", mapper.readValue(employeeResponse.body(), EmployeeOption[].class));
+            HttpRequest roleRequest = com.example.erp.frontend.base.BackendRequests.newBuilder(URI.create(backendUrl + "/api/v1/roles"))
+                    .timeout(Duration.ofSeconds(5)).GET().build();
+            HttpResponse<String> roleResponse = client.send(roleRequest, HttpResponse.BodyHandlers.ofString());
+            if (roleResponse.statusCode() != HttpServletResponse.SC_OK) {
+                throw new IOException("Backend returned HTTP " + roleResponse.statusCode());
+            }
+            request.setAttribute("roleOptions", mapper.readValue(roleResponse.body(), RoleOption[].class));
         } catch (InterruptedException exception) {
             Thread.currentThread().interrupt();
             request.setAttribute("error", "Načítání uživatelů bylo přerušeno.");
@@ -86,15 +94,14 @@ public class UsersServlet extends HttpServlet {
 
     private HttpResponse<String> sendSave(String action, HttpServletRequest request)
             throws IOException, InterruptedException {
-        String body = mapper.writeValueAsString(Map.of(
-            "employeeId", request.getParameter("employeeId"),
-                "fullName", request.getParameter("fullName"),
-                "roleName", request.getParameter("roleName"),
-                "companyName", request.getParameter("companyName"),
-                "username", request.getParameter("username"),
-                "password", request.getParameter("password"),
-                "status", request.getParameter("status"),
-                "color", request.getParameter("color")));
+        Map<String, String> values = new HashMap<>();
+        values.put("employeeId", request.getParameter("employeeId"));
+        values.put("fullName", request.getParameter("fullName"));
+        values.put("roleName", request.getParameter("roleName"));
+        values.put("companyName", request.getParameter("companyName"));
+        values.put("status", request.getParameter("status"));
+        values.put("color", request.getParameter("color"));
+        String body = mapper.writeValueAsString(values);
         HttpRequest.Builder builder = com.example.erp.frontend.base.BackendRequests.newBuilder(userUri(action, request.getParameter("id")))
                 .header("Content-Type", "application/json");
         HttpRequest backendRequest = "update".equals(action)
@@ -158,4 +165,6 @@ public class UsersServlet extends HttpServlet {
     }
 
     public record EmployeeOption(UUID id, String fullName, String teamName, boolean hasAccount) { }
+
+    public record RoleOption(UUID id, String name) { }
 }

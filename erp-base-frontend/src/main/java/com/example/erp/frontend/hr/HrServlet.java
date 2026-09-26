@@ -35,6 +35,17 @@ public class HrServlet extends HttpServlet {
                 throw new IOException("Backend returned HTTP " + backendResponse.statusCode());
             }
             request.setAttribute("overview", mapper.readValue(backendResponse.body(), HrOverviewView.class));
+            String employeeId = request.getParameter("employeeId");
+            if (employeeId != null) {
+                HttpResponse<String> availability = client.send(com.example.erp.frontend.base.BackendRequests.newBuilder(
+                        URI.create(backendUrl + "/api/v1/hr/employees/" + UUID.fromString(employeeId) + "/availability"))
+                        .timeout(Duration.ofSeconds(5)).GET().build(), HttpResponse.BodyHandlers.ofString());
+                check(availability);
+                request.setAttribute("availability", mapper.readTree(availability.body()));
+                request.setAttribute("selectedEmployeeId", UUID.fromString(employeeId));
+            }
+        } catch (IllegalArgumentException exception) {
+            request.setAttribute("error", "Neplatný identifikátor zaměstnance.");
         } catch (InterruptedException exception) {
             Thread.currentThread().interrupt();
             request.setAttribute("error", "Načítání lidí bylo přerušeno.");
@@ -49,26 +60,48 @@ public class HrServlet extends HttpServlet {
         String id = request.getParameter("id");
         try {
             HttpRequest backendRequest;
-            if ("create".equals(request.getParameter("action"))) {
+            String action = request.getParameter("action");
+            if ("create".equals(action) || "update".equals(action)) {
                 String body = mapper.writeValueAsString(Map.of("fullName", request.getParameter("fullName"), "teamName", request.getParameter("teamName"),
                         "jobTitle", request.getParameter("jobTitle"), "employmentStartDate", request.getParameter("employmentStartDate")));
-                backendRequest = jsonRequest(backendUrl + "/api/v1/hr/employees", "POST", body);
-            } else {
+                boolean update = "update".equals(action);
+                backendRequest = jsonRequest(backendUrl + "/api/v1/hr/employees" + (update ? "/" + UUID.fromString(id) : ""), update ? "PUT" : "POST", body);
+            } else if ("absence".equals(action)) {
+                backendRequest = jsonRequest(backendUrl + "/api/v1/hr/employees/" + UUID.fromString(id) + "/absences", "POST",
+                        mapper.writeValueAsString(Map.of("startAt", request.getParameter("startAt"), "endAt", request.getParameter("endAt"), "reason", request.getParameter("reason"))));
+            } else if ("qualification".equals(action)) {
+                backendRequest = jsonRequest(backendUrl + "/api/v1/hr/employees/" + UUID.fromString(id) + "/qualifications", "POST",
+                        mapper.writeValueAsString(Map.of("roleName", request.getParameter("roleName"))));
+            } else if ("removeAbsence".equals(action)) {
+                backendRequest = jsonRequest(backendUrl + "/api/v1/hr/employees/" + UUID.fromString(id) + "/absences/"
+                        + UUID.fromString(request.getParameter("absenceId")), "DELETE", "{}");
+            } else if ("activate".equals(action) || "deactivate".equals(action)) {
                 UUID.fromString(id);
                 String operation = "deactivate".equals(request.getParameter("action")) ? "deactivate" : "activate";
                 backendRequest = com.example.erp.frontend.base.BackendRequests.newBuilder(URI.create(backendUrl + "/api/v1/hr/employees/" + id + "/" + operation))
                         .method("PATCH", HttpRequest.BodyPublishers.noBody()).build();
+            } else {
+                throw new IllegalArgumentException("Unknown action");
             }
-            HttpResponse<Void> backendResponse = client.send(backendRequest, HttpResponse.BodyHandlers.discarding());
-            String message = backendResponse.statusCode() == HttpServletResponse.SC_OK
-                    ? "Nástup zaměstnance byl aktivován." : "Změnu stavu backend odmítl.";
-            response.sendRedirect("hr?message=" + URLEncoder.encode(message, StandardCharsets.UTF_8));
+            HttpResponse<String> backendResponse = client.send(backendRequest, HttpResponse.BodyHandlers.ofString());
+            check(backendResponse);
+            response.sendRedirect("hr?message=" + URLEncoder.encode("Změna byla uložena.", StandardCharsets.UTF_8)
+                    + (id == null ? "" : "&employeeId=" + UUID.fromString(id)));
         } catch (IllegalArgumentException exception) {
             response.sendRedirect("hr?error=" + URLEncoder.encode("Neplatný zaměstnanec.", StandardCharsets.UTF_8));
         } catch (InterruptedException exception) {
             Thread.currentThread().interrupt();
             response.sendRedirect("hr?error=" + URLEncoder.encode("Aktivace nástupu byla přerušena.", StandardCharsets.UTF_8));
+        } catch (IOException exception) {
+            response.sendRedirect("hr?error=" + URLEncoder.encode(exception.getMessage(), StandardCharsets.UTF_8));
         }
+    }
+
+    private void check(HttpResponse<String> result) throws IOException {
+        if (result.statusCode() >= 200 && result.statusCode() < 300) return;
+        String detail = "Backend HTTP " + result.statusCode();
+        if (result.body() != null && !result.body().isBlank()) detail = mapper.readTree(result.body()).path("detail").asText(detail);
+        throw new IOException(detail);
     }
 
     private HttpRequest jsonRequest(String url, String method, String body) {

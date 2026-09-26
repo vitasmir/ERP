@@ -45,6 +45,10 @@ public class ApiAccess implements HandlerInterceptor {
         }
     }
 
+    public void revokeUser(UUID userId) {
+        jdbc.update("DELETE FROM api_sessions WHERE user_id = ?", userId);
+    }
+
     @Override
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) {
         String path = request.getRequestURI().substring(request.getContextPath().length());
@@ -57,7 +61,9 @@ public class ApiAccess implements HandlerInterceptor {
         ErpUser user = users.findById(userId).orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED));
         if (user.getStatus() != UserStatus.ACTIVE) unauthorized();
         String module = path.substring("/api/v1/".length()).split("/")[0];
-        if (!allowed(user.getRoleName(), module, Set.of("GET", "HEAD").contains(request.getMethod()))) {
+        boolean receipt = "PATCH".equals(request.getMethod())
+            && path.matches("/api/v1/planning/notifications/[0-9a-fA-F-]{36}/read");
+        if (!allowed(user.getRoleName(), module, receipt || Set.of("GET", "HEAD").contains(request.getMethod()))) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Role does not permit this operation.");
         }
         request.setAttribute("erpUser", user);

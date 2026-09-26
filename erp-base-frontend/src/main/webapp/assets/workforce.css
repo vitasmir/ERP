@@ -1,0 +1,25 @@
+.workforce-section { margin: 28px 0; padding: 24px 0; border-top: 1px solid #cbd7d1; }
+.workforce-section h2 { font-size: 23px; margin: 0 0 20px; letter-spacing: 0; }
+.workforce-form { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 210px), 1fr)); gap: 16px; align-items: end; margin: 18px 0; }
+.workforce-form label { display: grid; gap: 7px; font-size: 13px; min-width: 0; }
+.workforce-form input, .workforce-form select { box-sizing: border-box; width: 100%; min-width: 0; min-height: 42px; padding: 9px; border: 1px solid #8b9e94; border-radius: 3px; color: #253b35; background: #fff; font: inherit; }
+.workforce-form button { min-height: 42px; white-space: normal; }
+.workforce-form input:focus, .workforce-form select:focus, summary:focus-visible { outline: 2px solid #28716a; outline-offset: 3px; }
+.workforce-actions { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; min-width: 0; }
+.workforce-actions a { color: #285b53; font-size: 13px; }
+.workforce-actions button { white-space: normal; }
+.workforce-edit { grid-column: 1 / -1; padding-top: 12px; border-top: 1px solid #dce4de; min-width: 0; }
+.workforce-edit summary, .workforce-section summary { cursor: pointer; font-size: 14px; padding: 8px 0; }
+.workforce-event { padding: 16px 0; border-bottom: 1px solid #d5ddd7; overflow-wrap: anywhere; font-size: 13px; line-height: 1.7; }
+.workforce-event time { color: #53665c; font-size: 12px; }
+.planning-page .shift-card, .hr-page .employee-card { min-width: 0; }
+.planning-page .shift-card > *, .hr-page .employee-card > * { min-width: 0; overflow-wrap: anywhere; }
+.planning-page .planning-message, .hr-page .hr-message { overflow-wrap: anywhere; }
+@media (max-width: 760px) {
+    .planning-page, .hr-page { padding: 24px 16px; }
+    .planning-page .planning-header, .hr-page .hr-header { grid-template-columns: 1fr; gap: 16px; }
+    .planning-page .planning-metrics, .hr-page .hr-metrics { grid-template-columns: 1fr; gap: 10px; margin: 20px 0; }
+    .planning-page .shift-card, .hr-page .employee-card { grid-template-columns: minmax(0, 1fr); padding: 18px; }
+    .workforce-form { grid-template-columns: minmax(0, 1fr); }
+    .planning-page .section-head, .hr-page .section-head { align-items: start; gap: 12px; flex-wrap: wrap; }
+}

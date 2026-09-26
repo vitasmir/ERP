@@ -9,12 +9,19 @@ import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import jakarta.persistence.Version;
 
 @Entity
 @Table(name = "planning_shifts")
 public class PlanningShift {
     @Id
     private UUID id;
+
+    @Column(name = "employee_id")
+    private UUID employeeId;
+
+    @Version
+    private long version;
 
     @Column(name = "employee_name")
     private String employeeName;
@@ -47,6 +54,9 @@ public class PlanningShift {
     }
 
     public UUID getId() { return id; }
+    public UUID getEmployeeId() { return employeeId; }
+    public long getVersion() { return version; }
+    public void linkEmployee(UUID employeeId) { this.employeeId = employeeId; }
     public String getEmployeeName() { return employeeName; }
     public String getRoleName() { return roleName; }
     public String getDepartment() { return department; }

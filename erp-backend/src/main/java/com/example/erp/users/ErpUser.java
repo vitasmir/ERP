@@ -84,4 +84,6 @@ public class ErpUser {
     public String getColor() { return color; }
 
     public void recordLogin() { lastAccessAt = LocalDateTime.now(); }
+    public void activateEmploymentAccount() { status = UserStatus.ACTIVE; }
+    public void suspendEmploymentAccount() { status = UserStatus.SUSPENDED; }
 }

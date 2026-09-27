@@ -48,13 +48,26 @@ public class ManufacturingServlet extends HttpServlet {
         String id = request.getParameter("id");
         try {
             UUID.fromString(id);
-            HttpRequest backendRequest = com.example.erp.frontend.base.BackendRequests.newBuilder(URI.create(backendUrl + "/api/v1/manufacturing/orders/" + id + "/complete"))
-                    .method("PATCH", HttpRequest.BodyPublishers.noBody()).build();
+            String action = request.getParameter("action");
+            HttpRequest backendRequest;
+            String successMessage;
+            if ("update".equals(action)) {
+                int completedQuantity = Integer.parseInt(request.getParameter("completedQuantity"));
+                String body = mapper.writeValueAsString(java.util.Map.of("completedQuantity", completedQuantity));
+                backendRequest = com.example.erp.frontend.base.BackendRequests.newBuilder(URI.create(backendUrl + "/api/v1/manufacturing/orders/" + id + "/progress"))
+                        .header("Content-Type", "application/json")
+                        .method("PATCH", HttpRequest.BodyPublishers.ofString(body)).build();
+                successMessage = "Počet vyrobených kusů byl upraven.";
+            } else {
+                backendRequest = com.example.erp.frontend.base.BackendRequests.newBuilder(URI.create(backendUrl + "/api/v1/manufacturing/orders/" + id + "/complete"))
+                        .method("PATCH", HttpRequest.BodyPublishers.noBody()).build();
+                successMessage = "Výrobní příkaz byl dokončen.";
+            }
             HttpResponse<Void> backendResponse = client.send(backendRequest, HttpResponse.BodyHandlers.discarding());
             String message = backendResponse.statusCode() == HttpServletResponse.SC_OK
-                    ? "Výrobní příkaz byl dokončen." : "Změnu stavu backend odmítl.";
+                    ? successMessage : "Změnu výroby backend odmítl.";
             response.sendRedirect("manufacturing?message=" + URLEncoder.encode(message, StandardCharsets.UTF_8));
-        } catch (IllegalArgumentException exception) {
+        } catch (IllegalArgumentException | NullPointerException exception) {
             response.sendRedirect("manufacturing?error=" + URLEncoder.encode("Neplatný výrobní příkaz.", StandardCharsets.UTF_8));
         } catch (InterruptedException exception) {
             Thread.currentThread().interrupt();

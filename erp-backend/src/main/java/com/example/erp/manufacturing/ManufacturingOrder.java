@@ -49,7 +49,16 @@ public class ManufacturingOrder {
     public ManufacturingOrderStatus getStatus() { return status; }
 
     public void complete() {
-        completedQuantity = plannedQuantity;
-        status = ManufacturingOrderStatus.COMPLETED;
+        setCompletedQuantity(plannedQuantity);
+    }
+
+    public void setCompletedQuantity(int completedQuantity) {
+        if (completedQuantity < 0 || completedQuantity > plannedQuantity) {
+            throw new IllegalArgumentException("Completed quantity must be between zero and the planned quantity.");
+        }
+        this.completedQuantity = completedQuantity;
+        status = completedQuantity == plannedQuantity
+                ? ManufacturingOrderStatus.COMPLETED
+                : completedQuantity == 0 ? ManufacturingOrderStatus.PLANNED : ManufacturingOrderStatus.IN_PROGRESS;
     }
 }

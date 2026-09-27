@@ -38,8 +38,21 @@ public class ManufacturingController {
         return ManufacturingOrderResponse.from(orders.save(order));
     }
 
+        @PatchMapping("/orders/{id}/progress")
+        public ManufacturingOrderResponse updateProgress(@PathVariable UUID id, @org.springframework.web.bind.annotation.RequestBody ProgressUpdate update) {
+                ManufacturingOrder order = orders.findById(id)
+                                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Manufacturing order was not found."));
+                if (update == null || update.completedQuantity() < 0 || update.completedQuantity() > order.getPlannedQuantity()) {
+                        throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Completed quantity must be between zero and the planned quantity.");
+                }
+                order.setCompletedQuantity(update.completedQuantity());
+                return ManufacturingOrderResponse.from(orders.save(order));
+        }
+
     public record ManufacturingOverview(int plannedQuantity, int completedQuantity, long activeOrderCount,
             List<ManufacturingOrderResponse> orders) { }
+
+        public record ProgressUpdate(int completedQuantity) { }
 
     public record ManufacturingOrderResponse(UUID id, String orderNumber, String productName, String workCenter,
             int plannedQuantity, int completedQuantity, LocalDate plannedDate, ManufacturingOrderStatus status) {

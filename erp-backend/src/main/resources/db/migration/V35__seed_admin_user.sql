@@ -2,12 +2,8 @@ INSERT INTO employees (id, full_name, team_name, job_title, employment_start_dat
 VALUES ('d0000000-0000-0000-0000-000000000005', 'Administrator', 'Správa systému', 'Administrátor', CURRENT_DATE, 'ACTIVE')
 ON CONFLICT (id) DO NOTHING;
 
-INSERT INTO role_definitions (id, name, initial, description, can_read, can_edit, can_manage, color)
-VALUES ('25000000-0000-0000-0000-000000000004', 'Administrator', 'A', 'Plný přístup do všech modulů a nastavení.', TRUE, TRUE, TRUE, '#D9ED62')
-ON CONFLICT (name) DO NOTHING;
-
 INSERT INTO role_module_permissions (role_id, module_key)
-SELECT '25000000-0000-0000-0000-000000000004', module_key
+SELECT '25000000-0000-0000-0000-000000000001', module_key
 FROM erp_modules
 ON CONFLICT DO NOTHING;
 
@@ -16,7 +12,7 @@ INSERT INTO system_users (
     employee_id, username, password_hash, color
 )
 VALUES (
-    '16000000-0000-0000-0000-000000000004', 'Administrator', 'Administrator',
+    '16000000-0000-0000-0000-000000000004', 'Administrator', 'Administrátor',
     'Retail Group a.s.', 'ACTIVE', NULL,
     'd0000000-0000-0000-0000-000000000005', 'admin',
     '210000:RVJQLWFkbWluLXNlZWQh:xam0vK91L4kcJQFZYoZRtQfQpofJY8wsPR6P0PiiGzw=',

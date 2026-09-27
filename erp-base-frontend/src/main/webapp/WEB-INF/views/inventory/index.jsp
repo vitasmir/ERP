@@ -35,14 +35,17 @@
     <section id="stock" class="inventory-section inventory-view-panel" <%= "products".equals(selectedView) ? "hidden" : "" %>>
       <div class="section-head"><div><span class="eyebrow">SKLADOVÉ POLOŽKY</span><h2>Stav zásob podle lokace</h2></div><span class="item-count"><%= overview == null ? 0 : overview.items().size() %> lokace</span></div>
       <div class="category-tree">
-        <% String categoryPath = null; if (overview != null) for (InventoryItemView item : overview.items()) { if (!item.categoryPath().equals(categoryPath)) { if (categoryPath != null) { %></div></details><% } categoryPath = item.categoryPath(); %><details class="category-branch" open><summary><span>Kategorie</span> <strong><%= categoryPath %></strong></summary><div class="stock-list"><% } boolean lowStock = item.quantity() < item.reorderLevel(); %>
-        <article class="stock-card <%= lowStock ? "low-stock" : "" %>">
-          <div class="stock-main"><span class="status-chip <%= lowStock ? "status-low" : "status-ok" %>"><%= lowStock ? "DOPLNIT" : "V POŘÁDKU" %></span><h3><%= item.locationName() %></h3><p><%= item.productName() %> · <%= item.sku() %></p></div>
-          <div class="stock-item-image"><% if (item.imageUrl() != null && !item.imageUrl().isBlank()) { %><img src="<%= item.imageUrl() %>" alt="<%= item.productName() %>"><% } else { %><span>FM</span><% } %></div>
-          <dl><div><dt>Skladem</dt><dd><%= item.quantity() %> <%= item.unit() %></dd></div><div><dt>Minimum</dt><dd><input form="receive-form-<%= item.id() %>" type="number" name="reorderLevel" min="0" step="1" value="<%= item.reorderLevel() %>" aria-label="Minimum <%= item.productName() %>"> <%= item.unit() %></dd></div><div><dt>Jednotková cena</dt><dd><input form="receive-form-<%= item.id() %>" type="number" name="unitCost" min="0" step="0.01" value="<%= amount(item.unitCost()) %>" aria-label="Jednotková cena <%= item.productName() %>"> Kč</dd></div></dl>
-          <form id="receive-form-<%= item.id() %>" method="post" class="receive-form"><input type="hidden" name="id" value="<%= item.id() %>"><label>Příjem <span class="receive-quantity"><input type="number" name="quantity" min="1" value="1" required><%= item.unit() %></span></label><button class="secondary" type="submit">Zaevidovat příjem</button></form>
-        </article>
-        <% } if (categoryPath != null) { %></div></details><% } %>
+        <% String categoryPath = null; if (overview != null) for (InventoryItemView item : overview.items()) { if (!item.categoryPath().equals(categoryPath)) { if (categoryPath != null) { %></tbody></table></div></details><% } categoryPath = item.categoryPath(); %><details class="category-branch" open><summary><span>Kategorie</span> <strong><%= categoryPath %></strong></summary><div class="stock-table-wrap"><table class="stock-table"><thead><tr><th>Lokace</th><th>Položka</th><th>Obrázek</th><th>Skladem</th><th>Minimum</th><th>Jednotková cena</th><th>Příjem</th></tr></thead><tbody><% } boolean lowStock = item.quantity() < item.reorderLevel(); %>
+        <tr class="<%= lowStock ? "low-stock" : "" %>">
+          <td data-label="Lokace"><span class="status-chip <%= lowStock ? "status-low" : "status-ok" %>"><%= lowStock ? "DOPLNIT" : "V POŘÁDKU" %></span><strong><%= item.locationName() %></strong></td>
+          <td data-label="Položka"><strong><%= item.productName() %></strong><span><%= item.sku() %></span></td>
+          <td data-label="Obrázek"><div class="stock-item-image"><% if (item.imageUrl() != null && !item.imageUrl().isBlank()) { %><img src="<%= item.imageUrl() %>" alt="<%= item.productName() %>"><% } else { %><span>FM</span><% } %></div></td>
+          <td data-label="Skladem"><strong><%= item.quantity() %> <%= item.unit() %></strong></td>
+          <td data-label="Minimum"><input form="receive-form-<%= item.id() %>" type="number" name="reorderLevel" min="0" step="1" value="<%= item.reorderLevel() %>" aria-label="Minimum <%= item.productName() %>"> <%= item.unit() %></td>
+          <td data-label="Jednotková cena"><input form="receive-form-<%= item.id() %>" type="number" name="unitCost" min="0" step="0.01" value="<%= amount(item.unitCost()) %>" aria-label="Jednotková cena <%= item.productName() %>"> Kč</td>
+          <td data-label="Příjem"><form id="receive-form-<%= item.id() %>" method="post" class="receive-form"><input type="hidden" name="id" value="<%= item.id() %>"><label><span class="receive-quantity"><input type="number" name="quantity" min="1" value="1" required><%= item.unit() %></span></label><button class="secondary" type="submit">Zaevidovat příjem</button></form></td>
+        </tr>
+        <% } if (categoryPath != null) { %></tbody></table></div></details><% } %>
       </div>
     </section>
     <section id="products" class="inventory-section inventory-view-panel" <%= "stock".equals(selectedView) ? "hidden" : "" %>>

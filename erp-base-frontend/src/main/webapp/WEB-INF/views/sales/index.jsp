@@ -29,14 +29,22 @@
     </section>
     <section id="orders" class="sales-section">
       <div class="section-head"><div><span class="eyebrow">NABÍDKY A OBJEDNÁVKY</span><h2>Obchodní dokumenty</h2></div><span class="order-count"><%= overview == null ? 0 : overview.orders().size() %> dokumenty</span></div>
-      <div class="order-list">
-        <% if (overview != null) for (SalesOrderView order : overview.orders()) { %>
-        <article class="order-card">
-          <div class="order-main"><span class="status-chip status-<%= order.status().toLowerCase() %>"><%= order.status().equals("QUOTE") ? "NABÍDKA" : "OBJEDNÁVKA" %></span><h3><%= order.orderNumber() %></h3><p><%= order.customerName() %></p></div>
-          <dl><div><dt>Vystaveno</dt><dd><%= order.orderDate() %></dd></div><div><dt>Dodání</dt><dd><%= order.deliveryDate() %></dd></div><div><dt>Celkem</dt><dd><%= amount(order.totalAmount()) %> Kč</dd></div></dl>
-          <% if ("QUOTE".equals(order.status())) { %><form method="post"><input type="hidden" name="id" value="<%= order.id() %>"><button class="secondary" type="submit">Potvrdit objednávku</button></form><% } else { %><span class="confirmed-label">Potvrzeno k dodání</span><% } %>
-        </article>
-        <% } %>
+      <div class="sales-table-wrap">
+        <table class="sales-table">
+          <thead><tr><th>Dokument</th><th>Zákazník</th><th>Vystaveno</th><th>Dodání</th><th class="amount-column">Celkem</th><th>Stav / akce</th></tr></thead>
+          <tbody>
+            <% if (overview != null) for (SalesOrderView order : overview.orders()) { %>
+            <tr>
+              <td data-label="Dokument"><span class="status-chip status-<%= order.status().toLowerCase() %>"><%= order.status().equals("QUOTE") ? "NABÍDKA" : "OBJEDNÁVKA" %></span><strong><%= order.orderNumber() %></strong></td>
+              <td data-label="Zákazník"><%= order.customerName() %></td>
+              <td data-label="Vystaveno"><%= order.orderDate() %></td>
+              <td data-label="Dodání"><%= order.deliveryDate() %></td>
+              <td data-label="Celkem" class="amount-column"><strong><%= amount(order.totalAmount()) %> Kč</strong></td>
+              <td data-label="Stav / akce"><% if ("QUOTE".equals(order.status())) { %><form method="post"><input type="hidden" name="id" value="<%= order.id() %>"><button class="secondary" type="submit">Potvrdit objednávku</button></form><% } else { %><span class="confirmed-label">Potvrzeno k dodání</span><% } %></td>
+            </tr>
+            <% } %>
+          </tbody>
+        </table>
       </div>
     </section>
   </main>

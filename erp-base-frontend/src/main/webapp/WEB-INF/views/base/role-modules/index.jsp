@@ -1,6 +1,6 @@
 <%@ page contentType="text/html; charset=UTF-8" pageEncoding="UTF-8" %>
 <%@ include file="../../fragments/base-header.jspf" %>
-<link rel="stylesheet" href="assets/roles.css?v=20260927-module-roles">
+<link rel="stylesheet" href="assets/roles.css?v=20260927-module-roles-sticky-header">
 <style>.topbar .breadcrumb{display:none !important}.role-column-mark{background:var(--card-color,#d9ed62)}</style>
 <%
     java.util.List<com.example.erp.frontend.base.RolesServlet.RoleView> roles = (java.util.List<com.example.erp.frontend.base.RolesServlet.RoleView>) request.getAttribute("roles");

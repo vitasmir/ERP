@@ -1,6 +1,7 @@
 package com.example.erp.frontend.accounting;
 
 import java.io.IOException;
+import java.math.BigDecimal;
 import java.net.URI;
 import java.net.URLEncoder;
 import java.net.http.HttpClient;
@@ -8,9 +9,11 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
+import com.example.erp.frontend.companies.CompaniesServlet.CompanyView;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import jakarta.servlet.ServletException;
@@ -33,6 +36,13 @@ public class AccountingServlet extends HttpServlet {
             HttpResponse<String> backendResponse = client.send(backendRequest, HttpResponse.BodyHandlers.ofString());
             if (backendResponse.statusCode() != HttpServletResponse.SC_OK) throw new IOException("Backend returned HTTP " + backendResponse.statusCode());
             request.setAttribute("overview", mapper.readValue(backendResponse.body(), AccountingOverviewView.class));
+            HttpRequest companiesRequest = com.example.erp.frontend.base.BackendRequests
+                    .newBuilder(URI.create(backendUrl + "/api/v1/companies"))
+                    .timeout(Duration.ofSeconds(5)).GET().build();
+            HttpResponse<String> companiesResponse = client.send(companiesRequest, HttpResponse.BodyHandlers.ofString());
+            if (companiesResponse.statusCode() == HttpServletResponse.SC_OK) {
+                request.setAttribute("companies", mapper.readValue(companiesResponse.body(), CompanyView[].class));
+            }
         } catch (InterruptedException exception) {
             Thread.currentThread().interrupt();
             request.setAttribute("error", "Načítání účetnictví bylo přerušeno.");
@@ -48,9 +58,13 @@ public class AccountingServlet extends HttpServlet {
         try {
             HttpRequest backendRequest;
             if ("create".equals(request.getParameter("action"))) {
-                String body = mapper.writeValueAsString(Map.of("invoiceNumber", request.getParameter("invoiceNumber"),
+                String invoiceNumber = request.getParameter("invoiceNumber");
+                BigDecimal totalAmount = new BigDecimal(request.getParameter("totalAmount"));
+                String body = mapper.writeValueAsString(Map.of("invoiceNumber", invoiceNumber,
                         "partnerName", request.getParameter("partnerName"), "issueDate", request.getParameter("issueDate"),
-                        "dueDate", request.getParameter("dueDate"), "totalAmount", request.getParameter("totalAmount")));
+                    "dueDate", request.getParameter("dueDate"),
+                    "lines", List.of(Map.of("description", "Faktura " + invoiceNumber,
+                        "quantity", BigDecimal.ONE, "unitPrice", totalAmount, "vatRate", BigDecimal.ZERO))));
                 backendRequest = jsonRequest(backendUrl + "/api/v1/accounting/invoices", "POST", body);
             } else if ("payment".equals(request.getParameter("action"))) {
                 UUID.fromString(id);
@@ -61,9 +75,11 @@ public class AccountingServlet extends HttpServlet {
                 backendRequest = com.example.erp.frontend.base.BackendRequests.newBuilder(URI.create(backendUrl + "/api/v1/accounting/invoices/" + id + "/paid"))
                         .method("PATCH", HttpRequest.BodyPublishers.noBody()).build();
             }
-            HttpResponse<Void> backendResponse = client.send(backendRequest, HttpResponse.BodyHandlers.discarding());
-            String message = backendResponse.statusCode() >= 200 && backendResponse.statusCode() < 300 ? "Faktura byla uložena." : "Změnu backend odmítl.";
-            response.sendRedirect("accounting?message=" + URLEncoder.encode(message, StandardCharsets.UTF_8));
+            HttpResponse<String> backendResponse = client.send(backendRequest, HttpResponse.BodyHandlers.ofString());
+            boolean successful = backendResponse.statusCode() >= 200 && backendResponse.statusCode() < 300;
+            String message = successful ? "Faktura byla uložena." : "Backend odmítl změnu: " + backendResponse.body();
+            String parameter = successful ? "message" : "error";
+            response.sendRedirect("accounting?" + parameter + "=" + URLEncoder.encode(message, StandardCharsets.UTF_8));
         } catch (IllegalArgumentException exception) {
             response.sendRedirect("accounting?error=" + URLEncoder.encode("Neplatná faktura.", StandardCharsets.UTF_8));
         } catch (InterruptedException exception) {

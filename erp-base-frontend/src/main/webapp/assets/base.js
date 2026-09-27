@@ -315,21 +315,6 @@ document.getElementById('drawer-action')?.addEventListener('click', () => {
     window.alert(`Modul ${document.getElementById('drawer-title').textContent} bude napojen v další iteraci.`);
   }
 });
-const browserBackend = `${window.location.protocol}//${window.location.hostname}:8080/api/v1`;
-fetch(`${browserBackend}/companies`).then((response) => response.ok ? response.json() : []).then((companies) => {
-  companies.forEach((company) => {
-    document.querySelectorAll('.company-grid article').forEach((card) => {
-      if (card.querySelector('h3')?.textContent.trim() === company.name) card.style.setProperty('--card-color', company.color);
-    });
-  });
-}).catch(() => {});
-fetch(`${browserBackend}/users`).then((response) => response.ok ? response.json() : []).then((users) => {
-  users.forEach((user) => {
-    const row = document.querySelector(`tr[data-user-id="${user.id}"]`);
-    row?.style.setProperty('--card-color', user.color);
-    if (row) row.dataset.color = user.color;
-  });
-}).catch(() => {});
 const moduleSearch = document.getElementById('module-search');
 const moduleFilters = document.querySelectorAll('.module-filter');
 const filterModules = () => {

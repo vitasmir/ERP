@@ -1,3 +1,4 @@
+.employee-table tbody tr:hover th,.employee-table tbody tr:hover td{background:#eef5d9}
 .workforce-section { margin: 28px 0; padding: 24px 0; border-top: 1px solid #cbd7d1; }
 .workforce-section h2 { font-size: 23px; margin: 0 0 20px; letter-spacing: 0; }
 .workforce-form { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 210px), 1fr)); gap: 16px; align-items: end; margin: 18px 0; }
@@ -8,7 +9,7 @@
 .workforce-actions { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; min-width: 0; }
 .workforce-actions a { color: #285b53; font-size: 13px; }
 .workforce-actions button { white-space: normal; }
-.workforce-edit { grid-column: 1 / -1; padding-top: 12px; border-top: 1px solid #dce4de; min-width: 0; }
+.workforce-edit { grid-column: 1 / -1; padding-top: 6px; border-top: 1px solid #dce4de; min-width: 0; }
 .workforce-edit summary, .workforce-section summary { cursor: pointer; font-size: 14px; padding: 8px 0; }
 .workforce-event { padding: 16px 0; border-bottom: 1px solid #d5ddd7; overflow-wrap: anywhere; font-size: 13px; line-height: 1.7; }
 .workforce-event time { color: #53665c; font-size: 12px; }

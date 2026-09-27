@@ -61,11 +61,45 @@ public class ApiAccess implements HandlerInterceptor {
         ErpUser user = users.findById(userId).orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED));
         if (user.getStatus() != UserStatus.ACTIVE) unauthorized();
         String module = path.substring("/api/v1/".length()).split("/")[0];
-        if (!allowed(user.getRoleName(), module, Set.of("GET", "HEAD").contains(request.getMethod()))) {
+        if (!"auth".equals(module) && !hasPermission(user.getRoleName(), module, requiredPermission(path, request.getMethod()))) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Role does not permit this operation.");
         }
         request.setAttribute("erpUser", user);
         return true;
+    }
+
+    private Permission requiredPermission(String path, String method) {
+        if ("/api/v1/roles/matrix".equals(path) && !Set.of("GET", "HEAD").contains(method)) {
+            return Permission.MANAGE;
+        }
+        if (path.startsWith("/api/v1/settings/") && !Set.of("GET", "HEAD").contains(method)) {
+            return Permission.MANAGE;
+        }
+        return switch (method) {
+            case "GET", "HEAD" -> Permission.READ;
+            case "POST" -> Permission.INSERT;
+            case "PUT", "PATCH" -> Permission.EDIT;
+            case "DELETE" -> Permission.DELETE;
+            default -> Permission.READ;
+        };
+    }
+
+    private boolean hasPermission(String roleName, String module, Permission permission) {
+        String column = permission.column;
+        Integer matches = jdbc.queryForObject(
+                "SELECT COUNT(*) FROM role_definitions rd "
+                    + "JOIN role_module_permissions assignment ON assignment.role_id = rd.id "
+                    + "WHERE lower(rd.name) = lower(?) AND assignment.module_key = ? AND rd." + column + " = TRUE",
+                Integer.class, roleName, module);
+        return matches != null && matches > 0;
+    }
+
+    private enum Permission {
+        READ("can_read"), INSERT("can_insert"), EDIT("can_edit"), DELETE("can_delete"), MANAGE("can_manage");
+
+        private final String column;
+
+        Permission(String column) { this.column = column; }
     }
 
     public static boolean allowed(String role, String module, boolean read) {

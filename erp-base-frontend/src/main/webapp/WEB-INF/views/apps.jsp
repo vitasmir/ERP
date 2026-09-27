@@ -1,5 +1,7 @@
 <%@ page contentType="text/html; charset=UTF-8" pageEncoding="UTF-8" %>
 <%@ include file="fragments/base-header.jspf" %>
+<style>.module-access-error{margin:0 0 24px;padding:18px 22px;border:1px solid #d34b4b;background:#fff0f0;color:#c62828;font-size:18px;font-weight:700}</style>
+<% if (request.getParameter("error") != null) { %><div class="page-alert error-alert module-access-error" role="alert"><%= escapeHtml(request.getParameter("error")) %></div><% } %>
 <section class="launcher-head"><div><span class="eyebrow">ERP WORKSPACE</span><h2>Vše, co vaše firma potřebuje.</h2><p>Vyberte aplikaci a začněte pracovat. Každý modul sdílí stejná data a oprávnění.</p></div><div class="launcher-stat"><strong>18</strong><span>aplikací<br>v katalogu</span></div></section>
 <section class="launcher-tools"><div class="launcher-search"><span>⌕</span><input id="module-search" placeholder="Hledat aplikaci nebo funkci..." aria-label="Hledat aplikaci nebo funkci"></div><div class="launcher-filter"><button class="module-filter active" data-filter="all">Vše</button><button class="module-filter" data-filter="core">Základ</button><button class="module-filter" data-filter="operations">Provoz</button><button class="module-filter" data-filter="sales">Obchod</button></div></section>
 <section class="module-grid" id="module-grid">
@@ -24,3 +26,10 @@
 </section><p class="module-empty" id="module-empty">Žádná aplikace neodpovídá hledání.</p>
 <aside class="module-drawer" id="module-drawer" aria-hidden="true"><button class="drawer-close" id="drawer-close" aria-label="Zavřít detail">×</button><span class="drawer-icon module-icon"></span><span class="eyebrow">APLIKACE ERP</span><h2 id="drawer-title"></h2><p class="drawer-subtitle" id="drawer-subtitle"></p><p id="drawer-description"></p><div class="drawer-status"><span class="online"></span><span>Modul připraven k návrhu</span></div><div class="drawer-section"><span class="eyebrow">CO BUDE OBSAHOVAT</span><ul><li>Role a oprávnění podle pracovních týmů</li><li>Seznamy, formuláře a filtrování záznamů</li><li>Napojení na společná ERP data</li><li>Auditní stopa a přehledy výkonu</li></ul></div><button class="primary drawer-action" id="drawer-action">Otevřít modul <span>→</span></button></aside>
 <%@ include file="fragments/base-footer.jspf" %>
+<%!
+  private String escapeHtml(String value) {
+    if (value == null) return "";
+    return value.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+        .replace("\"", "&quot;").replace("'", "&#39;");
+  }
+%>

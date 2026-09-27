@@ -94,6 +94,17 @@ if (companyNameField?.tagName === 'INPUT' && companyOptionsSource) {
   companySelect.innerHTML = companyOptionsSource.innerHTML;
   companyNameField.replaceWith(companySelect);
 }
+if (userForm && !document.getElementById('user-color')) {
+  const colorLabel = document.createElement('label');
+  colorLabel.textContent = 'Barva';
+  const colorInput = document.createElement('input');
+  colorInput.name = 'color';
+  colorInput.id = 'user-color';
+  colorInput.type = 'color';
+  colorInput.value = '#DCE9D7';
+  colorLabel.appendChild(colorInput);
+  userForm.querySelector('.dialog-actions')?.before(colorLabel);
+}
 const openUserDialog = (user) => {
   document.getElementById('user-action').value = user ? 'update' : 'create';
   document.getElementById('user-id').value = user?.dataset.userId || '';
@@ -114,7 +125,11 @@ const openUserDialog = (user) => {
   passwordInput.required = !user;
   document.getElementById('user-role-name').value = user?.dataset.roleName || '';
   document.getElementById('user-company-name').value = user?.dataset.companyName || '';
-  document.getElementById('user-color').value = user?.dataset.color || '#DCE9D7';
+  const colorInput = document.getElementById('user-color');
+  if (colorInput) {
+    colorInput.value = user?.dataset.color || '#DCE9D7';
+    colorInput.name = user && !user.dataset.color ? '' : 'color';
+  }
   document.getElementById('user-status').value = user?.dataset.status || 'ACTIVE';
   document.getElementById('user-dialog-title').textContent = user ? 'Upravit uživatele' : 'Nový uživatel';
   document.getElementById('save-user').textContent = user ? 'Uložit změny' : 'Přidat uživatele';

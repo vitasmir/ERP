@@ -53,9 +53,10 @@ public class UserController {
 
     @PutMapping("/{id}")
     public UserResponse update(@PathVariable UUID id, @RequestBody UserRequest request) {
-        UserData data = validate(request, id);
         ErpUser user = findUser(id);
-        user.update(data.employee(), data.fullName(), data.roleName(), data.companyName(), data.status(), data.color());
+        UserData data = validate(request, id);
+        String color = request.color() == null ? user.getColor() : data.color();
+        user.update(data.employee(), data.fullName(), data.roleName(), data.companyName(), data.status(), color);
         return UserResponse.from(users.save(user));
     }
 

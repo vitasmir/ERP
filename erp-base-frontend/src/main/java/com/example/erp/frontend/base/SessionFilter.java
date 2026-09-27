@@ -2,6 +2,12 @@ package com.example.erp.frontend.base;
 
 import java.io.IOException;
 import java.net.URI;
+import java.net.URLEncoder;
+import java.net.http.HttpClient;
+import java.net.http.HttpResponse;
+import java.nio.charset.StandardCharsets;
+import java.time.Duration;
+import java.util.Map;
 import java.util.Set;
 
 import jakarta.servlet.Filter;
@@ -16,6 +22,26 @@ import jakarta.servlet.http.HttpSession;
 
 @WebFilter("/*")
 public class SessionFilter implements Filter {
+    private static final Map<String, ModuleCheck> MODULE_CHECKS = Map.ofEntries(
+            Map.entry("/accounting", new ModuleCheck("/api/v1/accounting/overview", "Účetnictví")),
+            Map.entry("/crm", new ModuleCheck("/api/v1/crm/overview", "CRM")),
+            Map.entry("/documents", new ModuleCheck("/api/v1/documents/overview", "Dokumenty")),
+            Map.entry("/ecommerce", new ModuleCheck("/api/v1/catalog/homepage", "eCommerce")),
+            Map.entry("/helpdesk", new ModuleCheck("/api/v1/helpdesk/overview", "Helpdesk")),
+            Map.entry("/hr", new ModuleCheck("/api/v1/hr/overview", "Lidé")),
+            Map.entry("/inventory", new ModuleCheck("/api/v1/inventory/overview", "Sklad")),
+            Map.entry("/manufacturing", new ModuleCheck("/api/v1/manufacturing/overview", "Výroba")),
+            Map.entry("/marketing", new ModuleCheck("/api/v1/marketing/overview", "Marketing")),
+            Map.entry("/planning", new ModuleCheck("/api/v1/planning/overview", "Plánování")),
+            Map.entry("/pos", new ModuleCheck("/api/v1/pos/overview", "Pokladna")),
+            Map.entry("/projects", new ModuleCheck("/api/v1/projects/overview", "Projekty")),
+            Map.entry("/promo", new ModuleCheck("/api/v1/promo-campaigns", "Promo kampaně")),
+            Map.entry("/purchase", new ModuleCheck("/api/v1/purchase/overview", "Nákup")),
+            Map.entry("/sales", new ModuleCheck("/api/v1/sales/overview", "Prodej")),
+            Map.entry("/website", new ModuleCheck("/api/v1/website/overview", "Web")));
+    private final HttpClient client = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(3)).build();
+    private final String backendUrl = System.getenv().getOrDefault("BACKEND_URL", "http://localhost:8080");
+
     @Override
     public void doFilter(ServletRequest source, ServletResponse target, FilterChain chain) throws IOException, ServletException {
         HttpServletRequest request = (HttpServletRequest) source;
@@ -42,10 +68,30 @@ public class SessionFilter implements Filter {
         if (!publicPage) response.setHeader("Cache-Control", "no-store");
         BackendRequests.TOKEN.set(token);
         try {
+            if ("GET".equals(request.getMethod()) && !checkModuleAccess(request, response)) return;
             chain.doFilter(request, response);
         } finally {
             BackendRequests.TOKEN.remove();
         }
+    }
+
+    private boolean checkModuleAccess(HttpServletRequest request, HttpServletResponse response) throws IOException {
+        ModuleCheck module = MODULE_CHECKS.get(request.getServletPath());
+        if (module == null) return true;
+        try {
+            HttpResponse<Void> backendResponse = client.send(
+                    BackendRequests.newBuilder(URI.create(backendUrl + module.endpoint())).GET().build(),
+                    HttpResponse.BodyHandlers.discarding());
+            if (backendResponse.statusCode() == HttpServletResponse.SC_FORBIDDEN) {
+                String message = "Uživatel nemá oprávnění k modulu " + module.name() + ".";
+                response.sendRedirect(request.getContextPath() + "/apps?error="
+                        + URLEncoder.encode(message, StandardCharsets.UTF_8));
+                return false;
+            }
+        } catch (InterruptedException exception) {
+            Thread.currentThread().interrupt();
+        } catch (IOException exception) { }
+        return true;
     }
 
     private boolean sameOrigin(HttpServletRequest request) {
@@ -64,4 +110,6 @@ public class SessionFilter implements Filter {
     }
 
     private int port(URI uri) { return uri.getPort() != -1 ? uri.getPort() : "https".equals(uri.getScheme()) ? 443 : 80; }
+
+    private record ModuleCheck(String endpoint, String name) { }
 }

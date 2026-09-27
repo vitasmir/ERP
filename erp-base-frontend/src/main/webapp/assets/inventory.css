@@ -1,6 +1,6 @@
 .stock-table{min-width:0;table-layout:auto}
 .stock-table th:nth-child(n),.stock-table td:nth-child(n){width:auto!important}
-.stock-table th:nth-child(4),.stock-table td:nth-child(4){width:100px!important}
+.stock-table th:nth-child(4),.stock-table td:nth-child(4){width:100px!important}.stock-table th:nth-child(6),.stock-table td:nth-child(6){width:130px!important}
 .stock-table th:nth-child(3),.stock-table td:nth-child(3){width:90px!important}
 .stock-item-image{width:72px;height:auto;aspect-ratio:1 / 1}
 .stock-table td{padding:4px}

@@ -209,6 +209,141 @@
 .color-picker-preview output {
   text-transform: uppercase;
 }
+.date-field {
+  display: block;
+}
+.localized-date-input {
+  box-sizing: border-box;
+  width: 100%;
+  border: 1px solid #c9d1c9;
+  background: #fff;
+  color: #1e2b32;
+  padding: 11px 12px;
+  font: inherit;
+  cursor: pointer;
+}
+.localized-date-input:focus {
+  border-color: #245543;
+  outline: 2px solid rgba(36, 85, 67, 0.16);
+}
+.date-picker-modal {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 41;
+  place-items: center;
+}
+.date-picker-modal.open {
+  display: grid;
+}
+.date-picker-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(20, 54, 45, 0.68);
+}
+.date-picker-dialog {
+  position: relative;
+  width: min(390px, calc(100% - 32px));
+  max-height: calc(100vh - 32px);
+  overflow: auto;
+  padding: 24px;
+  border: 1px solid #dedfd4;
+  background: #fffdf8;
+  box-shadow: 0 22px 70px rgba(20, 54, 45, 0.3);
+}
+.date-picker-dialog:focus {
+  outline: none;
+}
+.date-picker-head,
+.date-picker-navigation {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.date-picker-head {
+  margin-bottom: 16px;
+}
+.date-picker-head h2 {
+  margin: 0;
+  font-size: 20px;
+}
+.date-picker-navigation {
+  margin-bottom: 12px;
+  color: #17362b;
+}
+.date-picker-navigation button {
+  width: 32px;
+  height: 32px;
+  border: 1px solid #c9d1c9;
+  background: #fff;
+  color: #17362b;
+  font-size: 22px;
+  line-height: 1;
+  cursor: pointer;
+}
+.date-picker-weekdays,
+.date-picker-days {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 5px;
+}
+.date-picker-weekdays {
+  margin-bottom: 5px;
+  color: #718078;
+  font: 10px "DM Mono";
+  text-align: center;
+}
+.date-picker-days button {
+  aspect-ratio: 1;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  background: transparent;
+  color: #39454c;
+  cursor: pointer;
+}
+.date-picker-days button:hover,
+.date-picker-days button.selected {
+  border-color: #245543;
+  background: #d9ed62;
+  color: #17362b;
+}
+.date-picker-days button.empty {
+  cursor: default;
+}
+.date-picker-dialog .dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 16px;
+}
+.date-picker-dialog .secondary-button {
+  min-height: 36px;
+  border: 1px solid #c9d1c9;
+  background: #fff;
+  color: #4c6256;
+  padding: 9px 16px;
+  font: 11px "Space Grotesk";
+  cursor: pointer;
+}
+.date-picker-dialog .secondary-button:hover {
+  background: #f0f4ed;
+  border-color: #8da68e;
+}
+.date-picker-time {
+  display: grid;
+  gap: 6px;
+  margin-top: 16px;
+  color: #39454c;
+  font-size: 12px;
+  font-weight: 700;
+}
+.date-picker-time input {
+  box-sizing: border-box;
+  width: 100%;
+  border: 1px solid #c9d1c9;
+  padding: 9px 10px;
+  font: inherit;
+}
 /* Application launcher */
 .launcher-head {
   display: flex;

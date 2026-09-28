@@ -7,7 +7,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>ERP | Marketing</title>
-  <link rel="stylesheet" href="assets/base.css?v=20260928-154028">
+  <link rel="stylesheet" href="assets/base.css?v=20260928-160400">
   <link rel="stylesheet" href="assets/marketing.css?v=20260928-154028">
 </head>
 <body>
@@ -54,5 +54,6 @@
       </div>
     </section>
   </main>
+  <script src="assets/base.js?v=20260928-160300"></script>
 </body>
 </html>

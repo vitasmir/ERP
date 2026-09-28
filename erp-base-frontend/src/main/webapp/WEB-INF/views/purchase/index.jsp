@@ -10,7 +10,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>ERP | Nákup</title>
-  <link rel="stylesheet" href="assets/base.css?v=20260928-154028">
+  <link rel="stylesheet" href="assets/base.css?v=20260928-160400">
   <link rel="stylesheet" href="assets/purchase.css?v=20260928-154028">
 </head>
 <body>
@@ -65,5 +65,6 @@
     document.querySelector('[data-close-order-dialog]').addEventListener('click', () => orderDialog.close());
     orderDialog.addEventListener('click', event => { if (event.target === orderDialog) orderDialog.close(); });
   </script>
+  <script src="assets/base.js?v=20260928-160300"></script>
 </body>
 </html>

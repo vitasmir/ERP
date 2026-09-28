@@ -125,6 +125,159 @@ document.addEventListener("keydown", (event) => {
     closeColorPicker();
   }
 });
+const czechMonths = [
+  "Leden",
+  "Únor",
+  "Březen",
+  "Duben",
+  "Květen",
+  "Červen",
+  "Červenec",
+  "Srpen",
+  "Září",
+  "Říjen",
+  "Listopad",
+  "Prosinec",
+];
+const czechWeekdays = ["Po", "Út", "St", "Čt", "Pá", "So", "Ne"];
+const datePickerModal = document.createElement("div");
+datePickerModal.className = "date-picker-modal";
+datePickerModal.innerHTML = `<div class="date-picker-backdrop"></div><section class="date-picker-dialog" role="dialog" aria-modal="true" aria-labelledby="date-picker-title"><div class="date-picker-head"><h2 id="date-picker-title">Vyberte datum</h2><button type="button" class="dialog-close" aria-label="Zavřít">×</button></div><div class="date-picker-navigation"><button type="button" data-date-prev aria-label="Předchozí měsíc">‹</button><strong data-date-month></strong><button type="button" data-date-next aria-label="Další měsíc">›</button></div><div class="date-picker-weekdays"></div><div class="date-picker-days"></div><label class="date-picker-time" hidden>Čas<input type="time" data-date-time></label><div class="dialog-actions"><button type="button" class="secondary-button" data-date-cancel>Zrušit</button><button type="button" class="primary" data-date-accept>Vybrat</button></div></section>`;
+document.body.appendChild(datePickerModal);
+const datePickerWeekdays = datePickerModal.querySelector(".date-picker-weekdays");
+czechWeekdays.forEach((day) => {
+  const label = document.createElement("span");
+  label.textContent = day;
+  datePickerWeekdays.appendChild(label);
+});
+let activeDateInput;
+let pendingDate;
+let pendingTime = "00:00";
+const padDatePart = (value) => String(value).padStart(2, "0");
+const toDateInputValue = (date) =>
+  `${date.getFullYear()}-${padDatePart(date.getMonth() + 1)}-${padDatePart(date.getDate())}`;
+const toDisplayDate = (date, withTime = false) =>
+  `${padDatePart(date.getDate())}.${padDatePart(date.getMonth() + 1)}.${date.getFullYear()}${withTime ? ` ${pendingTime}` : ""}`;
+const parseDateInput = (value) => {
+  const match = value?.match(/^(\d{4})-(\d{2})-(\d{2})(?:T(\d{2}:\d{2}))?/);
+  if (!match) return null;
+  const date = new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]));
+  return Number.isNaN(date.getTime()) ? null : { date, time: match[4] || "00:00" };
+};
+const datePickerDays = datePickerModal.querySelector(".date-picker-days");
+const renderDatePicker = () => {
+  const monthLabel = datePickerModal.querySelector("[data-date-month]");
+  monthLabel.textContent = `${czechMonths[pendingDate.getMonth()]} ${pendingDate.getFullYear()}`;
+  datePickerDays.replaceChildren();
+  const firstDay = new Date(pendingDate.getFullYear(), pendingDate.getMonth(), 1);
+  const startOffset = (firstDay.getDay() + 6) % 7;
+  const daysInMonth = new Date(
+    pendingDate.getFullYear(),
+    pendingDate.getMonth() + 1,
+    0,
+  ).getDate();
+  for (let index = 0; index < startOffset + daysInMonth; index += 1) {
+    const dayNumber = index - startOffset + 1;
+    const day = document.createElement("button");
+    day.type = "button";
+    if (dayNumber < 1 || dayNumber > daysInMonth) {
+      day.disabled = true;
+      day.className = "empty";
+    } else {
+      day.textContent = dayNumber;
+      day.dataset.day = dayNumber;
+      day.className =
+        dayNumber === pendingDate.getDate() ? "selected" : "";
+    }
+    datePickerDays.appendChild(day);
+  }
+  datePickerModal.querySelector("[data-date-time]").value = pendingTime;
+};
+const closeDatePicker = () => {
+  datePickerModal.classList.remove("open");
+  activeDateInput = undefined;
+};
+const openDatePicker = (input) => {
+  activeDateInput = input;
+  const parsed = parseDateInput(input.value);
+  pendingDate = parsed?.date || new Date();
+  pendingTime = parsed?.time || "00:00";
+  const timeField = datePickerModal.querySelector(".date-picker-time");
+  const isDateTime = input.dataset.dateType === "datetime-local";
+  timeField.hidden = !isDateTime;
+  timeField.style.display = isDateTime ? "grid" : "none";
+  renderDatePicker();
+  datePickerModal.classList.add("open");
+};
+datePickerModal.addEventListener("click", (event) => {
+  const day = event.target.closest("[data-day]");
+  if (day) {
+    pendingDate.setDate(Number(day.dataset.day));
+    renderDatePicker();
+  }
+  if (event.target.closest("[data-date-prev]")) {
+    pendingDate.setMonth(pendingDate.getMonth() - 1);
+    renderDatePicker();
+  }
+  if (event.target.closest("[data-date-next]")) {
+    pendingDate.setMonth(pendingDate.getMonth() + 1);
+    renderDatePicker();
+  }
+  if (event.target.closest("[data-date-cancel], .date-picker-backdrop, .date-picker-dialog .dialog-close")) {
+    closeDatePicker();
+  }
+  if (event.target.closest("[data-date-accept]") && activeDateInput) {
+    const dateValue = toDateInputValue(pendingDate);
+    activeDateInput.value =
+      activeDateInput.dataset.dateType === "datetime-local"
+        ? `${dateValue}T${pendingTime}`
+        : dateValue;
+    activeDateInput.previousElementSibling.value = toDisplayDate(
+      pendingDate,
+      activeDateInput.dataset.dateType === "datetime-local",
+    );
+    closeDatePicker();
+  }
+});
+datePickerModal.querySelector("[data-date-time]").addEventListener("input", (event) => {
+  pendingTime = event.target.value;
+});
+document.addEventListener("keydown", (event) => {
+  if (event.key === "Escape" && datePickerModal.classList.contains("open")) {
+    closeDatePicker();
+  }
+});
+document.querySelectorAll('input[type="date"], input[type="datetime-local"]').forEach((input) => {
+  const nativeType = input.type;
+  const wrapper = document.createElement("span");
+  const display = document.createElement("input");
+  wrapper.className = "date-field";
+  display.type = "text";
+  display.className = "localized-date-input";
+  display.placeholder = nativeType === "date" ? "dd.mm.rrrr" : "dd.mm.rrrr hh:mm";
+  display.readOnly = true;
+  display.required = input.required;
+  input.required = false;
+  input.dataset.dateType = nativeType;
+  input.type = "hidden";
+  const parsed = parseDateInput(input.value);
+  if (parsed) {
+    pendingTime = parsed.time;
+    display.value = toDisplayDate(parsed.date, nativeType === "datetime-local");
+  }
+  const inputParent = input.parentNode;
+  inputParent.insertBefore(wrapper, input);
+  wrapper.append(display, input);
+  display.addEventListener("click", () => openDatePicker(input));
+  input.form?.addEventListener("reset", () => {
+    window.setTimeout(() => {
+      const resetDate = parseDateInput(input.value);
+      display.value = resetDate
+        ? toDisplayDate(resetDate.date, nativeType === "datetime-local")
+        : "";
+    });
+  });
+});
 const companyModal = document.getElementById("company-modal");
 const companyForm = document.getElementById("company-form");
 const companyCards = () => [

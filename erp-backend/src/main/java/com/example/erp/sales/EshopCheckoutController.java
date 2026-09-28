@@ -17,6 +17,7 @@ import org.springframework.web.server.ResponseStatusException;
 import com.example.erp.accounting.AccountInvoice;
 import com.example.erp.accounting.AccountInvoiceRepository;
 import com.example.erp.accounting.InvoiceLine;
+import com.example.erp.accounting.InvoicePdfService;
 import com.example.erp.accounting.InvoiceRecords;
 import com.example.erp.accounting.InvoiceStatus;
 import com.example.erp.catalog.Product;
@@ -35,16 +36,18 @@ public class EshopCheckoutController {
     private final PosTransactionRepository transactions;
     private final ProductRepository products;
     private final InventoryItemRepository inventory;
+    private final InvoicePdfService pdfs;
 
     public EshopCheckoutController(SalesOrderRepository orders, AccountInvoiceRepository invoices,
             InvoiceRecords invoiceRecords, PosTransactionRepository transactions, ProductRepository products,
-            InventoryItemRepository inventory) {
+            InventoryItemRepository inventory, InvoicePdfService pdfs) {
         this.orders = orders;
         this.invoices = invoices;
         this.invoiceRecords = invoiceRecords;
         this.transactions = transactions;
         this.products = products;
         this.inventory = inventory;
+        this.pdfs = pdfs;
     }
 
     @PostMapping("/orders/checkout")
@@ -66,7 +69,8 @@ public class EshopCheckoutController {
             BigDecimal quantity = BigDecimal.valueOf(line.quantity());
             total = total.add(product.getPrice().multiply(quantity));
             itemCount += line.quantity();
-            invoiceLines.add(new InvoiceLine(product.getName(), quantity, product.getPrice(), BigDecimal.ZERO));
+                invoiceLines.add(new InvoiceLine(product.getId(), product.getImageUrl(), product.getName(), quantity,
+                    product.getPrice(), BigDecimal.ZERO));
         }
         if (total.signum() <= 0) throw badRequest("Hodnota objednávky musí být kladná.");
 
@@ -94,6 +98,7 @@ public class EshopCheckoutController {
             invoices.saveAndFlush(invoice);
             invoiceRecords.payment(invoice.getId(), total, LocalDate.now(), "Platba kartou v e-shopu");
             invoiceRecords.event(invoice.getId(), "PAYMENT", "Platba kartou v e-shopu");
+            pdfs.createWhenPaid(invoice);
         }
         return new CheckoutResponse(order.getId(), invoice.getId(), orderNumber, invoiceNumber, invoice.getStatus());
     }

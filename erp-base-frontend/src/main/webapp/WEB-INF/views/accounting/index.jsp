@@ -1,6 +1,7 @@
 <%@ page contentType="text/html; charset=UTF-8" pageEncoding="UTF-8" %>
 <%@ page import="com.example.erp.frontend.accounting.AccountingOverviewView" %>
 <%@ page import="com.example.erp.frontend.accounting.AccountingOverviewView.InvoiceView" %>
+<%@ page import="com.example.erp.frontend.accounting.AccountingOverviewView.InvoiceLineView" %>
 <%@ page import="com.example.erp.frontend.companies.CompaniesServlet.CompanyView" %>
 <!doctype html>
 <html lang="cs">
@@ -9,7 +10,7 @@
 	<meta name="viewport" content="width=device-width, initial-scale=1">
 	<title>ERP | Účetnictví</title>
 										  <link rel="stylesheet" href="assets/base.css?v=20260928-160510">
-	<link rel="stylesheet" href="assets/accounting.css?v=20260928-160511">
+	<link rel="stylesheet" href="assets/accounting.css?v=20260929-011500">
 </head>
 <body>
 	<%
@@ -67,7 +68,19 @@
 				<% if (overview != null) for (InvoiceView invoice : overview.invoices()) { %>
 					<tr class="invoice-row">
 						<td><span class="status-chip status-<%= invoice.status().toLowerCase() %>"><%= invoice.status() %></span></td>
-						<td><strong><%= invoice.invoiceNumber() %></strong></td>
+						<td>
+							<details class="invoice-items">
+								<summary><strong><%= invoice.invoiceNumber() %></strong><span><%= invoice.lines().size() %> položek</span></summary>
+								<div class="invoice-items-panel">
+									<% for (InvoiceLineView line : invoice.lines()) { %>
+										<div class="invoice-item">
+											<% if (line.imageUrl() != null && !line.imageUrl().isBlank()) { %><img src="<%= line.imageUrl() %>" alt="<%= line.description() %>"><% } else { %><span class="invoice-item-placeholder">FM</span><% } %>
+											<div><strong><%= line.description() %></strong><small><%= line.quantity() %> ks · <%= line.unitPrice() %> Kč / kus</small></div>
+										</div>
+									<% } %>
+								</div>
+							</details>
+						</td>
 						<td><span class="invoice-partner"><%= invoice.partnerName() %></span></td>
 						<td><%= invoice.issueDate() %></td>
 						<td><%= invoice.dueDate() %></td>

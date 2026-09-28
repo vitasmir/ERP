@@ -2,6 +2,7 @@ package com.example.erp.accounting;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.util.UUID;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Embeddable;
@@ -14,6 +15,12 @@ import jakarta.validation.constraints.Size;
 
 @Embeddable
 public class InvoiceLine {
+    @Column(name = "product_id")
+    private UUID productId;
+
+    @Column(name = "image_url")
+    private String imageUrl;
+
     @NotBlank @Size(max = 240)
     private String description;
 
@@ -31,6 +38,13 @@ public class InvoiceLine {
     protected InvoiceLine() { }
 
     public InvoiceLine(String description, BigDecimal quantity, BigDecimal unitPrice, BigDecimal vatRate) {
+        this(null, null, description, quantity, unitPrice, vatRate);
+    }
+
+    public InvoiceLine(UUID productId, String imageUrl, String description, BigDecimal quantity,
+            BigDecimal unitPrice, BigDecimal vatRate) {
+        this.productId = productId;
+        this.imageUrl = imageUrl;
         this.description = description;
         this.quantity = quantity;
         this.unitPrice = unitPrice;
@@ -38,6 +52,8 @@ public class InvoiceLine {
     }
 
     public String getDescription() { return description; }
+    public UUID getProductId() { return productId; }
+    public String getImageUrl() { return imageUrl; }
     public BigDecimal getQuantity() { return quantity; }
     public BigDecimal getUnitPrice() { return unitPrice; }
     public BigDecimal getVatRate() { return vatRate; }

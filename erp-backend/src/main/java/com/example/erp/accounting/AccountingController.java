@@ -49,11 +49,18 @@ public class AccountingController {
     private final AccountInvoiceRepository invoices;
         private final InvoiceRecords records;
         private final SalesOrderRepository orders;
+        private final InvoicePdfService pdfs;
 
         public AccountingController(AccountInvoiceRepository invoices, InvoiceRecords records, SalesOrderRepository orders) {
+                this(invoices, records, orders, null);
+        }
+
+        public AccountingController(AccountInvoiceRepository invoices, InvoiceRecords records, SalesOrderRepository orders,
+                InvoicePdfService pdfs) {
                 this.invoices = invoices;
                 this.records = records;
                 this.orders = orders;
+                this.pdfs = pdfs;
         }
 
     @GetMapping("/overview")
@@ -154,6 +161,7 @@ public class AccountingController {
         invoices.saveAndFlush(invoice);
         records.payment(id, request.amount(), request.paidOn(), request.reference());
         records.event(id, "PAYMENT", request.amount().toPlainString() + " / " + request.reference());
+        if (pdfs != null) pdfs.createWhenPaid(invoice);
         return InvoiceResponse.from(invoice);
     }
 
@@ -255,12 +263,21 @@ public class AccountingController {
     public record AccountingOverview(BigDecimal receivables, BigDecimal overdue, long openInvoiceCount,
             List<InvoiceResponse> invoices) { }
 
-        public record InvoiceResponse(UUID id, long version, String invoiceNumber, String partnerName, LocalDate issueDate,
-            LocalDate dueDate, BigDecimal totalAmount, BigDecimal paidAmount, InvoiceStatus status) {
+                public record InvoiceResponse(UUID id, long version, String invoiceNumber, String partnerName, LocalDate issueDate,
+                        LocalDate dueDate, BigDecimal totalAmount, BigDecimal paidAmount, InvoiceStatus status,
+                        List<InvoiceLineView> lines) {
         static InvoiceResponse from(AccountInvoice invoice) {
             return new InvoiceResponse(invoice.getId(), invoice.getVersion(), invoice.getInvoiceNumber(), invoice.getPartnerName(),
                     invoice.getIssueDate(), invoice.getDueDate(), invoice.getTotalAmount(), invoice.getPaidAmount(),
-                    invoice.getStatus());
+                                        invoice.getStatus(), invoice.getLines().stream().map(InvoiceLineView::from).toList());
         }
     }
+
+        public record InvoiceLineView(UUID productId, String description, BigDecimal quantity, BigDecimal unitPrice,
+                        String imageUrl) {
+                static InvoiceLineView from(InvoiceLine line) {
+                        return new InvoiceLineView(line.getProductId(), line.getDescription(), line.getQuantity(),
+                                        line.getUnitPrice(), line.getImageUrl());
+                }
+        }
 }

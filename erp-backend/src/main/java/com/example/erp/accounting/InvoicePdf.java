@@ -15,14 +15,19 @@ final class InvoicePdf {
     private InvoicePdf() { }
 
     static byte[] render(AccountInvoice invoice) throws IOException {
+        return render(invoice, null);
+    }
+
+    static byte[] render(AccountInvoice invoice, String orderNumber) throws IOException {
         try (PDDocument document = new PDDocument();
                 var source = InvoicePdf.class.getResourceAsStream("/fonts/DejaVuSans.ttf");
                 ByteArrayOutputStream output = new ByteArrayOutputStream()) {
             if (source == null) throw new IOException("Invoice font is missing.");
             PDType0Font font = PDType0Font.load(document, source);
-            List<String> content = new ArrayList<>(List.of("Invoice " + invoice.getInvoiceNumber(),
+                List<String> content = new ArrayList<>(List.of("Invoice " + invoice.getInvoiceNumber(),
                     "Customer: " + invoice.getPartnerName(), "Status: " + invoice.getStatus(),
                     "Issued: " + invoice.getIssueDate() + "     Due: " + invoice.getDueDate(), ""));
+                if (orderNumber != null && !orderNumber.isBlank()) content.add(1, "Order: " + orderNumber);
             for (InvoiceLine line : invoice.getLines()) {
                 content.add(line.getDescription());
                 content.add(line.getQuantity() + " x " + line.getUnitPrice() + " CZK | VAT " + line.getVatRate()

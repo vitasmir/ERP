@@ -7,6 +7,7 @@ import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.ContentDisposition;
 import org.springframework.http.HttpStatus;
@@ -55,6 +56,7 @@ public class AccountingController {
                 this(invoices, records, orders, null);
         }
 
+        @Autowired
         public AccountingController(AccountInvoiceRepository invoices, InvoiceRecords records, SalesOrderRepository orders,
                 InvoicePdfService pdfs) {
                 this.invoices = invoices;

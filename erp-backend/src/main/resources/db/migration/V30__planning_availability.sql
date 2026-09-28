@@ -49,3 +49,7 @@ CREATE TABLE planning_notifications (
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     read_at TIMESTAMP
 );
+
+ALTER TABLE invoice_lines
+    ADD COLUMN product_id UUID,
+    ADD COLUMN image_url VARCHAR(1000);

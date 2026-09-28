@@ -248,11 +248,26 @@ public class ShopServlet extends HttpServlet {
                 return;
             }
             boolean paid = "card".equals(paymentMethod);
-            PosTransactionRequest posTransaction = new PosTransactionRequest(itemCount, total, paid ? "CARD" : "CASH", paid);
-            HttpResponse<String> posResponse = send("POST", "/api/v1/pos/transactions", mapper.writeValueAsString(posTransaction));
-            if (posResponse.statusCode() != HttpServletResponse.SC_CREATED) {
+            ShopView.DeliveryDetails customer = delivery(session);
+            if (customer == null) {
+                response.sendRedirect("eshop?checkout=delivery&error=" + java.net.URLEncoder.encode(
+                    "Vyplňte údaje zákazníka.", java.nio.charset.StandardCharsets.UTF_8));
+                return;
+            }
+            List<Map<String, Object>> checkoutLines = cart.entrySet().stream()
+                    .filter(entry -> entry.getValue() > 0)
+                    .map(entry -> Map.<String, Object>of("productId", entry.getKey(), "quantity", entry.getValue()))
+                    .toList();
+            Map<String, Object> checkout = Map.of(
+                    "customerName", customer.firstName() + " " + customer.lastName(),
+                    "orderDate", java.time.LocalDate.now(),
+                    "deliveryDate", java.time.LocalDate.now().plusDays(1),
+                    "paymentMethod", paid ? "CARD" : "CASH",
+                    "lines", checkoutLines);
+            HttpResponse<String> checkoutResponse = send("POST", "/api/v1/sales/orders/checkout", mapper.writeValueAsString(checkout));
+            if (checkoutResponse.statusCode() != HttpServletResponse.SC_CREATED) {
                 response.sendRedirect("eshop?checkout=payment&error=" + java.net.URLEncoder.encode(
-                    "Prodej se nepodařilo předat do Pokladny.", java.nio.charset.StandardCharsets.UTF_8));
+                    "Objednávku se nepodařilo dokončit: " + checkoutResponse.body(), java.nio.charset.StandardCharsets.UTF_8));
                 return;
             }
         session.removeAttribute(CART_ATTRIBUTE);
@@ -260,8 +275,6 @@ public class ShopServlet extends HttpServlet {
         session.removeAttribute(PAYMENT_ATTRIBUTE);
         response.sendRedirect("eshop?order=completed");
     }
-
-    private record PosTransactionRequest(int itemCount, BigDecimal totalAmount, String paymentMethod, boolean paid) { }
 
     private String text(String value) {
         return value == null ? "" : value.trim();

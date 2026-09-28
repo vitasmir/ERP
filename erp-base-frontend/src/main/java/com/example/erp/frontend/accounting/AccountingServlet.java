@@ -66,6 +66,18 @@ public class AccountingServlet extends HttpServlet {
                     "lines", List.of(Map.of("description", "Faktura " + invoiceNumber,
                         "quantity", BigDecimal.ONE, "unitPrice", totalAmount, "vatRate", BigDecimal.ZERO))));
                 backendRequest = jsonRequest(backendUrl + "/api/v1/accounting/invoices", "POST", body);
+                } else if ("update".equals(request.getParameter("action"))) {
+                UUID.fromString(id);
+                String invoiceNumber = request.getParameter("invoiceNumber");
+                BigDecimal totalAmount = new BigDecimal(request.getParameter("totalAmount"));
+                String body = mapper.writeValueAsString(Map.of("version", Long.parseLong(request.getParameter("version")),
+                    "invoice", Map.of("invoiceNumber", invoiceNumber,
+                        "partnerName", request.getParameter("partnerName"),
+                        "issueDate", request.getParameter("issueDate"),
+                        "dueDate", request.getParameter("dueDate"),
+                        "lines", List.of(Map.of("description", "Faktura " + invoiceNumber,
+                            "quantity", BigDecimal.ONE, "unitPrice", totalAmount, "vatRate", BigDecimal.ZERO)))));
+                backendRequest = jsonRequest(backendUrl + "/api/v1/accounting/invoices/" + id, "PUT", body);
             } else if ("payment".equals(request.getParameter("action"))) {
                 UUID.fromString(id);
                 String body = mapper.writeValueAsString(Map.of("amount", request.getParameter("amount")));

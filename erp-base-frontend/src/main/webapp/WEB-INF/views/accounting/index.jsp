@@ -9,7 +9,7 @@
 	<meta name="viewport" content="width=device-width, initial-scale=1">
 	<title>ERP | Účetnictví</title>
 										  <link rel="stylesheet" href="assets/base.css?v=20260928-160510">
-	<link rel="stylesheet" href="assets/accounting.css?v=20260928-154028">
+	<link rel="stylesheet" href="assets/accounting.css?v=20260928-160511">
 </head>
 <body>
 	<%
@@ -80,6 +80,22 @@
 							</form>
 						<% } else { %>
 							<span class="paid-label">Uhrazeno <%= invoice.paidAmount() %> Kč</span>
+						<% } %>
+						<% if ("DRAFT".equals(invoice.status())) { %>
+							<details class="invoice-edit"><summary>Upravit</summary>
+								<form method="post">
+									<h3>Upravit fakturu</h3>
+									<input type="hidden" name="action" value="update">
+									<input type="hidden" name="id" value="<%= invoice.id() %>">
+									<input type="hidden" name="version" value="<%= invoice.version() %>">
+									<label>Číslo faktury<input name="invoiceNumber" value="<%= invoice.invoiceNumber() %>" required maxlength="40"></label>
+									<label>Odběratel<input name="partnerName" value="<%= invoice.partnerName() %>" required maxlength="160"></label>
+									<label>Vystaveno<input type="date" name="issueDate" value="<%= invoice.issueDate() %>" required></label>
+									<label>Splatnost<input type="date" name="dueDate" value="<%= invoice.dueDate() %>" required></label>
+									<label>Celkem<input type="number" name="totalAmount" value="<%= invoice.totalAmount() %>" min="0.01" step="0.01" required></label>
+									<div class="invoice-edit-actions"><button class="dialog-cancel" type="button" onclick="this.closest('details').removeAttribute('open')">Zrušit</button><button class="secondary" type="submit">Uložit změny</button></div>
+								</form>
+							</details>
 						<% } %>
 						</td>
 					</tr>

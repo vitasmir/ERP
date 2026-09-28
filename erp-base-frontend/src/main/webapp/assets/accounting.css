@@ -113,6 +113,73 @@
 .invoice-action-cell .secondary {
   white-space: nowrap;
 }
+.invoice-edit {
+  display: inline-block;
+  margin-left: 6px;
+}
+.invoice-edit summary {
+  display: inline-block;
+  border: 1px solid #35624c;
+  color: #28543f;
+  padding: 8px 11px;
+  font: 11px "Space Grotesk";
+  cursor: pointer;
+  list-style: none;
+}
+.invoice-edit summary::-webkit-details-marker {
+  display: none;
+}
+.invoice-edit[open]::before {
+  position: fixed;
+  inset: 0;
+  z-index: 10;
+  background: rgba(23, 54, 43, 0.28);
+  content: "";
+}
+.invoice-edit form {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  z-index: 11;
+  display: grid;
+  box-sizing: border-box;
+  width: min(420px, calc(100vw - 36px));
+  max-height: calc(100vh - 36px);
+  overflow-y: auto;
+  gap: 8px;
+  margin: 0;
+  padding: 20px;
+  border: 1px solid #d9ddd4;
+  background: #fffdf8;
+  box-shadow: 0 12px 30px rgba(20, 54, 45, 0.16);
+  transform: translate(-50%, -50%);
+}
+.invoice-edit h3 {
+  margin: 0 0 6px;
+  color: #17362b;
+  font-size: 20px;
+}
+.invoice-edit label {
+  display: grid;
+  gap: 4px;
+  color: #718078;
+  font: 9px "DM Mono";
+  text-transform: uppercase;
+}
+.invoice-edit input {
+  box-sizing: border-box;
+  width: 100%;
+  border: 1px solid #c9d1c9;
+  padding: 7px 8px;
+  color: #1e2b32;
+  font: 12px "Space Grotesk";
+}
+.invoice-edit-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 6px;
+}
 .invoice-table .paid-label {
   white-space: nowrap;
 }

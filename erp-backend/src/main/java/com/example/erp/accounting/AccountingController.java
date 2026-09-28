@@ -255,10 +255,10 @@ public class AccountingController {
     public record AccountingOverview(BigDecimal receivables, BigDecimal overdue, long openInvoiceCount,
             List<InvoiceResponse> invoices) { }
 
-    public record InvoiceResponse(UUID id, String invoiceNumber, String partnerName, LocalDate issueDate,
+        public record InvoiceResponse(UUID id, long version, String invoiceNumber, String partnerName, LocalDate issueDate,
             LocalDate dueDate, BigDecimal totalAmount, BigDecimal paidAmount, InvoiceStatus status) {
         static InvoiceResponse from(AccountInvoice invoice) {
-            return new InvoiceResponse(invoice.getId(), invoice.getInvoiceNumber(), invoice.getPartnerName(),
+            return new InvoiceResponse(invoice.getId(), invoice.getVersion(), invoice.getInvoiceNumber(), invoice.getPartnerName(),
                     invoice.getIssueDate(), invoice.getDueDate(), invoice.getTotalAmount(), invoice.getPaidAmount(),
                     invoice.getStatus());
         }

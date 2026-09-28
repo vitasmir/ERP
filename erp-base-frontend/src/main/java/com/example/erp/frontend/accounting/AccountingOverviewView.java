@@ -6,6 +6,6 @@ import java.util.UUID;
 
 public record AccountingOverviewView(BigDecimal receivables, BigDecimal overdue, long openInvoiceCount,
         List<InvoiceView> invoices) {
-    public record InvoiceView(UUID id, String invoiceNumber, String partnerName, String issueDate, String dueDate,
+        public record InvoiceView(UUID id, long version, String invoiceNumber, String partnerName, String issueDate, String dueDate,
             BigDecimal totalAmount, BigDecimal paidAmount, String status) { }
 }

@@ -9,7 +9,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>ERP | Plánování</title>
-  <link rel="stylesheet" href="assets/base.css?v=20260928-160400">
+  <link rel="stylesheet" href="assets/base.css?v=20260928-160510">
   <link rel="stylesheet" href="assets/planning.css?v=20260928-154028">
   <link rel="stylesheet" href="assets/workforce.css?v=20260928-154028">
 </head>
@@ -83,7 +83,7 @@
             <% if (edit && "DRAFT".equals(shift.status())) { %>
             <label><input type="checkbox" form="publish-plan" name="shiftIds" value="<%= shift.id() %>"> Vybrat</label>
             <form method="post"><input type="hidden" name="action" value="publish"><input type="hidden" name="id" value="<%= shift.id() %>"><button class="secondary" type="submit">Publikovat směnu</button></form>
-            <form method="post"><input type="hidden" name="action" value="delete"><input type="hidden" name="id" value="<%= shift.id() %>"><button class="secondary" type="submit">Smazat koncept</button></form>
+            <form method="post" data-confirm-delete data-confirm-message="Opravdu chcete tento koncept smazat?"><input type="hidden" name="action" value="delete"><input type="hidden" name="id" value="<%= shift.id() %>"><button class="secondary" type="submit">Smazat koncept</button></form>
             <% } %>
             <a href="planning?audit=<%= shift.id() %>#audit">Historie</a>
           </div>
@@ -120,6 +120,6 @@
       </div><% } %>
     </section>
   </main>
-  <script src="assets/base.js?v=20260928-160300"></script>
+  <script src="assets/base.js?v=20260928-160511"></script>
 </body>
 </html>

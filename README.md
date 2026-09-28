@@ -17,6 +17,16 @@ docker compose up --build
 
 Aplikace bude na `http://localhost:4201`, API na `http://localhost:8080`.
 
+## Automatický rebuild UI
+
+Pro automatické sestavení po změně zdrojů frontendového UI spusťte:
+
+```bash
+./watch-ui.sh
+```
+
+Watcher spustí Compose na pozadí, sleduje `erp-base-frontend/src` a při změně automaticky provede `docker compose up --build -d`.
+
 ## Lokální vývoj
 
 ```bash

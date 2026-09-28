@@ -10,7 +10,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>ERP | Lidé</title>
-  <link rel="stylesheet" href="assets/base.css?v=20260928-160400">
+  <link rel="stylesheet" href="assets/base.css?v=20260928-160510">
   <link rel="stylesheet" href="assets/hr.css?v=20260928-154028">
   <link rel="stylesheet" href="assets/workforce.css?v=20260928-154028">
 </head>
@@ -111,6 +111,6 @@
     </section>
     <% } %>
   </main>
-  <script src="assets/base.js?v=20260928-160300"></script>
+  <script src="assets/base.js?v=20260928-160511"></script>
 </body>
 </html>

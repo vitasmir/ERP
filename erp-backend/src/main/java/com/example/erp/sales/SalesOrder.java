@@ -45,5 +45,27 @@ public class SalesOrder {
     public BigDecimal getTotalAmount() { return totalAmount; }
     public SalesOrderStatus getStatus() { return status; }
 
+    public static SalesOrder create(String orderNumber, String customerName, LocalDate orderDate,
+            LocalDate deliveryDate, BigDecimal totalAmount) {
+        SalesOrder order = new SalesOrder();
+        order.id = UUID.randomUUID();
+        order.orderNumber = orderNumber;
+        order.customerName = customerName;
+        order.orderDate = orderDate;
+        order.deliveryDate = deliveryDate;
+        order.totalAmount = totalAmount;
+        order.status = SalesOrderStatus.CONFIRMED;
+        return order;
+    }
+
+    public void update(String orderNumber, String customerName, LocalDate orderDate, LocalDate deliveryDate,
+            BigDecimal totalAmount) {
+        this.orderNumber = orderNumber;
+        this.customerName = customerName;
+        this.orderDate = orderDate;
+        this.deliveryDate = deliveryDate;
+        this.totalAmount = totalAmount;
+    }
+
     public void confirm() { status = SalesOrderStatus.CONFIRMED; }
 }

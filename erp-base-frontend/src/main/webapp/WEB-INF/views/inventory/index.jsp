@@ -12,7 +12,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>ERP | Sklad</title>
-  <link rel="stylesheet" href="assets/base.css?v=20260928-154028">
+  <link rel="stylesheet" href="assets/base.css?v=20260928-160510">
   <link rel="stylesheet" href="assets/inventory.css?v=20260928-154028">
   <link rel="stylesheet" href="assets/inventory-views.css?v=20260928-154028">
   <style>.inventory-image-modal{position:fixed;inset:0;z-index:1000;display:grid;place-items:center;padding:24px;background:rgba(15,29,24,.82);cursor:zoom-out}.inventory-image-modal-content{position:relative;display:grid;place-items:center;max-width:calc(100vw - 48px);max-height:calc(100vh - 48px)}.inventory-image-modal img{display:block;max-width:calc(100vw - 48px);max-height:calc(100vh - 48px);width:auto;height:auto;object-fit:contain;box-shadow:0 20px 60px rgba(0,0,0,.35);cursor:default}.inventory-image-modal-close{position:absolute;z-index:1;top:-18px;right:-18px;width:36px;height:36px;border:0;border-radius:50%;background:#fffdf8;color:#17362b;font-size:26px;line-height:1;cursor:pointer;box-shadow:0 4px 14px rgba(0,0,0,.25)}@media(max-width:520px){.inventory-image-modal{padding:12px}.inventory-image-modal img{max-width:calc(100vw - 24px);max-height:calc(100vh - 24px)}} </style>

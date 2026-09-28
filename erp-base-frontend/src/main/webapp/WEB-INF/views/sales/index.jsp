@@ -5,13 +5,13 @@
 <%@ page import="com.example.erp.frontend.sales.SalesOverviewView.SalesOrderView" %>
 <%! String amount(BigDecimal value) { return value.setScale(2, RoundingMode.HALF_UP).toPlainString(); } %>
 <!doctype html>
-<html lang="cs">
+<html lang="cs-CZ">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>ERP | Prodej</title>
-  <link rel="stylesheet" href="assets/base.css?v=20260928-154028">
-  <link rel="stylesheet" href="assets/sales.css?v=20260928-154028">
+  <link rel="stylesheet" href="assets/base.css?v=20260928-160510">
+  <link rel="stylesheet" href="assets/sales.css?v=20260928-160507">
 </head>
 <body>
   <% SalesOverviewView overview = (SalesOverviewView) request.getAttribute("overview"); String error = (String) request.getAttribute("error"); String message = request.getParameter("message"); String actionError = request.getParameter("error"); %>
@@ -19,7 +19,7 @@
     <header class="sales-header">
       <a href="apps" class="back-link">← Aplikace</a>
       <div><span class="eyebrow">OBCHOD / PRODEJ</span><h1>Prodej</h1><p>Převádějte nabídky do objednávek a mějte pod kontrolou dodávky pro zákazníky.</p></div>
-      <a href="#orders" class="primary">Přehled objednávek</a>
+      <details class="sales-create"><summary class="primary">Vytvořit objednávku</summary><form method="post"><h3 class="sales-dialog-title">Vytvořit objednávku</h3><input type="hidden" name="action" value="create"><label>Číslo dokumentu<input name="orderNumber" required maxlength="30"></label><label>Zákazník<input name="customerName" required maxlength="200"></label><label>Vystaveno<input type="date" name="orderDate" required></label><label>Dodání<input type="date" name="deliveryDate" required></label><label>Celkem<input type="number" name="totalAmount" min="0" step="0.01" required></label><div class="sales-dialog-actions"><button class="dialog-cancel" type="button" onclick="this.closest('details').removeAttribute('open')">Zrušit</button><button class="primary" type="submit">Vytvořit objednávku</button></div></form></details>
     </header>
     <% if (error != null) { %><p class="sales-message error"><%= error %></p><% } if (actionError != null) { %><p class="sales-message error"><%= actionError %></p><% } if (message != null) { %><p class="sales-message"><%= message %></p><% } %>
     <section class="sales-metrics">
@@ -40,7 +40,13 @@
               <td data-label="Vystaveno"><%= order.orderDate() %></td>
               <td data-label="Dodání"><%= order.deliveryDate() %></td>
               <td data-label="Celkem" class="amount-column"><strong><%= amount(order.totalAmount()) %> Kč</strong></td>
-              <td data-label="Stav / akce"><% if ("QUOTE".equals(order.status())) { %><form method="post"><input type="hidden" name="id" value="<%= order.id() %>"><button class="secondary" type="submit">Potvrdit objednávku</button></form><% } else { %><span class="confirmed-label">Potvrzeno k dodání</span><% } %></td>
+              <td data-label="Stav / akce">
+                <div class="sales-actions">
+                  <% if ("QUOTE".equals(order.status())) { %><form method="post"><input type="hidden" name="id" value="<%= order.id() %>"><input type="hidden" name="action" value="confirm"><button class="secondary" type="submit">Potvrdit objednávku</button></form><% } else { %><span class="confirmed-label">Potvrzeno k dodání</span><% } %>
+                  <details class="sales-edit"><summary>Upravit</summary><form method="post"><h3 class="sales-dialog-title">Upravit objednávku</h3><input type="hidden" name="action" value="update"><input type="hidden" name="id" value="<%= order.id() %>"><label>Číslo dokumentu<input name="orderNumber" value="<%= order.orderNumber() %>" required maxlength="30"></label><label>Zákazník<input name="customerName" value="<%= order.customerName() %>" required maxlength="200"></label><label>Vystaveno<input type="date" name="orderDate" value="<%= order.orderDate() %>" required></label><label>Dodání<input type="date" name="deliveryDate" value="<%= order.deliveryDate() %>" required></label><label>Celkem<input type="number" name="totalAmount" value="<%= order.totalAmount() %>" min="0" step="0.01" required></label><div class="sales-dialog-actions"><button class="dialog-cancel" type="button" onclick="this.closest('details').removeAttribute('open')">Zrušit</button><button class="secondary" type="submit">Uložit změny</button></div></form></details>
+                  <form method="post" data-confirm-delete data-confirm-message="Opravdu chcete tento dokument smazat?"><input type="hidden" name="action" value="delete"><input type="hidden" name="id" value="<%= order.id() %>"><button class="danger-button" type="submit">Smazat</button></form>
+                </div>
+              </td>
             </tr>
             <% } %>
           </tbody>
@@ -48,5 +54,6 @@
       </div>
     </section>
   </main>
+  <script src="assets/base.js?v=20260928-160511"></script>
 </body>
 </html>

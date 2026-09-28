@@ -46,19 +46,55 @@ public class SalesServlet extends HttpServlet {
     @Override
     protected void doPost(HttpServletRequest request, HttpServletResponse response) throws IOException {
         String id = request.getParameter("id");
+        String action = request.getParameter("action");
         try {
-            UUID.fromString(id);
-            HttpRequest backendRequest = com.example.erp.frontend.base.BackendRequests.newBuilder(URI.create(backendUrl + "/api/v1/sales/orders/" + id + "/confirm"))
-                    .method("PATCH", HttpRequest.BodyPublishers.noBody()).build();
+            HttpRequest backendRequest;
+            if ("create".equals(action)) {
+                SalesOrderRequest create = new SalesOrderRequest(request.getParameter("orderNumber"),
+                    request.getParameter("customerName"), request.getParameter("orderDate"),
+                    request.getParameter("deliveryDate"), request.getParameter("totalAmount"));
+                backendRequest = com.example.erp.frontend.base.BackendRequests.newBuilder(URI.create(backendUrl + "/api/v1/sales/orders"))
+                    .header("Content-Type", "application/json")
+                    .POST(HttpRequest.BodyPublishers.ofString(mapper.writeValueAsString(create))).build();
+            } else {
+                UUID.fromString(id);
+                if ("update".equals(action)) {
+            SalesOrderUpdateRequest update = new SalesOrderUpdateRequest(request.getParameter("orderNumber"),
+                request.getParameter("customerName"), request.getParameter("orderDate"),
+                request.getParameter("deliveryDate"), request.getParameter("totalAmount"));
+            backendRequest = com.example.erp.frontend.base.BackendRequests.newBuilder(URI.create(backendUrl + "/api/v1/sales/orders/" + id))
+                .header("Content-Type", "application/json")
+                .PUT(HttpRequest.BodyPublishers.ofString(mapper.writeValueAsString(update))).build();
+            } else if ("delete".equals(action)) {
+            backendRequest = com.example.erp.frontend.base.BackendRequests.newBuilder(URI.create(backendUrl + "/api/v1/sales/orders/" + id))
+                .DELETE().build();
+            } else {
+            backendRequest = com.example.erp.frontend.base.BackendRequests.newBuilder(URI.create(backendUrl + "/api/v1/sales/orders/" + id + "/confirm"))
+                .method("PATCH", HttpRequest.BodyPublishers.noBody()).build();
+            }
+            }
             HttpResponse<Void> backendResponse = client.send(backendRequest, HttpResponse.BodyHandlers.discarding());
-            String message = backendResponse.statusCode() == HttpServletResponse.SC_OK
-                    ? "Nabídka byla potvrzena jako objednávka." : "Změnu stavu backend odmítl.";
+            boolean successful = backendResponse.statusCode() == HttpServletResponse.SC_OK
+                || backendResponse.statusCode() == HttpServletResponse.SC_NO_CONTENT
+                || backendResponse.statusCode() == HttpServletResponse.SC_CREATED;
+            String message = successful ? switch (action == null ? "confirm" : action) {
+            case "create" -> "Objednávka byla vytvořena.";
+            case "update" -> "Dokument byl upraven.";
+            case "delete" -> "Dokument byl smazán.";
+            default -> "Nabídka byla potvrzena jako objednávka.";
+            } : "Změnu dokumentu backend odmítl.";
             response.sendRedirect("sales?message=" + URLEncoder.encode(message, StandardCharsets.UTF_8));
         } catch (IllegalArgumentException exception) {
-            response.sendRedirect("sales?error=" + URLEncoder.encode("Neplatná nabídka.", StandardCharsets.UTF_8));
+            response.sendRedirect("sales?error=" + URLEncoder.encode("Vyplňte platné údaje objednávky.", StandardCharsets.UTF_8));
         } catch (InterruptedException exception) {
             Thread.currentThread().interrupt();
             response.sendRedirect("sales?error=" + URLEncoder.encode("Změna stavu byla přerušena.", StandardCharsets.UTF_8));
         }
     }
+
+        private record SalesOrderRequest(String orderNumber, String customerName, String orderDate,
+            String deliveryDate, String totalAmount) { }
+
+        private record SalesOrderUpdateRequest(String orderNumber, String customerName, String orderDate,
+            String deliveryDate, String totalAmount) { }
 }

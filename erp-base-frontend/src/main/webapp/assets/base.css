@@ -1302,3 +1302,53 @@ footer {
     font-size: 8px;
   }
 }
+.delete-confirm-modal {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  place-items: center;
+}
+.delete-confirm-modal.open {
+  display: grid;
+}
+.delete-confirm-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(20, 54, 45, 0.68);
+}
+.delete-confirm-dialog {
+  position: relative;
+  width: min(420px, calc(100% - 32px));
+  padding: 24px;
+  border: 1px solid #dedfd4;
+  background: #fffdf8;
+  box-shadow: 0 22px 70px rgba(20, 54, 45, 0.3);
+}
+.delete-confirm-dialog h2 {
+  margin: 0 0 10px;
+  color: #17362b;
+  font-size: 20px;
+}
+.delete-confirm-dialog p {
+  margin: 0;
+  color: #53645a;
+  font-size: 13px;
+}
+.delete-confirm-dialog .dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 22px;
+}
+.delete-confirm-dialog .danger-button {
+  border: 1px solid #b65754;
+  background: #b65754;
+  color: #fff;
+  padding: 9px 16px;
+  font: 11px "Space Grotesk";
+  cursor: pointer;
+}
+.delete-confirm-dialog .danger-button:hover {
+  background: #963f47;
+}

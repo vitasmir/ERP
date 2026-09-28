@@ -468,12 +468,48 @@ if (requestedEmployeeId) {
     document.getElementById("user-full-name").value =
       employeeOption.textContent.split(" · ")[0];
 }
-document.querySelectorAll(".delete-user-form").forEach((form) =>
-  form.addEventListener("submit", (event) => {
-    if (!window.confirm("Opravdu chcete tohoto uživatele smazat?"))
-      event.preventDefault();
-  }),
-);
+const deleteConfirmModal = document.createElement("div");
+deleteConfirmModal.className = "delete-confirm-modal";
+deleteConfirmModal.innerHTML = `<div class="delete-confirm-backdrop"></div><section class="delete-confirm-dialog" role="dialog" aria-modal="true" aria-labelledby="delete-confirm-title"><h2 id="delete-confirm-title">Potvrzení smazání</h2><p data-delete-confirm-message></p><div class="dialog-actions"><button type="button" class="secondary-button" data-delete-confirm-cancel>ZRUŠIT</button><button type="button" class="danger-button" data-delete-confirm-accept>SMAZAT</button></div></section>`;
+document.body.appendChild(deleteConfirmModal);
+let deleteConfirmForm;
+const closeDeleteConfirm = () => {
+  deleteConfirmModal.classList.remove("open");
+  deleteConfirmForm = undefined;
+};
+const openDeleteConfirm = (form) => {
+  deleteConfirmForm = form;
+  const action = form.querySelector('input[name="action"]')?.value;
+  const defaultMessage = action === "deleteCategory"
+    ? "Opravdu smazat kategorii?"
+    : action === "deleteProduct"
+      ? "Opravdu smazat produkt?"
+      : "Opravdu chcete tento záznam smazat?";
+  deleteConfirmModal.querySelector("[data-delete-confirm-message]").textContent =
+    form.dataset.confirmMessage || defaultMessage;
+  deleteConfirmModal.classList.add("open");
+};
+deleteConfirmModal.addEventListener("click", (event) => {
+  if (event.target.closest("[data-delete-confirm-cancel], .delete-confirm-backdrop")) {
+    closeDeleteConfirm();
+  }
+  if (event.target.closest("[data-delete-confirm-accept]") && deleteConfirmForm) {
+    const form = deleteConfirmForm;
+    closeDeleteConfirm();
+    form.submit();
+  }
+});
+document.addEventListener("keydown", (event) => {
+  if (event.key === "Escape" && deleteConfirmModal.classList.contains("open"))
+    closeDeleteConfirm();
+});
+document.addEventListener("submit", (event) => {
+  const form = event.target.closest('form[data-confirm-delete], form[onsubmit*="confirm("]');
+  if (!form) return;
+  event.preventDefault();
+  event.stopPropagation();
+  openDeleteConfirm(form);
+}, true);
 
 const roleModal = document.getElementById("role-modal");
 const roleForm = document.getElementById("role-form");

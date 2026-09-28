@@ -15,12 +15,18 @@ const ensureColorPicker = (form, id, defaultColor) => {
   label.className = "color-picker-field";
   label.textContent = "Barva";
   const input = document.createElement("input");
-  input.type = "color";
+  input.type = "hidden";
   input.name = "color";
   input.id = id;
   input.value = defaultColor;
   input.defaultValue = defaultColor;
-  label.appendChild(input);
+  const trigger = document.createElement("button");
+  trigger.type = "button";
+  trigger.className = "color-picker-trigger";
+  trigger.dataset.colorTarget = id;
+  trigger.textContent = "Vybrat barvu";
+  trigger.style.setProperty("--picker-color", defaultColor);
+  label.append(trigger, input);
   form.insertBefore(label, form.querySelector(".dialog-actions"));
   return input;
 };
@@ -39,6 +45,86 @@ ensureColorPicker(
   "user-color",
   "#DCE9D7",
 );
+const pickerPalette = [
+  "#D9ED62",
+  "#8DE6A0",
+  "#64D6E8",
+  "#8CB8EA",
+  "#F5A96B",
+  "#F06A61",
+  "#C978D2",
+  "#CDA98E",
+  "#8B8B92",
+  "#443B59",
+  "#2E9F70",
+  "#C2414A",
+];
+let activeColorInput;
+let pendingColor;
+const colorPickerModal = document.createElement("div");
+colorPickerModal.className = "color-picker-modal";
+colorPickerModal.innerHTML = `<div class="color-picker-backdrop"></div><section class="color-picker-dialog" role="dialog" aria-modal="true" aria-labelledby="color-picker-title"><div class="color-picker-head"><h2 id="color-picker-title">Vyberte barvu</h2><button type="button" class="dialog-close" aria-label="Zavřít">×</button></div><div class="color-picker-palette"></div><div class="color-picker-preview"><span></span><output></output></div><div class="dialog-actions"><button type="button" class="secondary-button" data-color-cancel>Zrušit</button><button type="button" class="primary" data-color-accept>Vybrat</button></div></section>`;
+document.body.appendChild(colorPickerModal);
+const colorPickerPalette = colorPickerModal.querySelector(
+  ".color-picker-palette",
+);
+const colorPickerPreview = colorPickerModal.querySelector(
+  ".color-picker-preview",
+);
+pickerPalette.forEach((color) => {
+  const swatch = document.createElement("button");
+  swatch.type = "button";
+  swatch.className = "color-swatch";
+  swatch.dataset.color = color;
+  swatch.style.backgroundColor = color;
+  swatch.setAttribute("aria-label", color);
+  colorPickerPalette.appendChild(swatch);
+});
+const updateColorPickerPreview = () => {
+  colorPickerPreview.style.setProperty("--picker-color", pendingColor);
+  colorPickerPreview.querySelector("output").textContent = pendingColor;
+  colorPickerModal.querySelectorAll(".color-swatch").forEach((swatch) => {
+    swatch.classList.toggle("selected", swatch.dataset.color === pendingColor);
+  });
+};
+const syncColorPickerTrigger = (input) => {
+  const trigger = document.querySelector(
+    `.color-picker-trigger[data-color-target="${input.id}"]`,
+  );
+  trigger?.style.setProperty("--picker-color", input.value);
+};
+const closeColorPicker = () => {
+  colorPickerModal.classList.remove("open");
+  activeColorInput = undefined;
+};
+document.addEventListener("click", (event) => {
+  const trigger = event.target.closest(".color-picker-trigger");
+  if (trigger) {
+    activeColorInput = document.getElementById(trigger.dataset.colorTarget);
+    pendingColor = activeColorInput.value;
+    updateColorPickerPreview();
+    colorPickerModal.classList.add("open");
+    colorPickerModal.querySelector(".color-picker-dialog").focus();
+  }
+  const swatch = event.target.closest(".color-swatch");
+  if (swatch) {
+    pendingColor = swatch.dataset.color;
+    updateColorPickerPreview();
+  }
+  if (event.target.closest("[data-color-cancel], .color-picker-backdrop")) {
+    closeColorPicker();
+  }
+  if (event.target.closest("[data-color-accept]") && activeColorInput) {
+    activeColorInput.value = pendingColor;
+    syncColorPickerTrigger(activeColorInput);
+    closeColorPicker();
+  }
+});
+document.addEventListener("keydown", (event) => {
+  if (event.key === "Escape" && colorPickerModal.classList.contains("open")) {
+    closeColorPicker();
+  }
+});
 const companyModal = document.getElementById("company-modal");
 const companyForm = document.getElementById("company-form");
 const companyCards = () => [
@@ -78,6 +164,7 @@ const openCompanyDialog = (edit = false) => {
       document.getElementById("company-status").value = card.dataset.status;
       document.getElementById("company-color").value =
         card.dataset.color || "#D9ED62";
+      syncColorPickerTrigger(document.getElementById("company-color"));
     };
     selector.addEventListener("change", () =>
       fillCompany(companyCards()[Number(selector.value)]),
@@ -94,6 +181,7 @@ const openCompanyDialog = (edit = false) => {
     document.getElementById("company-dialog-description").textContent =
       "Přidejte organizační jednotku do ERP.";
     document.getElementById("company-color").value = "#D9ED62";
+    syncColorPickerTrigger(document.getElementById("company-color"));
     document.getElementById("save-company").textContent = "Vytvořit společnost";
   }
   companyModal?.classList.add("open");
@@ -173,6 +261,7 @@ const openUserDialog = (user) => {
   if (colorInput) {
     colorInput.value = user?.dataset.color || "#DCE9D7";
     colorInput.name = user && !user.dataset.color ? "" : "color";
+    syncColorPickerTrigger(colorInput);
   }
   document.getElementById("user-status").value =
     user?.dataset.status || "ACTIVE";
@@ -248,6 +337,7 @@ const updateRoleForm = (card) => {
     card?.querySelector("p")?.textContent || "";
   document.getElementById("role-color").value =
     card?.dataset.color || "#D9ED62";
+  syncColorPickerTrigger(document.getElementById("role-color"));
   document.getElementById("permission-read").checked =
     card?.dataset.canRead === "true";
   document.getElementById("permission-insert").checked =
@@ -297,6 +387,7 @@ const openRoleDialog = (edit = false) => {
     document.getElementById("role-action").value = "create";
     document.getElementById("role-id").value = "";
     document.getElementById("role-color").value = "#D9ED62";
+    syncColorPickerTrigger(document.getElementById("role-color"));
     document.getElementById("permission-read").checked = true;
     document.getElementById("permission-insert").checked = false;
     document.getElementById("permission-edit").checked = false;

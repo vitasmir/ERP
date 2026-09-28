@@ -117,6 +117,98 @@
   background: #d9ed62;
   color: #173b30;
 }
+.color-picker-trigger {
+  position: relative;
+  min-height: 42px;
+  padding: 10px 12px 10px 42px;
+  border: 1px solid #c9d1c9;
+  background: #fff;
+  color: #39454c;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.color-picker-trigger::before {
+  position: absolute;
+  top: 9px;
+  left: 11px;
+  width: 22px;
+  height: 22px;
+  border-radius: 4px;
+  background: var(--picker-color, #d9ed62);
+  content: "";
+}
+.color-picker-modal {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  place-items: center;
+}
+.color-picker-modal.open {
+  display: grid;
+}
+.color-picker-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(20, 54, 45, 0.68);
+}
+.color-picker-dialog {
+  position: relative;
+  width: min(390px, calc(100% - 32px));
+  padding: 24px;
+  border: 1px solid #dedfd4;
+  background: #fffdf8;
+  box-shadow: 0 22px 70px rgba(20, 54, 45, 0.3);
+}
+.color-picker-dialog:focus {
+  outline: none;
+}
+.color-picker-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20px;
+}
+.color-picker-head h2 {
+  margin: 0;
+  font-size: 20px;
+}
+.color-picker-palette {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 8px;
+}
+.color-swatch {
+  aspect-ratio: 1;
+  min-width: 0;
+  border: 2px solid transparent;
+  border-radius: 4px;
+  cursor: pointer;
+}
+.color-swatch:hover,
+.color-swatch.selected {
+  border-color: #17362b;
+  box-shadow: 0 0 0 2px #fffdf8;
+}
+.color-picker-preview {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 22px 0;
+  color: #718078;
+  font: 11px "DM Mono";
+}
+.color-picker-preview span {
+  width: 32px;
+  height: 32px;
+  border: 1px solid #c9d1c9;
+  border-radius: 4px;
+  background: var(--picker-color, #d9ed62);
+}
+.color-picker-preview output {
+  text-transform: uppercase;
+}
 /* Application launcher */
 .launcher-head {
   display: flex;

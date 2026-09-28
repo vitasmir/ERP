@@ -6,8 +6,8 @@
 <html lang="cs">
 <head>
   <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-  <style>.catalog-actions-panel{display:none!important}.product-card-actions{display:flex;flex-direction:column;align-items:flex-end;gap:7px}.danger-button{background:#a8463d!important;border-color:#a8463d!important;color:#fff!important}.danger-button:hover{background:#8d342d!important;border-color:#8d342d!important}</style><script src="assets/ecommerce.js?v=3" defer></script>
-  <title>ERP | eCommerce</title><link rel="stylesheet" href="assets/base.css"><link rel="stylesheet" href="assets/ecommerce.css">
+  <style>.catalog-actions-panel{display:none!important}.product-card-actions{display:flex;flex-direction:column;align-items:flex-end;gap:7px}.danger-button{background:#a8463d!important;border-color:#a8463d!important;color:#fff!important}.danger-button:hover{background:#8d342d!important;border-color:#8d342d!important}</style><script src="assets/ecommerce.js?v=20260928-154028" defer></script>
+  <title>ERP | eCommerce</title><link rel="stylesheet" href="assets/base.css?v=20260928-154028"><link rel="stylesheet" href="assets/ecommerce.css?v=20260928-154028">
   <style>@media(min-width:1200px){.product-list{grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}.product-card{padding:14px}.product-top{display:block}.product-card-actions{align-items:flex-start!important;margin-top:12px}.active-state{text-align:left}.delivery-form{grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}.delivery-form button{grid-column:1/-1}.product-edit-form{grid-template-columns:1fr}.product-edit-form .secondary{grid-column:1}}</style>
 </head>
 <body>

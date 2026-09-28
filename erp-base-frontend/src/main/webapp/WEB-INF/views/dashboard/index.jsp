@@ -12,8 +12,8 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>ERP | Dashboard</title>
-  <link rel="stylesheet" href="assets/base.css">
-  <link rel="stylesheet" href="assets/dashboard.css">
+  <link rel="stylesheet" href="assets/base.css?v=20260928-154028">
+  <link rel="stylesheet" href="assets/dashboard.css?v=20260928-154028">
 </head>
 <body>
   <% DashboardOverviewView overview = (DashboardOverviewView) request.getAttribute("overview"); String error = (String) request.getAttribute("error"); %>

@@ -1,2 +1,163 @@
-.receipt-table tbody tr:hover th,.receipt-table tbody tr:hover td{background:#eef5d9}
-.receipt-table-wrap{overflow-x:auto;background:#fffdf8;border:1px solid #e0e2da}.receipt-table{width:100%;min-width:900px;border-collapse:collapse;text-align:left;color:#17362b}.receipt-table th{padding:14px 18px;background:#f1f0e9;border-bottom:1px solid #d9ddd4;color:#718078;font:10px 'DM Mono',monospace;text-transform:uppercase;white-space:nowrap}.receipt-table td{padding:16px 18px;border-bottom:1px solid #e8e9e3;vertical-align:middle;font-size:13px}.receipt-table tbody tr:last-child td{border-bottom:0}.receipt-table tbody tr:hover{background:#fcfbf6}.receipt-table td strong{display:block;font-size:15px}.receipt-table td span:not(.status-chip){display:block;margin-top:5px;color:#748278;font:10px 'DM Mono',monospace}.receipt-table .status-chip{display:inline-block;margin-top:8px}.receipt-table .payment-form{display:flex;align-items:end;gap:8px;margin:0}.receipt-table .payment-form label{display:grid;gap:5px;color:#7b897f;font:9px 'DM Mono',monospace}.receipt-table .payment-form select{min-width:95px;border:1px solid #d5ddd3;background:#fff;padding:8px;font:11px 'Space Grotesk',sans-serif}.receipt-table .secondary{border:1px solid #789582;background:#fff;padding:8px 10px;color:#234c39;font:11px 'Space Grotesk',sans-serif;cursor:pointer;white-space:nowrap}.receipt-table .paid-label{color:#257453!important;font:11px 'Space Grotesk',sans-serif!important}.receipt-table td:nth-child(4) strong{font-size:15px}@media(max-width:760px){.receipt-table-wrap{border-left:0;border-right:0}.receipt-table{min-width:0}.receipt-table thead{display:none}.receipt-table,.receipt-table tbody,.receipt-table tr,.receipt-table td{display:block;width:auto}.receipt-table tr{padding:14px 16px;border-bottom:1px solid #e8e9e3}.receipt-table td{display:flex;justify-content:space-between;gap:18px;padding:8px 0;border:0;text-align:right}.receipt-table td:before{content:attr(data-label);color:#718078;font:10px 'DM Mono',monospace;text-transform:uppercase;text-align:left}.receipt-table td:first-child,.receipt-table td[data-label="Prodejna a čas"]{display:block;text-align:left}.receipt-table td:first-child:before,.receipt-table td[data-label="Prodejna a čas"]:before{display:block;margin-bottom:6px}.receipt-table td[data-label="Obsluha"]{display:block;text-align:left}.receipt-table td[data-label="Obsluha"]:before{display:block;margin-bottom:8px}.receipt-table .payment-form{justify-content:flex-end;flex-wrap:wrap}.receipt-table .payment-form select{flex:1}}
+.receipt-table tbody tr:hover th,
+.receipt-table tbody tr:hover td {
+  background: #eef5d9;
+}
+.receipt-table-wrap {
+  overflow-x: auto;
+  background: #fffdf8;
+  border: 1px solid #e0e2da;
+}
+.receipt-table {
+  width: 100%;
+  min-width: 900px;
+  border-collapse: collapse;
+  text-align: left;
+  color: #17362b;
+}
+.receipt-table th {
+  padding: 14px 18px;
+  background: #f1f0e9;
+  border-bottom: 1px solid #d9ddd4;
+  color: #718078;
+  font:
+    10px "DM Mono",
+    monospace;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.receipt-table td {
+  padding: 16px 18px;
+  border-bottom: 1px solid #e8e9e3;
+  vertical-align: middle;
+  font-size: 13px;
+}
+.receipt-table tbody tr:last-child td {
+  border-bottom: 0;
+}
+.receipt-table tbody tr:hover {
+  background: #fcfbf6;
+}
+.receipt-table td strong {
+  display: block;
+  font-size: 15px;
+}
+.receipt-table td span:not(.status-chip) {
+  display: block;
+  margin-top: 5px;
+  color: #748278;
+  font:
+    10px "DM Mono",
+    monospace;
+}
+.receipt-table .status-chip {
+  display: inline-block;
+  margin-top: 8px;
+}
+.receipt-table .payment-form {
+  display: flex;
+  align-items: end;
+  gap: 8px;
+  margin: 0;
+}
+.receipt-table .payment-form label {
+  display: grid;
+  gap: 5px;
+  color: #7b897f;
+  font:
+    9px "DM Mono",
+    monospace;
+}
+.receipt-table .payment-form select {
+  min-width: 95px;
+  border: 1px solid #d5ddd3;
+  background: #fff;
+  padding: 8px;
+  font:
+    11px "Space Grotesk",
+    sans-serif;
+}
+.receipt-table .secondary {
+  border: 1px solid #789582;
+  background: #fff;
+  padding: 8px 10px;
+  color: #234c39;
+  font:
+    11px "Space Grotesk",
+    sans-serif;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.receipt-table .paid-label {
+  color: #257453 !important;
+  font:
+    11px "Space Grotesk",
+    sans-serif !important;
+}
+.receipt-table td:nth-child(4) strong {
+  font-size: 15px;
+}
+@media (max-width: 760px) {
+  .receipt-table-wrap {
+    border-left: 0;
+    border-right: 0;
+  }
+  .receipt-table {
+    min-width: 0;
+  }
+  .receipt-table thead {
+    display: none;
+  }
+  .receipt-table,
+  .receipt-table tbody,
+  .receipt-table tr,
+  .receipt-table td {
+    display: block;
+    width: auto;
+  }
+  .receipt-table tr {
+    padding: 14px 16px;
+    border-bottom: 1px solid #e8e9e3;
+  }
+  .receipt-table td {
+    display: flex;
+    justify-content: space-between;
+    gap: 18px;
+    padding: 8px 0;
+    border: 0;
+    text-align: right;
+  }
+  .receipt-table td:before {
+    content: attr(data-label);
+    color: #718078;
+    font:
+      10px "DM Mono",
+      monospace;
+    text-transform: uppercase;
+    text-align: left;
+  }
+  .receipt-table td:first-child,
+  .receipt-table td[data-label="Prodejna a čas"] {
+    display: block;
+    text-align: left;
+  }
+  .receipt-table td:first-child:before,
+  .receipt-table td[data-label="Prodejna a čas"]:before {
+    display: block;
+    margin-bottom: 6px;
+  }
+  .receipt-table td[data-label="Obsluha"] {
+    display: block;
+    text-align: left;
+  }
+  .receipt-table td[data-label="Obsluha"]:before {
+    display: block;
+    margin-bottom: 8px;
+  }
+  .receipt-table .payment-form {
+    justify-content: flex-end;
+    flex-wrap: wrap;
+  }
+  .receipt-table .payment-form select {
+    flex: 1;
+  }
+}

@@ -1,1 +1,245 @@
-.sales-page{min-height:100vh;background:#f3f1eb;color:#17362b;padding:44px max(5vw,24px);font-family:'Space Grotesk',sans-serif}.sales-header{display:grid;grid-template-columns:auto 1fr auto;gap:32px;align-items:start;padding-bottom:42px;border-bottom:1px solid #d9ddd4}.sales-header h1{font-size:42px;letter-spacing:0;margin:8px 0}.sales-header p{margin:0;color:#65756b}.back-link{color:#456a56;font:11px 'DM Mono';text-decoration:none;padding-top:8px}.sales-metrics{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin:28px 0 44px}.sales-metrics article{background:#fffdf8;border-top:3px solid #c96555;padding:20px}.sales-metrics article:nth-child(2){border-color:#3c8592}.sales-metrics article:nth-child(3){border-color:#d4a624}.sales-metrics span,.sales-metrics small{display:block;color:#718078;font:10px 'DM Mono'}.sales-metrics strong{display:block;font-size:27px;letter-spacing:0;margin:9px 0;overflow-wrap:anywhere}.section-head{display:flex;align-items:end;justify-content:space-between}.section-head h2{margin:7px 0;font-size:27px;letter-spacing:0}.order-count{font:10px 'DM Mono';color:#7b897f}.sales-table-wrap{overflow-x:auto;margin-top:16px;background:#fffdf8;border:1px solid #e0e2da}.sales-table{width:100%;min-width:900px;border-collapse:collapse;table-layout:fixed}.sales-table th{padding:13px 16px;border-bottom:1px solid #d9ddd4;text-align:left;color:#718078;font:9px 'DM Mono';font-weight:400;text-transform:uppercase}.sales-table td{padding:17px 16px;border-bottom:1px solid #e8e9e3;vertical-align:middle;color:#53645a;font-size:12px}.sales-table tbody tr:last-child td{border-bottom:0}.sales-table tbody tr:hover th,.sales-table tbody tr:hover td{background:#eef5d9}.sales-table th:nth-child(1){width:20%}.sales-table th:nth-child(2){width:21%}.sales-table th:nth-child(3),.sales-table th:nth-child(4){width:13%}.sales-table th:nth-child(5){width:16%}.sales-table th:nth-child(6){width:17%}.sales-table td strong{display:block;color:#17362b;font-size:14px;margin-top:8px}.amount-column{text-align:right!important;white-space:nowrap}.sales-table .secondary{white-space:nowrap}.status-chip{display:inline-block;border-radius:3px;padding:4px 6px;font:9px 'DM Mono';background:#e6ebe5;color:#506357}.status-quote{background:#fff0cf;color:#935f13}.status-confirmed{background:#daf0e6;color:#257453}.secondary{border:1px solid #35624c;background:transparent;color:#28543f;padding:8px 11px;font:11px 'Space Grotesk';cursor:pointer}.confirmed-label{font:10px 'DM Mono';color:#257453}.sales-message{background:#dff0e3;color:#285f39;padding:12px 14px;font-size:12px}.sales-message.error{background:#f8dfdf;color:#963f47}@media(max-width:840px){.sales-header{grid-template-columns:1fr}.sales-header .primary{justify-self:start}.sales-metrics{grid-template-columns:1fr}}@media(max-width:520px){.sales-page{padding:28px 18px}.sales-table-wrap{border-left:0;border-right:0}.sales-table{min-width:0}.sales-table thead{display:none}.sales-table,.sales-table tbody,.sales-table tr,.sales-table td{display:block;width:auto}.sales-table tr{padding:14px 16px;border-bottom:1px solid #e8e9e3}.sales-table td{display:flex;justify-content:space-between;gap:18px;padding:8px 0;border:0;text-align:right}.sales-table td:before{content:attr(data-label);color:#718078;font:10px 'DM Mono';text-transform:uppercase;text-align:left}.sales-table td:first-child{display:block;text-align:left}.sales-table td:first-child:before{display:block;margin-bottom:6px}.sales-table td[data-label="Stav / akce"]{justify-content:flex-end}.sales-table td[data-label="Stav / akce"] form{margin:0}.sales-header h1{font-size:36px}}
+.sales-page {
+  min-height: 100vh;
+  background: #f3f1eb;
+  color: #17362b;
+  padding: 44px max(5vw, 24px);
+  font-family: "Space Grotesk", sans-serif;
+}
+.sales-header {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 32px;
+  align-items: start;
+  padding-bottom: 42px;
+  border-bottom: 1px solid #d9ddd4;
+}
+.sales-header h1 {
+  font-size: 42px;
+  letter-spacing: 0;
+  margin: 8px 0;
+}
+.sales-header p {
+  margin: 0;
+  color: #65756b;
+}
+.back-link {
+  color: #456a56;
+  font: 11px "DM Mono";
+  text-decoration: none;
+  padding-top: 8px;
+}
+.sales-metrics {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  margin: 28px 0 44px;
+}
+.sales-metrics article {
+  background: #fffdf8;
+  border-top: 3px solid #c96555;
+  padding: 20px;
+}
+.sales-metrics article:nth-child(2) {
+  border-color: #3c8592;
+}
+.sales-metrics article:nth-child(3) {
+  border-color: #d4a624;
+}
+.sales-metrics span,
+.sales-metrics small {
+  display: block;
+  color: #718078;
+  font: 10px "DM Mono";
+}
+.sales-metrics strong {
+  display: block;
+  font-size: 27px;
+  letter-spacing: 0;
+  margin: 9px 0;
+  overflow-wrap: anywhere;
+}
+.section-head {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+}
+.section-head h2 {
+  margin: 7px 0;
+  font-size: 27px;
+  letter-spacing: 0;
+}
+.order-count {
+  font: 10px "DM Mono";
+  color: #7b897f;
+}
+.sales-table-wrap {
+  overflow-x: auto;
+  margin-top: 16px;
+  background: #fffdf8;
+  border: 1px solid #e0e2da;
+}
+.sales-table {
+  width: 100%;
+  min-width: 900px;
+  border-collapse: collapse;
+  table-layout: fixed;
+}
+.sales-table th {
+  padding: 13px 16px;
+  border-bottom: 1px solid #d9ddd4;
+  text-align: left;
+  color: #718078;
+  font: 9px "DM Mono";
+  font-weight: 400;
+  text-transform: uppercase;
+}
+.sales-table td {
+  padding: 17px 16px;
+  border-bottom: 1px solid #e8e9e3;
+  vertical-align: middle;
+  color: #53645a;
+  font-size: 12px;
+}
+.sales-table tbody tr:last-child td {
+  border-bottom: 0;
+}
+.sales-table tbody tr:hover th,
+.sales-table tbody tr:hover td {
+  background: #eef5d9;
+}
+.sales-table th:nth-child(1) {
+  width: 20%;
+}
+.sales-table th:nth-child(2) {
+  width: 21%;
+}
+.sales-table th:nth-child(3),
+.sales-table th:nth-child(4) {
+  width: 13%;
+}
+.sales-table th:nth-child(5) {
+  width: 16%;
+}
+.sales-table th:nth-child(6) {
+  width: 17%;
+}
+.sales-table td strong {
+  display: block;
+  color: #17362b;
+  font-size: 14px;
+  margin-top: 8px;
+}
+.amount-column {
+  text-align: right !important;
+  white-space: nowrap;
+}
+.sales-table .secondary {
+  white-space: nowrap;
+}
+.status-chip {
+  display: inline-block;
+  border-radius: 3px;
+  padding: 4px 6px;
+  font: 9px "DM Mono";
+  background: #e6ebe5;
+  color: #506357;
+}
+.status-quote {
+  background: #fff0cf;
+  color: #935f13;
+}
+.status-confirmed {
+  background: #daf0e6;
+  color: #257453;
+}
+.secondary {
+  border: 1px solid #35624c;
+  background: transparent;
+  color: #28543f;
+  padding: 8px 11px;
+  font: 11px "Space Grotesk";
+  cursor: pointer;
+}
+.confirmed-label {
+  font: 10px "DM Mono";
+  color: #257453;
+}
+.sales-message {
+  background: #dff0e3;
+  color: #285f39;
+  padding: 12px 14px;
+  font-size: 12px;
+}
+.sales-message.error {
+  background: #f8dfdf;
+  color: #963f47;
+}
+@media (max-width: 840px) {
+  .sales-header {
+    grid-template-columns: 1fr;
+  }
+  .sales-header .primary {
+    justify-self: start;
+  }
+  .sales-metrics {
+    grid-template-columns: 1fr;
+  }
+}
+@media (max-width: 520px) {
+  .sales-page {
+    padding: 28px 18px;
+  }
+  .sales-table-wrap {
+    border-left: 0;
+    border-right: 0;
+  }
+  .sales-table {
+    min-width: 0;
+  }
+  .sales-table thead {
+    display: none;
+  }
+  .sales-table,
+  .sales-table tbody,
+  .sales-table tr,
+  .sales-table td {
+    display: block;
+    width: auto;
+  }
+  .sales-table tr {
+    padding: 14px 16px;
+    border-bottom: 1px solid #e8e9e3;
+  }
+  .sales-table td {
+    display: flex;
+    justify-content: space-between;
+    gap: 18px;
+    padding: 8px 0;
+    border: 0;
+    text-align: right;
+  }
+  .sales-table td:before {
+    content: attr(data-label);
+    color: #718078;
+    font: 10px "DM Mono";
+    text-transform: uppercase;
+    text-align: left;
+  }
+  .sales-table td:first-child {
+    display: block;
+    text-align: left;
+  }
+  .sales-table td:first-child:before {
+    display: block;
+    margin-bottom: 6px;
+  }
+  .sales-table td[data-label="Stav / akce"] {
+    justify-content: flex-end;
+  }
+  .sales-table td[data-label="Stav / akce"] form {
+    margin: 0;
+  }
+  .sales-header h1 {
+    font-size: 36px;
+  }
+}

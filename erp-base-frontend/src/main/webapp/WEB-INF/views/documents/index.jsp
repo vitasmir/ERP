@@ -7,8 +7,8 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>ERP | Dokumenty</title>
-  <link rel="stylesheet" href="assets/base.css">
-  <link rel="stylesheet" href="assets/documents.css">
+  <link rel="stylesheet" href="assets/base.css?v=20260928-154028">
+  <link rel="stylesheet" href="assets/documents.css?v=20260928-154028">
 </head>
 <body>
   <% DocumentsOverviewView overview = (DocumentsOverviewView) request.getAttribute("overview"); String error = (String) request.getAttribute("error"); String message = request.getParameter("message"); String actionError = request.getParameter("error"); %>

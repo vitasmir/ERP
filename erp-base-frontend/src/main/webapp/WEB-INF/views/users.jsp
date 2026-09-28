@@ -5,7 +5,7 @@
 <%@ page import="com.example.erp.frontend.users.UsersServlet.RoleOption" %>
 <%@ page import="com.example.erp.frontend.users.UsersServlet.CompanyOption" %>
 <%@ include file="fragments/base-header.jspf" %>
-<link rel="stylesheet" href="assets/users.css?v=20260927-users-hover">
+<link rel="stylesheet" href="assets/users.css?v=20260928-154028">
 <style>.user-dialog input[type="color"]{height:42px;padding:4px;cursor:pointer}.user-dialog input[type="color"]::-webkit-color-swatch-wrapper{padding:0}.user-dialog input[type="color"]::-webkit-color-swatch{border:1px solid #8b9e94;border-radius:3px}</style>
 <style>.topbar .breadcrumb{display:none !important}</style>
 <style>.table-avatar{background:var(--card-color,#dce9d7)}</style>

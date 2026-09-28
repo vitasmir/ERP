@@ -9,10 +9,10 @@
                     <meta charset="UTF-8">
                     <meta name="viewport" content="width=device-width, initial-scale=1">
                     <title>ERP | Promo kampaně</title>
-                    <link rel="stylesheet" href="assets/base.css">
-                    <link rel="stylesheet" href="assets/promo.css">
-                    <link rel="stylesheet" href="assets/promo-form.css">
-                    <link rel="stylesheet" href="assets/promo-table.css">
+                    <link rel="stylesheet" href="assets/base.css?v=20260928-154028">
+                    <link rel="stylesheet" href="assets/promo.css?v=20260928-154028">
+                    <link rel="stylesheet" href="assets/promo-form.css?v=20260928-154028">
+                    <link rel="stylesheet" href="assets/promo-table.css?v=20260928-154028">
                 </head>
 
                 <body>
@@ -121,7 +121,7 @@
                                                 </form>
                                             </section>
                                         </div>
-                                        <script src="assets/promo.js"></script>
+                                        <script src="assets/promo.js?v=20260928-154028"></script>
                     </main>
                 </body>
 

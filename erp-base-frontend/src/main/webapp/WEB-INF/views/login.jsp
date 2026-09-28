@@ -1,7 +1,7 @@
 <%@ page contentType="text/html; charset=UTF-8" pageEncoding="UTF-8" %>
 <!doctype html>
 <html lang="cs">
-<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>ERP | Přihlášení</title><link rel="stylesheet" href="assets/base.css"><link rel="stylesheet" href="assets/workflows.css"></head>
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>ERP | Přihlášení</title><link rel="stylesheet" href="assets/base.css?v=20260928-154028"><link rel="stylesheet" href="assets/workflows.css?v=20260928-154028"></head>
 <body><main class="login-page">
     <a href="eshop">E-shop</a><h1>Retail ERP</h1>
     <% if (request.getAttribute("error") != null) { %><p role="alert">Přihlášení se nezdařilo nebo služba není dostupná.</p><% } %>

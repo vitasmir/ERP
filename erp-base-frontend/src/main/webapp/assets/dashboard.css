@@ -1,1 +1,273 @@
-.dashboard-page{min-height:100vh;background:#f3f1eb;color:#17362b;padding:44px max(5vw,24px);font-family:'Space Grotesk',sans-serif}.dashboard-header{display:flex;justify-content:space-between;gap:32px;align-items:end;padding-bottom:38px;border-bottom:1px solid #d9ddd4}.dashboard-title .back-link{display:block;margin-bottom:30px}.back-link{color:#456a56;font:11px 'DM Mono';text-decoration:none}.dashboard-title h1{margin:8px 0;font-size:42px;letter-spacing:0}.dashboard-title p{margin:0;color:#65756b}.dashboard-date{min-width:166px;padding:14px 16px;border-left:4px solid #e89426;background:#fffdf8}.dashboard-date span,.dashboard-date strong{display:block}.dashboard-date span,.eyebrow{font:10px 'DM Mono';letter-spacing:0;color:#718078}.dashboard-date strong{margin-top:6px;font-size:14px}.dashboard-message{margin:24px 0;background:#f8dfdf;color:#963f47;padding:12px 14px;font-size:12px}.dashboard-metrics{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:12px;margin:28px 0}.metric-card{position:relative;min-height:166px;padding:20px;background:#fffdf8;border-top:3px solid #a9bdb3;display:flex;flex-direction:column}.metric-card.receivables{border-color:#e89426}.metric-card.overdue{border-color:#c8635f}.metric-card.pipeline{border-color:#3c8592}.metric-card.forecast{border-color:#7666a6}.metric-card.campaigns{border-color:#3b8d5f}.metric-card span,.metric-card small{color:#718078;font:10px 'DM Mono'}.metric-card strong{margin:11px 0 7px;font-size:23px;letter-spacing:0;overflow-wrap:anywhere}.metric-card a{margin-top:auto;color:#28543f;font:10px 'DM Mono';text-decoration:none}.dashboard-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px}.dashboard-panel{background:#fffdf8;border:1px solid #e0e2da;padding:22px}.campaign-panel{grid-column:1/-1}.panel-head{display:flex;justify-content:space-between;gap:12px;align-items:end;margin-bottom:16px}.panel-head h2{margin:7px 0 0;font-size:22px;letter-spacing:0}.panel-head a{color:#28543f;font:10px 'DM Mono';white-space:nowrap;text-decoration:none}.panel-list{border-top:1px solid #e6e7e0}.list-row{display:flex;justify-content:space-between;gap:16px;padding:14px 0;border-bottom:1px solid #e6e7e0}.list-row strong,.list-row small{display:block}.list-row strong{margin:5px 0;font-size:14px}.list-row small,.campaign-row small{font:10px 'DM Mono';color:#718078}.list-row>b{align-self:center;white-space:nowrap;font-size:13px}.list-row b i{display:block;margin-top:5px;color:#718078;font:10px 'DM Mono';text-align:right}.status{display:inline-block;padding:3px 5px;background:#e6ebe5;color:#506357;font:9px 'DM Mono'}.status-overdue{background:#f8dfdf;color:#9e4f54}.status-open,.stage-qualified{background:#fff0cf;color:#935f13}.stage-proposal{background:#e5e0f5;color:#685692}.stage-new{background:#e3edf5;color:#3c6f92}.campaign-active{background:#daf0e6;color:#257453}.campaign-planned{background:#e3edf5;color:#3c6f92}.campaign-list{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}.campaign-row{display:flex;gap:10px;padding:14px;border:1px solid #e6e7e0}.campaign-row strong,.campaign-row small{display:block}.campaign-row strong{font-size:14px;margin-bottom:6px}@media(max-width:1050px){.dashboard-metrics{grid-template-columns:repeat(3,1fr)}}@media(max-width:760px){.dashboard-page{padding:28px 18px}.dashboard-header,.dashboard-grid{display:block}.dashboard-date{margin-top:22px;width:max-content}.dashboard-metrics{grid-template-columns:1fr 1fr}.metric-card{min-height:142px}.dashboard-panel{margin-top:16px}.campaign-list{grid-template-columns:1fr}.list-row{align-items:start;flex-direction:column;gap:7px}.list-row>b{text-align:left}.list-row b i{text-align:left}}@media(max-width:440px){.dashboard-metrics{grid-template-columns:1fr}.dashboard-title h1{font-size:36px}}
+.dashboard-page {
+  min-height: 100vh;
+  background: #f3f1eb;
+  color: #17362b;
+  padding: 44px max(5vw, 24px);
+  font-family: "Space Grotesk", sans-serif;
+}
+.dashboard-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 32px;
+  align-items: end;
+  padding-bottom: 38px;
+  border-bottom: 1px solid #d9ddd4;
+}
+.dashboard-title .back-link {
+  display: block;
+  margin-bottom: 30px;
+}
+.back-link {
+  color: #456a56;
+  font: 11px "DM Mono";
+  text-decoration: none;
+}
+.dashboard-title h1 {
+  margin: 8px 0;
+  font-size: 42px;
+  letter-spacing: 0;
+}
+.dashboard-title p {
+  margin: 0;
+  color: #65756b;
+}
+.dashboard-date {
+  min-width: 166px;
+  padding: 14px 16px;
+  border-left: 4px solid #e89426;
+  background: #fffdf8;
+}
+.dashboard-date span,
+.dashboard-date strong {
+  display: block;
+}
+.dashboard-date span,
+.eyebrow {
+  font: 10px "DM Mono";
+  letter-spacing: 0;
+  color: #718078;
+}
+.dashboard-date strong {
+  margin-top: 6px;
+  font-size: 14px;
+}
+.dashboard-message {
+  margin: 24px 0;
+  background: #f8dfdf;
+  color: #963f47;
+  padding: 12px 14px;
+  font-size: 12px;
+}
+.dashboard-metrics {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 12px;
+  margin: 28px 0;
+}
+.metric-card {
+  position: relative;
+  min-height: 166px;
+  padding: 20px;
+  background: #fffdf8;
+  border-top: 3px solid #a9bdb3;
+  display: flex;
+  flex-direction: column;
+}
+.metric-card.receivables {
+  border-color: #e89426;
+}
+.metric-card.overdue {
+  border-color: #c8635f;
+}
+.metric-card.pipeline {
+  border-color: #3c8592;
+}
+.metric-card.forecast {
+  border-color: #7666a6;
+}
+.metric-card.campaigns {
+  border-color: #3b8d5f;
+}
+.metric-card span,
+.metric-card small {
+  color: #718078;
+  font: 10px "DM Mono";
+}
+.metric-card strong {
+  margin: 11px 0 7px;
+  font-size: 23px;
+  letter-spacing: 0;
+  overflow-wrap: anywhere;
+}
+.metric-card a {
+  margin-top: auto;
+  color: #28543f;
+  font: 10px "DM Mono";
+  text-decoration: none;
+}
+.dashboard-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+.dashboard-panel {
+  background: #fffdf8;
+  border: 1px solid #e0e2da;
+  padding: 22px;
+}
+.campaign-panel {
+  grid-column: 1/-1;
+}
+.panel-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: end;
+  margin-bottom: 16px;
+}
+.panel-head h2 {
+  margin: 7px 0 0;
+  font-size: 22px;
+  letter-spacing: 0;
+}
+.panel-head a {
+  color: #28543f;
+  font: 10px "DM Mono";
+  white-space: nowrap;
+  text-decoration: none;
+}
+.panel-list {
+  border-top: 1px solid #e6e7e0;
+}
+.list-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 14px 0;
+  border-bottom: 1px solid #e6e7e0;
+}
+.list-row strong,
+.list-row small {
+  display: block;
+}
+.list-row strong {
+  margin: 5px 0;
+  font-size: 14px;
+}
+.list-row small,
+.campaign-row small {
+  font: 10px "DM Mono";
+  color: #718078;
+}
+.list-row > b {
+  align-self: center;
+  white-space: nowrap;
+  font-size: 13px;
+}
+.list-row b i {
+  display: block;
+  margin-top: 5px;
+  color: #718078;
+  font: 10px "DM Mono";
+  text-align: right;
+}
+.status {
+  display: inline-block;
+  padding: 3px 5px;
+  background: #e6ebe5;
+  color: #506357;
+  font: 9px "DM Mono";
+}
+.status-overdue {
+  background: #f8dfdf;
+  color: #9e4f54;
+}
+.status-open,
+.stage-qualified {
+  background: #fff0cf;
+  color: #935f13;
+}
+.stage-proposal {
+  background: #e5e0f5;
+  color: #685692;
+}
+.stage-new {
+  background: #e3edf5;
+  color: #3c6f92;
+}
+.campaign-active {
+  background: #daf0e6;
+  color: #257453;
+}
+.campaign-planned {
+  background: #e3edf5;
+  color: #3c6f92;
+}
+.campaign-list {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+}
+.campaign-row {
+  display: flex;
+  gap: 10px;
+  padding: 14px;
+  border: 1px solid #e6e7e0;
+}
+.campaign-row strong,
+.campaign-row small {
+  display: block;
+}
+.campaign-row strong {
+  font-size: 14px;
+  margin-bottom: 6px;
+}
+@media (max-width: 1050px) {
+  .dashboard-metrics {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+@media (max-width: 760px) {
+  .dashboard-page {
+    padding: 28px 18px;
+  }
+  .dashboard-header,
+  .dashboard-grid {
+    display: block;
+  }
+  .dashboard-date {
+    margin-top: 22px;
+    width: max-content;
+  }
+  .dashboard-metrics {
+    grid-template-columns: 1fr 1fr;
+  }
+  .metric-card {
+    min-height: 142px;
+  }
+  .dashboard-panel {
+    margin-top: 16px;
+  }
+  .campaign-list {
+    grid-template-columns: 1fr;
+  }
+  .list-row {
+    align-items: start;
+    flex-direction: column;
+    gap: 7px;
+  }
+  .list-row > b {
+    text-align: left;
+  }
+  .list-row b i {
+    text-align: left;
+  }
+}
+@media (max-width: 440px) {
+  .dashboard-metrics {
+    grid-template-columns: 1fr;
+  }
+  .dashboard-title h1 {
+    font-size: 36px;
+  }
+}

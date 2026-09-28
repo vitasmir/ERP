@@ -1,6 +1,6 @@
 <%@ page contentType="text/html; charset=UTF-8" pageEncoding="UTF-8" %>
 <%@ include file="fragments/base-header.jspf" %>
-<link rel="stylesheet" href="assets/roles.css?v=20260926-roles2">
+<link rel="stylesheet" href="assets/roles.css?v=20260928-154028">
 <style>.role-dialog input[type="color"]{height:42px;padding:4px;cursor:pointer}.role-dialog input[type="color"]::-webkit-color-swatch-wrapper{padding:0}.role-dialog input[type="color"]::-webkit-color-swatch{border:1px solid #8b9e94;border-radius:3px}</style>
 <style>.topbar .breadcrumb{display:none !important}</style>
 <style>.role-mark.custom{background:var(--card-color,#d9ed62)}</style>

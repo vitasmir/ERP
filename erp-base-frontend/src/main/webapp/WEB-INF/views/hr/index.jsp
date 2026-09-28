@@ -10,9 +10,9 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>ERP | Lidé</title>
-  <link rel="stylesheet" href="assets/base.css">
-  <link rel="stylesheet" href="assets/hr.css">
-  <link rel="stylesheet" href="assets/workforce.css">
+  <link rel="stylesheet" href="assets/base.css?v=20260928-154028">
+  <link rel="stylesheet" href="assets/hr.css?v=20260928-154028">
+  <link rel="stylesheet" href="assets/workforce.css?v=20260928-154028">
 </head>
 <body>
   <% HrOverviewView overview = (HrOverviewView) request.getAttribute("overview"); String error = (String) request.getAttribute("error"); String message = request.getParameter("message"); String actionError = request.getParameter("error"); %>

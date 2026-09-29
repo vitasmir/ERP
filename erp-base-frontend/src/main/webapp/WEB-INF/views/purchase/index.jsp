@@ -3,7 +3,9 @@
 <%@ page import="java.math.RoundingMode" %>
 <%@ page import="com.example.erp.frontend.purchase.PurchaseOverviewView" %>
 <%@ page import="com.example.erp.frontend.purchase.PurchaseOverviewView.PurchaseOrderView" %>
-<%! String amount(BigDecimal value) { return value.setScale(2, RoundingMode.HALF_UP).toPlainString(); } %>
+<%@ page import="com.example.erp.frontend.purchase.PurchaseOverviewView.WarehouseView" %>
+<%@ page import="com.example.erp.frontend.purchase.PurchaseOverviewView.ProductView" %>
+<%! String amount(BigDecimal value) { return value.setScale(2, RoundingMode.HALF_UP).toPlainString(); } String warehouseName(java.util.UUID id, java.util.List<WarehouseView> warehouses) { if (id == null || warehouses == null) return "-"; for (WarehouseView warehouse : warehouses) if (id.equals(warehouse.id())) return warehouse.name(); return id.toString(); } %>
 <!doctype html>
 <html lang="cs">
 <head>
@@ -14,7 +16,7 @@
   <link rel="stylesheet" href="assets/purchase.css?v=20260928-154028">
 </head>
 <body>
-  <% PurchaseOverviewView overview = (PurchaseOverviewView) request.getAttribute("overview"); String error = (String) request.getAttribute("error"); String message = request.getParameter("message"); String actionError = request.getParameter("error"); %>
+  <% PurchaseOverviewView overview = (PurchaseOverviewView) request.getAttribute("overview"); String error = (String) request.getAttribute("error"); String message = request.getParameter("message"); String actionError = request.getParameter("error"); java.util.List<WarehouseView> warehouses = (java.util.List<WarehouseView>) request.getAttribute("warehouses"); java.util.List<ProductView> products = (java.util.List<ProductView>) request.getAttribute("products"); %>
   <main class="purchase-page">
     <header class="purchase-header">
       <a href="apps" class="back-link">← Aplikace</a>
@@ -31,16 +33,17 @@
       <div class="section-head"><div><span class="eyebrow">NÁKUPNÍ POŽADAVKY A OBJEDNÁVKY</span><h2>Plán zásobování</h2></div><span class="order-count"><%= overview == null ? 0 : overview.orders().size() %> dokumenty</span></div>
       <div class="order-table-wrap">
         <table class="order-table">
-          <thead><tr><th>Dokument</th><th>Dodavatel</th><th>Požadováno</th><th>Dodání</th><th class="amount-column">Celkem</th><th>Stav / akce</th></tr></thead>
+          <thead><tr><th>Dokument</th><th>Dodavatel</th><th>Tok skladu</th><th>Požadováno</th><th>Dodání</th><th class="amount-column">Celkem</th><th>Stav / akce</th></tr></thead>
           <tbody>
             <% if (overview != null) for (PurchaseOrderView order : overview.orders()) { %>
             <tr>
               <td data-label="Dokument"><span class="status-chip status-<%= order.status().toLowerCase() %>"><%= order.status().equals("REQUESTED") ? "POŽADAVEK" : "OBJEDNÁNO" %></span><strong><%= order.orderNumber() %></strong></td>
               <td data-label="Dodavatel"><%= order.supplierName() %></td>
+              <td data-label="Tok skladu"><%= warehouseName(order.sourceWarehouseId(), warehouses) %> → <%= warehouseName(order.destinationWarehouseId(), warehouses) %><br><small><%= order.quantity() == null ? "-" : order.receivedQuantity() + " / " + order.quantity() %> ks</small></td>
               <td data-label="Požadováno"><%= order.requestedOn() %></td>
               <td data-label="Dodání"><%= order.expectedDeliveryDate() %></td>
               <td data-label="Celkem" class="amount-column"><strong><%= amount(order.totalAmount()) %> Kč</strong></td>
-              <td data-label="Stav / akce"><% if ("REQUESTED".equals(order.status())) { %><form method="post"><input type="hidden" name="id" value="<%= order.id() %>"><button class="secondary" type="submit">Vystavit objednávku</button></form><% } else { %><span class="ordered-label">Čeká na dodání</span><% } %></td>
+              <td data-label="Stav / akce"><% if ("REQUESTED".equals(order.status())) { %><form method="post"><input type="hidden" name="id" value="<%= order.id() %>"><button class="secondary" type="submit">Vystavit objednávku</button></form><% } else if ("ORDERED".equals(order.status()) && order.quantity() != null) { %><form method="post"><input type="hidden" name="id" value="<%= order.id() %>"><input type="hidden" name="action" value="receive"><input type="hidden" name="quantity" value="<%= order.quantity() - order.receivedQuantity() %>"><button class="secondary" type="submit">Přijmout na sklad</button></form><% } else { %><span class="ordered-label"><%= "RECEIVED".equals(order.status()) ? "Přijato na sklad" : "Čeká na dodání" %></span><% } %></td>
             </tr>
             <% } %>
           </tbody>
@@ -56,6 +59,10 @@
         <label>Požadováno<input type="date" name="requestedOn" required></label>
         <label>Očekávané dodání<input type="date" name="expectedDeliveryDate" required></label>
         <label>Celkem Kč<input type="number" name="totalAmount" min="0" step="0.01" required placeholder="0.00"></label>
+        <label>Dodavatelský sklad<select name="sourceWarehouseId" required><option value="">Vyberte sklad</option><% if (warehouses != null) for (WarehouseView warehouse : warehouses) if ("SUPPLIER".equals(warehouse.ownerType())) { %><option value="<%= warehouse.id() %>"><%= warehouse.name() %></option><% } %></select></label>
+        <label>Firemní cílový sklad<select name="destinationWarehouseId" required><option value="">Vyberte sklad</option><% if (warehouses != null) for (WarehouseView warehouse : warehouses) if ("COMPANY".equals(warehouse.ownerType())) { %><option value="<%= warehouse.id() %>"><%= warehouse.name() %></option><% } %></select></label>
+        <label>Produkt<select name="productId" required><option value="">Vyberte produkt</option><% if (products != null) for (ProductView product : products) { %><option value="<%= product.id() %>"><%= product.name() %> (<%= product.sku() %>)</option><% } %></select></label>
+        <label>Množství<input type="number" name="quantity" min="1" step="1" required placeholder="1"></label>
         <button class="secondary" type="submit">Vytvořit objednávku</button>
       </form>
   </dialog>

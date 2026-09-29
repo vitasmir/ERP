@@ -10,8 +10,10 @@ import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.time.LocalDate;
+import java.util.List;
 import java.util.UUID;
 
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 
@@ -37,6 +39,10 @@ public class PurchaseServlet extends HttpServlet {
                 throw new IOException("Backend returned HTTP " + backendResponse.statusCode());
             }
             request.setAttribute("overview", mapper.readValue(backendResponse.body(), PurchaseOverviewView.class));
+                request.setAttribute("warehouses", getList("/api/v1/purchase/warehouses",
+                    new TypeReference<List<PurchaseOverviewView.WarehouseView>>() { }));
+                request.setAttribute("products", getList("/api/v1/catalog/products",
+                    new TypeReference<List<PurchaseOverviewView.ProductView>>() { }));
         } catch (InterruptedException exception) {
             Thread.currentThread().interrupt();
             request.setAttribute("error", "Načítání nákupu bylo přerušeno.");
@@ -53,7 +59,9 @@ public class PurchaseServlet extends HttpServlet {
             if ("create".equals(request.getParameter("action"))) {
             String body = mapper.writeValueAsString(new CreatePurchaseOrderRequest(request.getParameter("supplierName"),
                 LocalDate.parse(request.getParameter("requestedOn")), LocalDate.parse(request.getParameter("expectedDeliveryDate")),
-                new BigDecimal(request.getParameter("totalAmount"))));
+                new BigDecimal(request.getParameter("totalAmount")), UUID.fromString(request.getParameter("sourceWarehouseId")),
+                UUID.fromString(request.getParameter("destinationWarehouseId")), UUID.fromString(request.getParameter("productId")),
+                Integer.parseInt(request.getParameter("quantity"))));
             HttpRequest backendRequest = com.example.erp.frontend.base.BackendRequests.newBuilder(URI.create(backendUrl + "/api/v1/purchase/orders"))
                 .header("Content-Type", "application/json").POST(HttpRequest.BodyPublishers.ofString(body)).build();
             HttpResponse<Void> backendResponse = client.send(backendRequest, HttpResponse.BodyHandlers.discarding());
@@ -63,11 +71,17 @@ public class PurchaseServlet extends HttpServlet {
             return;
             }
             UUID.fromString(id);
-            HttpRequest backendRequest = com.example.erp.frontend.base.BackendRequests.newBuilder(URI.create(backendUrl + "/api/v1/purchase/orders/" + id + "/order"))
-                    .method("PATCH", HttpRequest.BodyPublishers.noBody()).build();
+                String action = "receive".equals(request.getParameter("action")) ? "receive" : "order";
+                HttpRequest.Builder requestBuilder = com.example.erp.frontend.base.BackendRequests.newBuilder(URI.create(backendUrl + "/api/v1/purchase/orders/" + id + "/" + action));
+                HttpRequest backendRequest = "receive".equals(action)
+                    ? requestBuilder.header("Content-Type", "application/json")
+                    .method("PATCH", HttpRequest.BodyPublishers.ofString(mapper.writeValueAsString(
+                        new ReceivePurchaseRequest(Integer.parseInt(request.getParameter("quantity")))))).build()
+                    : requestBuilder.method("PATCH", HttpRequest.BodyPublishers.noBody()).build();
             HttpResponse<Void> backendResponse = client.send(backendRequest, HttpResponse.BodyHandlers.discarding());
-            String message = backendResponse.statusCode() == HttpServletResponse.SC_OK
-                    ? "Nákupní objednávka byla vystavena." : "Změnu stavu backend odmítl.";
+                String message = backendResponse.statusCode() == HttpServletResponse.SC_OK
+                    ? ("receive".equals(action) ? "Zboží bylo přijato na sklad." : "Nákupní objednávka byla vystavena.")
+                    : "Změnu stavu backend odmítl.";
             response.sendRedirect("purchase?message=" + URLEncoder.encode(message, StandardCharsets.UTF_8));
         } catch (IllegalArgumentException exception) {
             response.sendRedirect("purchase?error=" + URLEncoder.encode("Neplatný nákupní požadavek.", StandardCharsets.UTF_8));
@@ -78,5 +92,15 @@ public class PurchaseServlet extends HttpServlet {
     }
 
     private record CreatePurchaseOrderRequest(String supplierName, LocalDate requestedOn,
-            LocalDate expectedDeliveryDate, BigDecimal totalAmount) { }
+            LocalDate expectedDeliveryDate, BigDecimal totalAmount, UUID sourceWarehouseId,
+            UUID destinationWarehouseId, UUID productId, int quantity) { }
+        private record ReceivePurchaseRequest(int quantity) { }
+
+        private <T> List<T> getList(String path, TypeReference<List<T>> type) throws IOException, InterruptedException {
+        HttpRequest backendRequest = com.example.erp.frontend.base.BackendRequests.newBuilder(URI.create(backendUrl + path))
+            .timeout(Duration.ofSeconds(5)).GET().build();
+        HttpResponse<String> response = client.send(backendRequest, HttpResponse.BodyHandlers.ofString());
+        if (response.statusCode() != HttpServletResponse.SC_OK) throw new IOException("Backend returned HTTP " + response.statusCode());
+        return mapper.readValue(response.body(), type);
+        }
 }

@@ -34,16 +34,18 @@ public class CatalogController {
     private final InventoryItemRepository inventory;
     private final DeliveryOptionRepository deliveryOptions;
         private final ProductImageRepository images;
+    private final PricingService pricing;
 
     public CatalogController(ProductRepository products, ProductCategoryRepository categories,
             HomepageSettingsRepository homepage, InventoryItemRepository inventory,
-            DeliveryOptionRepository deliveryOptions, ProductImageRepository images) {
+            DeliveryOptionRepository deliveryOptions, ProductImageRepository images, PricingService pricing) {
         this.products = products;
         this.categories = categories;
         this.homepage = homepage;
         this.inventory = inventory;
         this.deliveryOptions = deliveryOptions;
         this.images = images;
+        this.pricing = pricing;
     }
 
     @GetMapping("/homepage")
@@ -104,9 +106,10 @@ public class CatalogController {
     @Transactional
     public ProductResponse createProduct(@RequestBody ProductRequest request) {
         validateProduct(request, null);
+        BigDecimal vatRate = vatRate(request);
         Product saved = products.save(Product.create(request.sku().trim(), request.name().trim(),
-                request.unit().trim(), text(request.description()), request.price(), request.categoryId(),
-                textOrNull(request.imageUrl()), request.active()));
+            request.unit().trim(), text(request.description()), sellingPrice(request, vatRate),
+            request.purchasePrice(), vatRate, request.categoryId(), textOrNull(request.imageUrl()), request.active()));
         ensureInventory(saved.getId());
         syncActiveImage(saved);
         return productResponse(saved);
@@ -120,8 +123,9 @@ public class CatalogController {
         validateProduct(request, id);
         String imageUrl = textOrNull(request.imageUrl());
         if (imageUrl == null) imageUrl = product.getImageUrl();
+        BigDecimal vatRate = vatRate(request);
         product.update(request.sku().trim(), request.name().trim(), request.unit().trim(), text(request.description()),
-            request.price(), request.categoryId(), imageUrl, request.active());
+            sellingPrice(request, vatRate), request.purchasePrice(), vatRate, request.categoryId(), imageUrl, request.active());
         Product saved = products.save(product);
         ensureInventory(saved.getId());
         syncActiveImage(saved);
@@ -217,11 +221,15 @@ public class CatalogController {
             Product product = products.findBySku(request.sku() == null ? "" : request.sku().trim()).orElse(null);
             validateProduct(request, product == null ? null : product.getId());
             if (product == null) {
+                BigDecimal vatRate = vatRate(request);
                 product = Product.create(request.sku().trim(), request.name().trim(), request.unit().trim(),
-                        text(request.description()), request.price(), request.categoryId(), textOrNull(request.imageUrl()), request.active());
+                    text(request.description()), sellingPrice(request, vatRate), request.purchasePrice(), vatRate,
+                    request.categoryId(), textOrNull(request.imageUrl()), request.active());
             } else {
+                BigDecimal vatRate = vatRate(request);
                 product.update(request.sku().trim(), request.name().trim(), request.unit().trim(), text(request.description()),
-                        request.price(), request.categoryId(), textOrNull(request.imageUrl()), request.active());
+                    sellingPrice(request, vatRate), request.purchasePrice(), vatRate, request.categoryId(),
+                    textOrNull(request.imageUrl()), request.active());
             }
             products.save(product);
             ensureInventory(product.getId());
@@ -283,7 +291,10 @@ public class CatalogController {
     private ProductResponse productResponse(Product product) {
         List<ImageResponse> productImages = images.findAllByProductIdOrderBySortOrderAscIdAsc(product.getId()).stream()
                 .map(ImageResponse::from).toList();
-        return ProductResponse.from(product, productImages);
+        BigDecimal vatRate = product.getVatRate() == null ? BigDecimal.ZERO : product.getVatRate();
+        BigDecimal sellingPrice = product.getPurchasePrice() == null
+            ? product.getPrice() : pricing.sellingPrice(product.getPurchasePrice(), vatRate);
+        return ProductResponse.from(product, sellingPrice, productImages);
     }
 
     private void syncActiveImage(Product product) {
@@ -332,8 +343,12 @@ public class CatalogController {
 
     private void validateProduct(ProductRequest request, UUID currentId) {
         if (request == null || blank(request.sku()) || blank(request.name()) || blank(request.unit())
-                || request.price() == null || request.price().signum() < 0) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Product SKU, name, unit, and non-negative price are required.");
+            || (request.price() == null && request.purchasePrice() == null)
+            || request.price() != null && request.price().signum() < 0
+            || request.purchasePrice() != null && request.purchasePrice().signum() < 0
+            || request.vatRate() != null && (request.vatRate().signum() < 0
+                || request.vatRate().compareTo(BigDecimal.valueOf(100)) > 0)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Product SKU, name, unit, and non-negative price data are required.");
         }
         products.findBySku(request.sku().trim()).filter(product -> !product.getId().equals(currentId)).ifPresent(product -> {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Product SKU is already in use.");
@@ -348,6 +363,16 @@ public class CatalogController {
     private String text(String value) { return value == null ? "" : value.trim(); }
     private String textOrNull(String value) { return blank(value) ? null : value.trim(); }
 
+    private BigDecimal vatRate(ProductRequest request) {
+        return request.vatRate() == null
+            ? request.purchasePrice() == null ? BigDecimal.ZERO : pricing.defaultVatRate()
+            : request.vatRate();
+    }
+
+    private BigDecimal sellingPrice(ProductRequest request, BigDecimal vatRate) {
+        return request.purchasePrice() == null ? request.price() : pricing.sellingPrice(request.purchasePrice(), vatRate);
+    }
+
     public record HomepageRequest(String design, String headline, String subheadline, BigDecimal textX, BigDecimal textY) { }
     public record HomepageResponse(UUID id, String design, String headline, String subheadline, BigDecimal textX, BigDecimal textY) {
         static HomepageResponse from(HomepageSettings settings) {
@@ -356,16 +381,19 @@ public class CatalogController {
     }
     public record CategoryRequest(String name, String slug, UUID parentId, int sortOrder, boolean active) { }
     public record CategoryResponse(UUID id, UUID parentId, String name, String slug, int sortOrder, boolean active, List<CategoryResponse> children) { }
-    public record ProductRequest(String sku, String name, String unit, String description, BigDecimal price, UUID categoryId, String imageUrl, boolean active) { }
+        public record ProductRequest(String sku, String name, String unit, String description, BigDecimal price,
+            BigDecimal purchasePrice, BigDecimal vatRate, UUID categoryId, String imageUrl, boolean active) { }
     public record ImageRequest(String imageUrl, boolean active) { }
     public record ImageResponse(UUID id, String imageUrl, boolean active, int sortOrder) {
         static ImageResponse from(ProductImage image) {
             return new ImageResponse(image.getId(), image.getImageUrl(), image.isActive(), image.getSortOrder());
         }
     }
-    public record ProductResponse(UUID id, String sku, String name, String unit, String description, BigDecimal price, UUID categoryId, String imageUrl, boolean active, List<ImageResponse> images) {
-        static ProductResponse from(Product product, List<ImageResponse> images) {
-            return new ProductResponse(product.getId(), product.getSku(), product.getName(), product.getUnit(), product.getDescription(), product.getPrice(), product.getCategoryId(), product.getImageUrl(), product.isActive(), images);
+    public record ProductResponse(UUID id, String sku, String name, String unit, String description, BigDecimal price,
+            BigDecimal purchasePrice, BigDecimal vatRate, UUID categoryId, String imageUrl, boolean active, List<ImageResponse> images) {
+        static ProductResponse from(Product product, BigDecimal sellingPrice, List<ImageResponse> images) {
+            return new ProductResponse(product.getId(), product.getSku(), product.getName(), product.getUnit(), product.getDescription(),
+                sellingPrice, product.getPurchasePrice(), product.getVatRate(), product.getCategoryId(), product.getImageUrl(), product.isActive(), images);
         }
     }
     public record ImportResponse(int imported) { }

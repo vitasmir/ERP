@@ -473,6 +473,34 @@
   color: #20362f;
   resize: vertical;
 }
+.product-pricing-form {
+  display: grid;
+  grid-template-columns: minmax(160px, 1.4fr) minmax(150px, 1fr) minmax(110px, .7fr) minmax(150px, 1fr) auto;
+  gap: 10px;
+  align-items: end;
+  padding: 10px 12px;
+  border-bottom: 1px solid #e8e8df;
+}
+.pricing-panel {
+  margin-top: 16px;
+}
+.product-pricing-form label {
+  display: grid;
+  gap: 5px;
+  color: #6b7b73;
+  font: 10px "DM Mono";
+}
+.product-pricing-form input {
+  min-width: 0;
+  padding: 8px;
+  border: 1px solid #cfd7ce;
+  background: #fffdf8;
+  font: 12px "Space Grotesk";
+}
+.product-pricing-form > span {
+  color: #6b7b73;
+  font-size: 12px;
+}
 @media (max-width: 900px) {
   .commerce-grid,
   .import-section {
@@ -487,7 +515,8 @@
   .editor-fields,
   .delivery-form,
   .product-form,
-  .product-edit-form {
+  .product-edit-form,
+  .product-pricing-form {
     grid-template-columns: 1fr;
   }
   .product-form .wide-field {

@@ -39,7 +39,8 @@ public class EcommerceServlet extends HttpServlet {
             for (EcommerceView.Product product : products) {
                 List<EcommerceView.Availability> availability = getList("/api/v1/catalog/products/" + product.id() + "/availability", new TypeReference<>() { });
                 enriched.add(new EcommerceView.Product(product.id(), product.sku(), product.name(), product.unit(), product.description(),
-                    product.price(), product.categoryId(), product.imageUrl(), product.active(), product.images(), availability));
+                    product.price(), product.purchasePrice(), product.vatRate(), product.categoryId(), product.imageUrl(),
+                    product.active(), product.images(), availability));
             }
                 UUID selectedCategoryId = categoryId(request.getParameter("categoryId"));
                 List<EcommerceView.Product> visibleProducts = selectedCategoryId == null ? enriched : enriched.stream()
@@ -127,9 +128,14 @@ public class EcommerceServlet extends HttpServlet {
     private ProductSaveResponse saveProduct(HttpServletRequest request) throws IOException, InterruptedException {
         String productId = request.getParameter("productId");
         String category = request.getParameter("categoryId");
+        String price = request.getParameter("price");
+        String purchasePrice = request.getParameter("purchasePrice");
+        String vatRate = request.getParameter("vatRate");
         ProductRequest body = new ProductRequest(request.getParameter("sku"), request.getParameter("name"),
-                request.getParameter("unit"), request.getParameter("description"), new BigDecimal(request.getParameter("price")),
-                category == null || category.isBlank() ? null : UUID.fromString(category), request.getParameter("imageUrl"),
+            request.getParameter("unit"), request.getParameter("description"), price == null || price.isBlank() ? null : new BigDecimal(price),
+            purchasePrice == null || purchasePrice.isBlank() ? null : new BigDecimal(purchasePrice),
+            vatRate == null || vatRate.isBlank() ? null : new BigDecimal(vatRate),
+            category == null || category.isBlank() ? null : UUID.fromString(category), request.getParameter("imageUrl"),
                 "on".equals(request.getParameter("active")));
         String path = productId == null || productId.isBlank() ? "/api/v1/catalog/products" : "/api/v1/catalog/products/" + UUID.fromString(productId);
         HttpResponse<String> response = sendMutation(productId == null || productId.isBlank() ? "POST" : "PUT", path,
@@ -213,7 +219,8 @@ public class EcommerceServlet extends HttpServlet {
 
     private record HomepageRequest(String design, String headline, String subheadline, BigDecimal textX, BigDecimal textY) { }
     private record CategoryRequest(String name, String slug, UUID parentId, int sortOrder, boolean active) { }
-    private record ProductRequest(String sku, String name, String unit, String description, BigDecimal price, UUID categoryId, String imageUrl, boolean active) { }
+        private record ProductRequest(String sku, String name, String unit, String description, BigDecimal price,
+            BigDecimal purchasePrice, BigDecimal vatRate, UUID categoryId, String imageUrl, boolean active) { }
     @JsonIgnoreProperties(ignoreUnknown = true)
     private record ProductSaveResponse(UUID id, UUID categoryId) { }
     private record ImageRequest(String imageUrl, boolean active) { }

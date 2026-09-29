@@ -15,11 +15,11 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
 
 import com.example.erp.accounting.AccountInvoice;
-import com.example.erp.accounting.AccountInvoiceRepository;
 import com.example.erp.accounting.InvoiceLine;
 import com.example.erp.accounting.InvoicePdfService;
 import com.example.erp.accounting.InvoiceRecords;
 import com.example.erp.accounting.InvoiceStatus;
+import com.example.erp.catalog.PricingService;
 import com.example.erp.catalog.Product;
 import com.example.erp.catalog.ProductRepository;
 import com.example.erp.inventory.InventoryItem;
@@ -33,25 +33,25 @@ import jakarta.persistence.EntityManager;
 @RequestMapping("/api/v1/sales")
 public class EshopCheckoutController {
     private final SalesOrderRepository orders;
-    private final AccountInvoiceRepository invoices;
     private final InvoiceRecords invoiceRecords;
     private final PosTransactionRepository transactions;
     private final ProductRepository products;
     private final InventoryItemRepository inventory;
     private final InvoicePdfService pdfs;
     private final EntityManager entityManager;
+    private final PricingService pricing;
 
-    public EshopCheckoutController(SalesOrderRepository orders, AccountInvoiceRepository invoices,
+    public EshopCheckoutController(SalesOrderRepository orders,
             InvoiceRecords invoiceRecords, PosTransactionRepository transactions, ProductRepository products,
-            InventoryItemRepository inventory, InvoicePdfService pdfs, EntityManager entityManager) {
+            InventoryItemRepository inventory, InvoicePdfService pdfs, EntityManager entityManager, PricingService pricing) {
         this.orders = orders;
-        this.invoices = invoices;
         this.invoiceRecords = invoiceRecords;
         this.transactions = transactions;
         this.products = products;
         this.inventory = inventory;
         this.pdfs = pdfs;
         this.entityManager = entityManager;
+        this.pricing = pricing;
     }
 
     @PostMapping("/orders/checkout")
@@ -71,11 +71,14 @@ public class EshopCheckoutController {
                 throw badRequest("Produkt " + product.getName() + " již není v požadovaném množství dostupný.");
             }
             BigDecimal quantity = BigDecimal.valueOf(line.quantity());
-            total = total.add(product.getPrice().multiply(quantity));
+                BigDecimal vatRate = product.getVatRate() == null ? BigDecimal.ZERO : product.getVatRate();
+                BigDecimal grossUnitPrice = product.getPurchasePrice() == null
+                    ? product.getPrice() : pricing.sellingPrice(product.getPurchasePrice(), vatRate);
             itemCount += line.quantity();
-                invoiceLines.add(new InvoiceLine(product.getId(), product.getImageUrl(), product.getName(), quantity,
-                    product.getPrice(), BigDecimal.ZERO));
+            invoiceLines.add(new InvoiceLine(product.getId(), product.getImageUrl(), product.getName(), quantity,
+                    pricing.netPrice(grossUnitPrice, vatRate), vatRate));
         }
+        total = invoiceLines.stream().map(InvoiceLine::getTotalAmount).reduce(BigDecimal.ZERO, BigDecimal::add);
         if (total.signum() <= 0) throw badRequest("Hodnota objednávky musí být kladná.");
 
         String suffix = UUID.randomUUID().toString().replace("-", "").substring(0, 12).toUpperCase();

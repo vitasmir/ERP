@@ -17,6 +17,9 @@ public class InventoryItem {
     @Column(name = "product_id")
     private UUID productId;
 
+    @Column(name = "warehouse_id")
+    private UUID warehouseId;
+
     @Column(name = "location_name")
     private String locationName;
 
@@ -34,9 +37,14 @@ public class InventoryItem {
     protected InventoryItem() { }
 
     public static InventoryItem create(UUID productId, String locationName) {
+        return create(productId, null, locationName);
+    }
+
+    public static InventoryItem create(UUID productId, UUID warehouseId, String locationName) {
         InventoryItem item = new InventoryItem();
         item.id = UUID.randomUUID();
         item.productId = productId;
+        item.warehouseId = warehouseId;
         item.locationName = locationName;
         item.quantity = 0;
         item.reorderLevel = 0;
@@ -47,6 +55,7 @@ public class InventoryItem {
 
     public UUID getId() { return id; }
     public UUID getProductId() { return productId; }
+    public UUID getWarehouseId() { return warehouseId; }
     public String getLocationName() { return locationName; }
     public int getQuantity() { return quantity; }
     public int getReorderLevel() { return reorderLevel; }
@@ -55,6 +64,13 @@ public class InventoryItem {
 
     public void receive(int receivedQuantity) {
         quantity += receivedQuantity;
+    }
+
+    public void dispatch(int dispatchedQuantity) {
+        if (dispatchedQuantity <= 0 || dispatchedQuantity > quantity) {
+            throw new IllegalArgumentException("Dispatched quantity exceeds available stock.");
+        }
+        quantity -= dispatchedQuantity;
     }
 
     public void updateStockSettings(int newReorderLevel, BigDecimal newUnitCost) {

@@ -35,10 +35,31 @@ public class PurchaseOrder {
     @Enumerated(EnumType.STRING)
     private PurchaseOrderStatus status;
 
+    @Column(name = "source_warehouse_id")
+    private UUID sourceWarehouseId;
+
+    @Column(name = "destination_warehouse_id")
+    private UUID destinationWarehouseId;
+
+    @Column(name = "product_id")
+    private UUID productId;
+
+    private Integer quantity;
+
+    @Column(name = "received_quantity")
+    private int receivedQuantity;
+
     protected PurchaseOrder() { }
 
     public static PurchaseOrder create(String orderNumber, String supplierName, LocalDate requestedOn,
             LocalDate expectedDeliveryDate, BigDecimal totalAmount) {
+        return create(orderNumber, supplierName, requestedOn, expectedDeliveryDate, totalAmount,
+            null, null, null, null);
+        }
+
+        public static PurchaseOrder create(String orderNumber, String supplierName, LocalDate requestedOn,
+            LocalDate expectedDeliveryDate, BigDecimal totalAmount, UUID sourceWarehouseId,
+            UUID destinationWarehouseId, UUID productId, Integer quantity) {
         PurchaseOrder order = new PurchaseOrder();
         order.id = UUID.randomUUID();
         order.orderNumber = orderNumber;
@@ -47,6 +68,11 @@ public class PurchaseOrder {
         order.expectedDeliveryDate = expectedDeliveryDate;
         order.totalAmount = totalAmount;
         order.status = PurchaseOrderStatus.REQUESTED;
+        order.sourceWarehouseId = sourceWarehouseId;
+        order.destinationWarehouseId = destinationWarehouseId;
+        order.productId = productId;
+        order.quantity = quantity;
+        order.receivedQuantity = 0;
         return order;
     }
 
@@ -57,6 +83,22 @@ public class PurchaseOrder {
     public LocalDate getExpectedDeliveryDate() { return expectedDeliveryDate; }
     public BigDecimal getTotalAmount() { return totalAmount; }
     public PurchaseOrderStatus getStatus() { return status; }
+    public UUID getSourceWarehouseId() { return sourceWarehouseId; }
+    public UUID getDestinationWarehouseId() { return destinationWarehouseId; }
+    public UUID getProductId() { return productId; }
+    public Integer getQuantity() { return quantity; }
+    public int getReceivedQuantity() { return receivedQuantity; }
 
     public void order() { status = PurchaseOrderStatus.ORDERED; }
+
+    public void receive(int receivedQuantity) {
+        if (status != PurchaseOrderStatus.ORDERED) {
+            throw new IllegalArgumentException("Only ordered purchases can be received.");
+        }
+        if (quantity == null || receivedQuantity <= 0 || receivedQuantity > quantity - this.receivedQuantity) {
+            throw new IllegalArgumentException("Received quantity is invalid.");
+        }
+        this.receivedQuantity += receivedQuantity;
+        if (this.receivedQuantity == quantity) status = PurchaseOrderStatus.RECEIVED;
+    }
 }

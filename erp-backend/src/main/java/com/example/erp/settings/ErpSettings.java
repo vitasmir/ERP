@@ -35,6 +35,15 @@ public class ErpSettings {
     @Column(name = "delivery_fee")
     private BigDecimal deliveryFee;
 
+    @Column(name = "eshop_margin_percent")
+    private BigDecimal eshopMarginPercent;
+
+    @Column(name = "eshop_rounding_unit")
+    private BigDecimal eshopRoundingUnit;
+
+    @Column(name = "eshop_default_vat_rate")
+    private BigDecimal eshopDefaultVatRate;
+
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
 
@@ -48,10 +57,14 @@ public class ErpSettings {
     public int getFiscalYearStartMonth() { return fiscalYearStartMonth; }
     public int getDefaultPaymentTermsDays() { return defaultPaymentTermsDays; }
     public BigDecimal getDeliveryFee() { return deliveryFee; }
+    public BigDecimal getEshopMarginPercent() { return eshopMarginPercent; }
+    public BigDecimal getEshopRoundingUnit() { return eshopRoundingUnit; }
+    public BigDecimal getEshopDefaultVatRate() { return eshopDefaultVatRate; }
     public LocalDateTime getUpdatedAt() { return updatedAt; }
 
     public void update(String companyName, String companyEmail, String currencyCode, String timezone,
-            int fiscalYearStartMonth, int defaultPaymentTermsDays, BigDecimal deliveryFee) {
+            int fiscalYearStartMonth, int defaultPaymentTermsDays, BigDecimal deliveryFee,
+            BigDecimal eshopMarginPercent, BigDecimal eshopRoundingUnit, BigDecimal eshopDefaultVatRate) {
         this.companyName = companyName;
         this.companyEmail = companyEmail;
         this.currencyCode = currencyCode;
@@ -59,6 +72,9 @@ public class ErpSettings {
         this.fiscalYearStartMonth = fiscalYearStartMonth;
         this.defaultPaymentTermsDays = defaultPaymentTermsDays;
         this.deliveryFee = deliveryFee;
+        this.eshopMarginPercent = eshopMarginPercent;
+        this.eshopRoundingUnit = eshopRoundingUnit;
+        this.eshopDefaultVatRate = eshopDefaultVatRate;
         this.updatedAt = LocalDateTime.now();
     }
 }

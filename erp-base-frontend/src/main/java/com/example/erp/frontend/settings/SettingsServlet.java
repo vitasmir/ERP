@@ -49,7 +49,10 @@ public class SettingsServlet extends HttpServlet {
                 request.getParameter("companyEmail"), request.getParameter("currencyCode"), request.getParameter("timezone"),
                 Integer.parseInt(request.getParameter("fiscalYearStartMonth")),
                 Integer.parseInt(request.getParameter("defaultPaymentTermsDays")),
-                new BigDecimal(request.getParameter("deliveryFee")));
+                new BigDecimal(request.getParameter("deliveryFee")),
+                new BigDecimal(request.getParameter("eshopMarginPercent")),
+                new BigDecimal(request.getParameter("eshopRoundingUnit")),
+                new BigDecimal(request.getParameter("eshopDefaultVatRate")));
         try {
             HttpRequest backendRequest = com.example.erp.frontend.base.BackendRequests.newBuilder(URI.create(backendUrl + "/api/v1/settings"))
                     .header("Content-Type", "application/json")
@@ -67,5 +70,6 @@ public class SettingsServlet extends HttpServlet {
     }
 
     private record UpdateSettingsRequest(String companyName, String companyEmail, String currencyCode, String timezone,
-            int fiscalYearStartMonth, int defaultPaymentTermsDays, BigDecimal deliveryFee) { }
+            int fiscalYearStartMonth, int defaultPaymentTermsDays, BigDecimal deliveryFee,
+            BigDecimal eshopMarginPercent, BigDecimal eshopRoundingUnit, BigDecimal eshopDefaultVatRate) { }
 }

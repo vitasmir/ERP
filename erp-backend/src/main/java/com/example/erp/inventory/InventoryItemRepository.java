@@ -10,6 +10,7 @@ public interface InventoryItemRepository extends JpaRepository<InventoryItem, UU
     List<InventoryItem> findAllByOrderByQuantityAsc();
     List<InventoryItem> findAllByProductIdOrderByQuantityDesc(UUID productId);
     Optional<InventoryItem> findByProductIdAndLocationName(UUID productId, String locationName);
+    Optional<InventoryItem> findByProductIdAndWarehouseId(UUID productId, UUID warehouseId);
     boolean existsByProductId(UUID productId);
     void deleteAllByProductId(UUID productId);
 }

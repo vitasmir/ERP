@@ -19,6 +19,12 @@ public class Product {
     private String description;
     private BigDecimal price;
 
+    @Column(name = "purchase_price")
+    private BigDecimal purchasePrice;
+
+    @Column(name = "vat_rate")
+    private BigDecimal vatRate;
+
     @Column(name = "category_id")
     private UUID categoryId;
 
@@ -28,21 +34,23 @@ public class Product {
 
     protected Product() { }
 
-    public static Product create(String sku, String name, String unit, String description, BigDecimal price,
-            UUID categoryId, String imageUrl, boolean active) {
+        public static Product create(String sku, String name, String unit, String description, BigDecimal price,
+            BigDecimal purchasePrice, BigDecimal vatRate, UUID categoryId, String imageUrl, boolean active) {
         Product product = new Product();
         product.id = UUID.randomUUID();
-        product.update(sku, name, unit, description, price, categoryId, imageUrl, active);
+        product.update(sku, name, unit, description, price, purchasePrice, vatRate, categoryId, imageUrl, active);
         return product;
     }
 
-    public void update(String sku, String name, String unit, String description, BigDecimal price,
-            UUID categoryId, String imageUrl, boolean active) {
+        public void update(String sku, String name, String unit, String description, BigDecimal price,
+            BigDecimal purchasePrice, BigDecimal vatRate, UUID categoryId, String imageUrl, boolean active) {
         this.sku = sku;
         this.name = name;
         this.unit = unit;
         this.description = description;
         this.price = price;
+        this.purchasePrice = purchasePrice;
+        this.vatRate = vatRate;
         this.categoryId = categoryId;
         this.imageUrl = imageUrl;
         this.active = active;
@@ -62,6 +70,8 @@ public class Product {
     public String getUnit() { return unit; }
     public String getDescription() { return description; }
     public BigDecimal getPrice() { return price; }
+    public BigDecimal getPurchasePrice() { return purchasePrice; }
+    public BigDecimal getVatRate() { return vatRate; }
     public UUID getCategoryId() { return categoryId; }
     public String getImageUrl() { return imageUrl; }
     public boolean isActive() { return active; }

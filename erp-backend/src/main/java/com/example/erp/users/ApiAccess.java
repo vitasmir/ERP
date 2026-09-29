@@ -53,7 +53,8 @@ public class ApiAccess implements HandlerInterceptor {
     @Override
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) {
         String path = request.getRequestURI().substring(request.getContextPath().length());
-        if ("OPTIONS".equals(request.getMethod()) || "/api/v1/auth/login".equals(path)) return true;
+        if ("OPTIONS".equals(request.getMethod()) || "/api/v1/auth/login".equals(path)
+            || isPublicEshopRequest(request.getMethod(), path)) return true;
         String authorization = request.getHeader("Authorization");
         if (authorization == null || !authorization.startsWith("Bearer ") || authorization.length() > 100) unauthorized();
         UUID userId = jdbc.query("SELECT user_id FROM api_sessions WHERE token_hash = ? AND expires_at > CURRENT_TIMESTAMP",
@@ -67,6 +68,15 @@ public class ApiAccess implements HandlerInterceptor {
         }
         request.setAttribute("erpUser", user);
         return true;
+    }
+
+    private boolean isPublicEshopRequest(String method, String path) {
+        if ("POST".equals(method) && "/api/v1/sales/orders/checkout".equals(path)) return true;
+        if (!"GET".equals(method)) return false;
+        return "/api/v1/catalog/categories/tree".equals(path)
+                || "/api/v1/catalog/products".equals(path)
+                || path.matches("/api/v1/catalog/products/[^/]+/availability")
+                || "/api/v1/settings".equals(path);
     }
 
     private Permission requiredPermission(String path, String method) {

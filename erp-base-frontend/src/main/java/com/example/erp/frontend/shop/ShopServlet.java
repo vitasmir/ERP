@@ -18,6 +18,7 @@ import com.example.erp.frontend.ecommerce.EcommerceView;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
@@ -32,7 +33,7 @@ public class ShopServlet extends HttpServlet {
     private static final String DELIVERY_ATTRIBUTE = "eshop.delivery";
     private static final String PAYMENT_ATTRIBUTE = "eshop.payment";
     private final HttpClient client = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(3)).build();
-    private final ObjectMapper mapper = new ObjectMapper();
+    private final ObjectMapper mapper = new ObjectMapper().registerModule(new JavaTimeModule());
     private final String backendUrl = System.getenv().getOrDefault("BACKEND_URL", "http://localhost:8080");
 
     @Override

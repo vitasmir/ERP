@@ -47,7 +47,6 @@
       thumbnail.addEventListener("mouseleave", removePopup);
     });
 
-  if (!popup) return;
   filters.forEach((filter) =>
     filter.addEventListener("click", () => {
       filters.forEach((item) =>

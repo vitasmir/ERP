@@ -25,7 +25,7 @@ public class AccountInvoice {
     private UUID id;
 
     @Version
-    private long version;
+    private Long version;
 
     @Column(name = "sales_order_id")
     private UUID salesOrderId;
@@ -71,7 +71,7 @@ public class AccountInvoice {
     }
 
     public UUID getId() { return id; }
-    public long getVersion() { return version; }
+    public long getVersion() { return version == null ? 0L : version; }
     public UUID getSalesOrderId() { return salesOrderId; }
     public List<InvoiceLine> getLines() { return List.copyOf(lines); }
 

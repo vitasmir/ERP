@@ -1,16 +1,20 @@
 package com.example.erp.users;
 
+import java.util.List;
 import java.util.Locale;
 import java.util.UUID;
 
 import org.springframework.http.HttpStatus;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
-import org.springframework.web.bind.annotation.RequestHeader;
-import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
+
+import jakarta.servlet.http.HttpServletRequest;
 
 @RestController
 @RequestMapping("/api/v1/auth")
@@ -37,10 +41,18 @@ public class AuthController {
     @PostMapping("/logout")
     public void logout(@RequestHeader("Authorization") String authorization) { access.revoke(authorization); }
 
+    @GetMapping("/me")
+    public CurrentUserResponse currentUser(HttpServletRequest request) {
+        ErpUser user = (ErpUser) request.getAttribute("erpUser");
+        return new CurrentUserResponse(user.getId(), user.getRoleName(), ApiAccess.isAdmin(user.getRoleName()),
+            access.readableModules(user.getRoleName()));
+    }
+
     private ResponseStatusException invalidCredentials() {
         return new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid username or password.");
     }
 
     public record LoginRequest(String username, String password) { }
     public record LoginResponse(UUID id, UUID employeeId, String fullName, String username, String roleName, String token) { }
+    public record CurrentUserResponse(UUID id, String roleName, boolean administrator, List<String> modules) { }
 }

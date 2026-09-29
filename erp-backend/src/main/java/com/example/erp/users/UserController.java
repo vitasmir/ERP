@@ -57,6 +57,7 @@ public class UserController {
         UserData data = validate(request, id);
         String color = request.color() == null ? user.getColor() : data.color();
         user.update(data.employee(), data.fullName(), data.roleName(), data.companyName(), data.status(), color);
+        if (!isBlank(data.password())) user.changePassword(data.password());
         return UserResponse.from(users.save(user));
     }
 

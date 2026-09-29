@@ -81,6 +81,8 @@ public class ErpUser {
         this.color = color;
     }
 
+    public void changePassword(String password) { this.passwordHash = PasswordHasher.hash(password); }
+
     public UUID getId() { return id; }
     public UUID getEmployeeId() { return employee == null ? null : employee.getId(); }
     public String getFullName() { return fullName; }

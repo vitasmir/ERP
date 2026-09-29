@@ -13,6 +13,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
@@ -72,7 +73,10 @@ public class EcommerceServlet extends HttpServlet {
                 case "category" -> { createCategory(request); redirect(response, "Kategorie byla přidána.", null); }
                 case "updateCategory" -> { updateCategory(request); redirect(response, "Kategorie byla přejmenována.", null); }
                 case "deleteCategory" -> { deleteCategory(request); redirect(response, "Kategorie byla smazána.", null); }
-                case "product" -> { saveProduct(request); redirect(response, "Produkt byl uložen.", null); }
+                case "product" -> {
+                    ProductSaveResponse saved = saveProduct(request);
+                    redirect(response, "Produkt byl uložen.", null, saved.categoryId(), saved.id());
+                }
                 case "addImage" -> { addImage(request); redirect(response, "Obrázek byl přidán.", null); }
                 case "activateImage" -> { activateImage(request); redirect(response, "Aktivní obrázek byl změněn.", null); }
                 case "deleteImage" -> { deleteImage(request); redirect(response, "Obrázek byl odstraněn.", null); }
@@ -120,7 +124,7 @@ public class EcommerceServlet extends HttpServlet {
         sendMutation("POST", "/api/v1/catalog/products/import", mapper.writeValueAsString(body));
     }
 
-    private void saveProduct(HttpServletRequest request) throws IOException, InterruptedException {
+    private ProductSaveResponse saveProduct(HttpServletRequest request) throws IOException, InterruptedException {
         String productId = request.getParameter("productId");
         String category = request.getParameter("categoryId");
         ProductRequest body = new ProductRequest(request.getParameter("sku"), request.getParameter("name"),
@@ -128,7 +132,9 @@ public class EcommerceServlet extends HttpServlet {
                 category == null || category.isBlank() ? null : UUID.fromString(category), request.getParameter("imageUrl"),
                 "on".equals(request.getParameter("active")));
         String path = productId == null || productId.isBlank() ? "/api/v1/catalog/products" : "/api/v1/catalog/products/" + UUID.fromString(productId);
-        sendMutation(productId == null || productId.isBlank() ? "POST" : "PUT", path, mapper.writeValueAsString(body));
+        HttpResponse<String> response = sendMutation(productId == null || productId.isBlank() ? "POST" : "PUT", path,
+            mapper.writeValueAsString(body));
+        return mapper.readValue(response.body(), ProductSaveResponse.class);
     }
 
     private void removeFromCategory(HttpServletRequest request) throws IOException, InterruptedException {
@@ -182,11 +188,12 @@ public class EcommerceServlet extends HttpServlet {
         return client.send(request, HttpResponse.BodyHandlers.ofString());
     }
 
-    private void sendMutation(String method, String path, String body) throws IOException, InterruptedException {
+    private HttpResponse<String> sendMutation(String method, String path, String body) throws IOException, InterruptedException {
         HttpResponse<String> response = send(method, path, body);
         if (response.statusCode() < 200 || response.statusCode() >= 300) {
             throw new IllegalArgumentException("Backend mutation failed: " + response.statusCode());
         }
+        return response;
     }
 
     private void redirect(HttpServletResponse response, String message, String error) throws IOException {
@@ -194,11 +201,21 @@ public class EcommerceServlet extends HttpServlet {
         response.sendRedirect("ecommerce?" + parameter);
     }
 
+    private void redirect(HttpServletResponse response, String message, String error,
+            UUID categoryId, UUID productId) throws IOException {
+        String parameter = message != null ? "message=" + encode(message) : "error=" + encode(error);
+        if (categoryId != null) parameter += "&categoryId=" + categoryId;
+        String fragment = productId == null ? "" : "#product-" + productId;
+        response.sendRedirect("ecommerce?" + parameter + fragment);
+    }
+
     private String encode(String value) { return URLEncoder.encode(value, StandardCharsets.UTF_8); }
 
     private record HomepageRequest(String design, String headline, String subheadline, BigDecimal textX, BigDecimal textY) { }
     private record CategoryRequest(String name, String slug, UUID parentId, int sortOrder, boolean active) { }
     private record ProductRequest(String sku, String name, String unit, String description, BigDecimal price, UUID categoryId, String imageUrl, boolean active) { }
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    private record ProductSaveResponse(UUID id, UUID categoryId) { }
     private record ImageRequest(String imageUrl, boolean active) { }
     private record DeliveryRequest(UUID productId, int quantity, String postalCode, String method) { }
     private record DeliveryResponse(String method, String label, boolean available, String estimatedDate, String reason) { }

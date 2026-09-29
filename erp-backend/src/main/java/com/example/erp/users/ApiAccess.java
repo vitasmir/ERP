@@ -7,6 +7,7 @@ import java.text.Normalizer;
 import java.time.LocalDateTime;
 import java.util.Base64;
 import java.util.HexFormat;
+import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 
@@ -127,6 +128,18 @@ public class ApiAccess implements HandlerInterceptor {
     public static String normalize(String role) {
         return Normalizer.normalize(role == null ? "" : role, Normalizer.Form.NFD).replaceAll("\\p{M}", "")
                 .trim().toLowerCase(java.util.Locale.ROOT);
+    }
+
+    public List<String> readableModules(String roleName) {
+        if (isAdmin(roleName)) {
+            return jdbc.query("SELECT module_key FROM erp_modules ORDER BY sort_order",
+                    (row, index) -> row.getString("module_key"));
+        }
+        return jdbc.query("SELECT module.module_key FROM erp_modules module "
+                + "JOIN role_module_permissions assignment ON assignment.module_key = module.module_key "
+                + "JOIN role_definitions role ON role.id = assignment.role_id "
+                + "WHERE lower(role.name) = lower(?) AND role.can_read = TRUE ORDER BY module.sort_order",
+                (row, index) -> row.getString("module_key"), roleName);
     }
 
     private static String hash(String token) {

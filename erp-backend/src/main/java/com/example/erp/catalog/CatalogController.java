@@ -33,15 +33,17 @@ public class CatalogController {
     private final HomepageSettingsRepository homepage;
     private final InventoryItemRepository inventory;
     private final DeliveryOptionRepository deliveryOptions;
+        private final ProductImageRepository images;
 
     public CatalogController(ProductRepository products, ProductCategoryRepository categories,
             HomepageSettingsRepository homepage, InventoryItemRepository inventory,
-            DeliveryOptionRepository deliveryOptions) {
+            DeliveryOptionRepository deliveryOptions, ProductImageRepository images) {
         this.products = products;
         this.categories = categories;
         this.homepage = homepage;
         this.inventory = inventory;
         this.deliveryOptions = deliveryOptions;
+        this.images = images;
     }
 
     @GetMapping("/homepage")
@@ -95,7 +97,7 @@ public class CatalogController {
 
     @GetMapping("/products")
     public List<ProductResponse> listProducts() {
-        return products.findAllByOrderByNameAsc().stream().map(ProductResponse::from).toList();
+        return products.findAllByOrderByNameAsc().stream().map(this::productResponse).toList();
     }
 
     @PostMapping("/products")
@@ -106,7 +108,8 @@ public class CatalogController {
                 request.unit().trim(), text(request.description()), request.price(), request.categoryId(),
                 textOrNull(request.imageUrl()), request.active()));
         ensureInventory(saved.getId());
-        return ProductResponse.from(saved);
+        syncActiveImage(saved);
+        return productResponse(saved);
     }
 
     @PutMapping("/products/{id}")
@@ -115,11 +118,14 @@ public class CatalogController {
         Product product = products.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Product was not found."));
         validateProduct(request, id);
+        String imageUrl = textOrNull(request.imageUrl());
+        if (imageUrl == null) imageUrl = product.getImageUrl();
         product.update(request.sku().trim(), request.name().trim(), request.unit().trim(), text(request.description()),
-                request.price(), request.categoryId(), textOrNull(request.imageUrl()), request.active());
+            request.price(), request.categoryId(), imageUrl, request.active());
         Product saved = products.save(product);
         ensureInventory(saved.getId());
-        return ProductResponse.from(saved);
+        syncActiveImage(saved);
+        return productResponse(saved);
     }
 
     @PutMapping("/products/{id}/category")
@@ -128,7 +134,7 @@ public class CatalogController {
         Product product = products.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Product was not found."));
         product.removeFromCategory();
-        return ProductResponse.from(products.save(product));
+        return productResponse(products.save(product));
     }
 
     @DeleteMapping("/products/{id}")
@@ -138,6 +144,66 @@ public class CatalogController {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Product was not found."));
         inventory.deleteAllByProductId(product.getId());
         products.delete(product);
+    }
+
+    @GetMapping("/products/{id}/images")
+    public List<ImageResponse> listImages(@PathVariable UUID id) {
+        findProduct(id);
+        return images.findAllByProductIdOrderBySortOrderAscIdAsc(id).stream().map(ImageResponse::from).toList();
+    }
+
+    @PostMapping("/products/{id}/images")
+    @Transactional
+    public ImageResponse addImage(@PathVariable UUID id, @RequestBody ImageRequest request) {
+        Product product = findProduct(id);
+        if (request == null || blank(request.imageUrl())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Image URL is required.");
+        }
+        List<ProductImage> existing = images.findAllByProductIdOrderBySortOrderAscIdAsc(id);
+        boolean active = request.active() || existing.stream().noneMatch(ProductImage::isActive);
+        if (active) deactivateImages(existing);
+        ProductImage image = images.save(ProductImage.create(id, request.imageUrl().trim(), active, existing.size()));
+        if (active) {
+            product.setImageUrl(image.getImageUrl());
+            products.save(product);
+        }
+        return ImageResponse.from(image);
+    }
+
+    @PutMapping("/products/{productId}/images/{imageId}/active")
+    @Transactional
+    public ImageResponse activateImage(@PathVariable UUID productId, @PathVariable UUID imageId) {
+        Product product = findProduct(productId);
+        ProductImage selected = images.findById(imageId)
+                .filter(image -> productId.equals(image.getProductId()))
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Product image was not found."));
+        deactivateImages(images.findAllByProductIdOrderBySortOrderAscIdAsc(productId));
+        selected.activate();
+        product.setImageUrl(selected.getImageUrl());
+        products.save(product);
+        return ImageResponse.from(images.save(selected));
+    }
+
+    @DeleteMapping("/products/{productId}/images/{imageId}")
+    @Transactional
+    public void deleteImage(@PathVariable UUID productId, @PathVariable UUID imageId) {
+        Product product = findProduct(productId);
+        ProductImage selected = images.findById(imageId)
+                .filter(image -> productId.equals(image.getProductId()))
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Product image was not found."));
+        boolean wasActive = selected.isActive();
+        images.delete(selected);
+        if (wasActive) {
+            ProductImage replacement = images.findAllByProductIdOrderBySortOrderAscIdAsc(productId).stream().findFirst().orElse(null);
+            if (replacement == null) {
+                product.setImageUrl(null);
+            } else {
+                replacement.activate();
+                images.save(replacement);
+                product.setImageUrl(replacement.getImageUrl());
+            }
+            products.save(product);
+        }
     }
 
     @PostMapping("/products/import")
@@ -159,6 +225,7 @@ public class CatalogController {
             }
             products.save(product);
             ensureInventory(product.getId());
+            syncActiveImage(product);
             imported++;
         }
         return new ImportResponse(imported);
@@ -206,6 +273,34 @@ public class CatalogController {
         if (!inventory.existsByProductId(productId)) {
             inventory.save(InventoryItem.create(productId, DEFAULT_INVENTORY_LOCATION));
         }
+    }
+
+    private Product findProduct(UUID id) {
+        return products.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Product was not found."));
+    }
+
+    private ProductResponse productResponse(Product product) {
+        List<ImageResponse> productImages = images.findAllByProductIdOrderBySortOrderAscIdAsc(product.getId()).stream()
+                .map(ImageResponse::from).toList();
+        return ProductResponse.from(product, productImages);
+    }
+
+    private void syncActiveImage(Product product) {
+        if (product.getImageUrl() == null || product.getImageUrl().isBlank()) return;
+        List<ProductImage> existing = images.findAllByProductIdOrderBySortOrderAscIdAsc(product.getId());
+        ProductImage active = existing.stream().filter(image -> product.getImageUrl().equals(image.getImageUrl())).findFirst().orElse(null);
+        if (active == null) active = images.save(ProductImage.create(product.getId(), product.getImageUrl(), true, existing.size()));
+        deactivateImages(existing);
+        active.activate();
+        images.save(active);
+    }
+
+    private void deactivateImages(List<ProductImage> productImages) {
+        productImages.stream().filter(ProductImage::isActive).forEach(image -> {
+            image.deactivate();
+            images.save(image);
+        });
     }
 
     private ProductCategory findCategory(UUID id) {
@@ -262,9 +357,15 @@ public class CatalogController {
     public record CategoryRequest(String name, String slug, UUID parentId, int sortOrder, boolean active) { }
     public record CategoryResponse(UUID id, UUID parentId, String name, String slug, int sortOrder, boolean active, List<CategoryResponse> children) { }
     public record ProductRequest(String sku, String name, String unit, String description, BigDecimal price, UUID categoryId, String imageUrl, boolean active) { }
-    public record ProductResponse(UUID id, String sku, String name, String unit, String description, BigDecimal price, UUID categoryId, String imageUrl, boolean active) {
-        static ProductResponse from(Product product) {
-            return new ProductResponse(product.getId(), product.getSku(), product.getName(), product.getUnit(), product.getDescription(), product.getPrice(), product.getCategoryId(), product.getImageUrl(), product.isActive());
+    public record ImageRequest(String imageUrl, boolean active) { }
+    public record ImageResponse(UUID id, String imageUrl, boolean active, int sortOrder) {
+        static ImageResponse from(ProductImage image) {
+            return new ImageResponse(image.getId(), image.getImageUrl(), image.isActive(), image.getSortOrder());
+        }
+    }
+    public record ProductResponse(UUID id, String sku, String name, String unit, String description, BigDecimal price, UUID categoryId, String imageUrl, boolean active, List<ImageResponse> images) {
+        static ProductResponse from(Product product, List<ImageResponse> images) {
+            return new ProductResponse(product.getId(), product.getSku(), product.getName(), product.getUnit(), product.getDescription(), product.getPrice(), product.getCategoryId(), product.getImageUrl(), product.isActive(), images);
         }
     }
     public record ImportResponse(int imported) { }

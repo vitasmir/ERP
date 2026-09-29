@@ -38,7 +38,7 @@ public class EcommerceServlet extends HttpServlet {
             for (EcommerceView.Product product : products) {
                 List<EcommerceView.Availability> availability = getList("/api/v1/catalog/products/" + product.id() + "/availability", new TypeReference<>() { });
                 enriched.add(new EcommerceView.Product(product.id(), product.sku(), product.name(), product.unit(), product.description(),
-                        product.price(), product.categoryId(), product.imageUrl(), product.active(), availability));
+                    product.price(), product.categoryId(), product.imageUrl(), product.active(), product.images(), availability));
             }
                 UUID selectedCategoryId = categoryId(request.getParameter("categoryId"));
                 List<EcommerceView.Product> visibleProducts = selectedCategoryId == null ? enriched : enriched.stream()
@@ -73,6 +73,9 @@ public class EcommerceServlet extends HttpServlet {
                 case "updateCategory" -> { updateCategory(request); redirect(response, "Kategorie byla přejmenována.", null); }
                 case "deleteCategory" -> { deleteCategory(request); redirect(response, "Kategorie byla smazána.", null); }
                 case "product" -> { saveProduct(request); redirect(response, "Produkt byl uložen.", null); }
+                case "addImage" -> { addImage(request); redirect(response, "Obrázek byl přidán.", null); }
+                case "activateImage" -> { activateImage(request); redirect(response, "Aktivní obrázek byl změněn.", null); }
+                case "deleteImage" -> { deleteImage(request); redirect(response, "Obrázek byl odstraněn.", null); }
                 case "removeFromCategory" -> { removeFromCategory(request); redirect(response, "Produkt byl odebrán z kategorie.", null); }
                 case "deleteProduct" -> { deleteProduct(request); redirect(response, "Produkt byl smazán.", null); }
                 case "import" -> { importProducts(request); redirect(response, "Produkty byly naimportovány.", null); }
@@ -132,6 +135,22 @@ public class EcommerceServlet extends HttpServlet {
         sendMutation("PUT", "/api/v1/catalog/products/" + UUID.fromString(request.getParameter("productId")) + "/category", "");
     }
 
+    private void addImage(HttpServletRequest request) throws IOException, InterruptedException {
+        UUID productId = UUID.fromString(request.getParameter("productId"));
+        ImageRequest body = new ImageRequest(request.getParameter("imageUrl"), "on".equals(request.getParameter("active")));
+        sendMutation("POST", "/api/v1/catalog/products/" + productId + "/images", mapper.writeValueAsString(body));
+    }
+
+    private void activateImage(HttpServletRequest request) throws IOException, InterruptedException {
+        sendMutation("PUT", "/api/v1/catalog/products/" + UUID.fromString(request.getParameter("productId"))
+                + "/images/" + UUID.fromString(request.getParameter("imageId")) + "/active", "");
+    }
+
+    private void deleteImage(HttpServletRequest request) throws IOException, InterruptedException {
+        sendMutation("DELETE", "/api/v1/catalog/products/" + UUID.fromString(request.getParameter("productId"))
+                + "/images/" + UUID.fromString(request.getParameter("imageId")), "");
+    }
+
     private void deleteProduct(HttpServletRequest request) throws IOException, InterruptedException {
         sendMutation("DELETE", "/api/v1/catalog/products/" + UUID.fromString(request.getParameter("productId")), "");
     }
@@ -180,6 +199,7 @@ public class EcommerceServlet extends HttpServlet {
     private record HomepageRequest(String design, String headline, String subheadline, BigDecimal textX, BigDecimal textY) { }
     private record CategoryRequest(String name, String slug, UUID parentId, int sortOrder, boolean active) { }
     private record ProductRequest(String sku, String name, String unit, String description, BigDecimal price, UUID categoryId, String imageUrl, boolean active) { }
+    private record ImageRequest(String imageUrl, boolean active) { }
     private record DeliveryRequest(UUID productId, int quantity, String postalCode, String method) { }
     private record DeliveryResponse(String method, String label, boolean available, String estimatedDate, String reason) { }
 }

@@ -1,0 +1,3 @@
+ALTER TABLE invoice_lines
+    ADD COLUMN IF NOT EXISTS product_id UUID,
+    ADD COLUMN IF NOT EXISTS image_url VARCHAR(1000);

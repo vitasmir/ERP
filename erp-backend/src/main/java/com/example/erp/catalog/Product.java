@@ -52,6 +52,10 @@ public class Product {
         this.categoryId = null;
     }
 
+    public void setImageUrl(String imageUrl) {
+        this.imageUrl = imageUrl;
+    }
+
     public UUID getId() { return id; }
     public String getSku() { return sku; }
     public String getName() { return name; }

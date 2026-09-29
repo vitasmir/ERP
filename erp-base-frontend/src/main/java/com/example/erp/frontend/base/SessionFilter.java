@@ -65,7 +65,11 @@ public class SessionFilter implements Filter {
             response.sendRedirect(request.getContextPath() + "/login");
             return;
         }
-        if (!publicPage) response.setHeader("Cache-Control", "no-store");
+        if (!path.startsWith("/assets/")) {
+            response.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, max-age=0");
+            response.setHeader("Pragma", "no-cache");
+            response.setDateHeader("Expires", 0);
+        }
         BackendRequests.TOKEN.set(token);
         try {
             if ("GET".equals(request.getMethod()) && !checkModuleAccess(request, response)) return;

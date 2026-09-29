@@ -19,7 +19,6 @@
     <header class="sales-header">
       <a href="apps" class="back-link">← Aplikace</a>
       <div><span class="eyebrow">OBCHOD / PRODEJ</span><h1>Prodej</h1><p>Převádějte nabídky do objednávek a mějte pod kontrolou dodávky pro zákazníky.</p></div>
-      <details class="sales-create"><summary class="primary">Vytvořit objednávku</summary><form method="post"><h3 class="sales-dialog-title">Vytvořit objednávku</h3><input type="hidden" name="action" value="create"><label>Číslo dokumentu<input name="orderNumber" required maxlength="30"></label><label>Zákazník<input name="customerName" required maxlength="200"></label><label>Vystaveno<input type="date" name="orderDate" required></label><label>Dodání<input type="date" name="deliveryDate" required></label><label>Celkem<input type="number" name="totalAmount" min="0" step="0.01" required></label><div class="sales-dialog-actions"><button class="dialog-cancel" type="button" onclick="this.closest('details').removeAttribute('open')">Zrušit</button><button class="primary" type="submit">Vytvořit objednávku</button></div></form></details>
     </header>
     <% if (error != null) { %><p class="sales-message error"><%= error %></p><% } if (actionError != null) { %><p class="sales-message error"><%= actionError %></p><% } if (message != null) { %><p class="sales-message"><%= message %></p><% } %>
     <section class="sales-metrics">

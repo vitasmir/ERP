@@ -109,6 +109,16 @@
   paymentForm
     ?.querySelectorAll('[name^="cardNumber"]')
     .forEach((input, index, inputs) => {
+      input.addEventListener("paste", (event) => {
+        const pasted = event.clipboardData?.getData("text").replace(/\D/g, "") || "";
+        if (!pasted) return;
+        event.preventDefault();
+        const values = pasted.slice(0, 16).match(/.{1,4}/g) || [];
+        values.forEach((value, offset) => {
+          if (inputs[index + offset]) inputs[index + offset].value = value;
+        });
+        inputs[Math.min(index + values.length, inputs.length - 1)]?.focus();
+      });
       input.addEventListener("input", () => {
         input.value = input.value.replace(/\D/g, "").slice(0, 4);
         if (input.value.length === 4 && inputs[index + 1])

@@ -27,6 +27,8 @@ import com.example.erp.inventory.InventoryItemRepository;
 import com.example.erp.pos.PosTransaction;
 import com.example.erp.pos.PosTransactionRepository;
 
+import jakarta.persistence.EntityManager;
+
 @RestController
 @RequestMapping("/api/v1/sales")
 public class EshopCheckoutController {
@@ -37,10 +39,11 @@ public class EshopCheckoutController {
     private final ProductRepository products;
     private final InventoryItemRepository inventory;
     private final InvoicePdfService pdfs;
+    private final EntityManager entityManager;
 
     public EshopCheckoutController(SalesOrderRepository orders, AccountInvoiceRepository invoices,
             InvoiceRecords invoiceRecords, PosTransactionRepository transactions, ProductRepository products,
-            InventoryItemRepository inventory, InvoicePdfService pdfs) {
+            InventoryItemRepository inventory, InvoicePdfService pdfs, EntityManager entityManager) {
         this.orders = orders;
         this.invoices = invoices;
         this.invoiceRecords = invoiceRecords;
@@ -48,6 +51,7 @@ public class EshopCheckoutController {
         this.products = products;
         this.inventory = inventory;
         this.pdfs = pdfs;
+        this.entityManager = entityManager;
     }
 
     @PostMapping("/orders/checkout")
@@ -84,10 +88,11 @@ public class EshopCheckoutController {
         AccountInvoice invoice = new AccountInvoice(UUID.randomUUID(), invoiceNumber, request.customerName().trim(),
                 request.orderDate(), request.deliveryDate(), BigDecimal.ZERO);
         invoice.saveAsDraft();
+        entityManager.persist(invoice);
         invoice.updateDraft(invoiceNumber, request.customerName().trim(), request.orderDate(), request.deliveryDate(), invoiceLines);
         invoice.linkSalesOrder(order.getId());
         invoice.issue();
-        invoices.saveAndFlush(invoice);
+        entityManager.flush();
         invoiceRecords.event(invoice.getId(), "ISSUED_FROM_ESHOP", orderNumber);
 
         boolean paid = "CARD".equals(request.paymentMethod());
@@ -95,7 +100,7 @@ public class EshopCheckoutController {
         transactions.save(transaction);
         if (paid) {
             invoice.registerPayment(total);
-            invoices.saveAndFlush(invoice);
+            entityManager.flush();
             invoiceRecords.payment(invoice.getId(), total, LocalDate.now(), "Platba kartou v e-shopu");
             invoiceRecords.event(invoice.getId(), "PAYMENT", "Platba kartou v e-shopu");
             pdfs.createWhenPaid(invoice);

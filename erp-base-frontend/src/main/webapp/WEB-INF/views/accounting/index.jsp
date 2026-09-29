@@ -42,20 +42,6 @@
 			<article><span>Otevřené faktury</span><strong><%= overview == null ? "-" : overview.openInvoiceCount() %></strong><small>čekají na úhradu</small></article>
 		</section>
 
-		<section class="workflow-form">
-			<h2>Nová faktura</h2>
-			<form class="invoice-form" method="post">
-				<input type="hidden" name="action" value="create">
-				<label>Číslo faktury<input name="invoiceNumber" placeholder="FV-2026-0019" required></label>
-				<label>Odběratel<input name="partnerName" list="accounting-companies" placeholder="Vyberte společnost" required></label>
-				<datalist id="accounting-companies"><% if (companies != null) for (CompanyView company : companies) { %><option value="<%= company.name() %>"><% } %></datalist>
-				<label>Vystaveno<input type="date" name="issueDate" required></label>
-				<label>Splatnost<input type="date" name="dueDate" required></label>
-				<label>Celkem<input type="number" step="0.01" name="totalAmount" placeholder="0,00 Kč" required></label>
-				<button class="primary" type="submit">Vystavit fakturu</button>
-			</form>
-		</section>
-
 		<section id="invoices" class="invoice-section">
 			<div class="section-head">
 				<div><span class="eyebrow">VYSTAVENÉ FAKTURY</span><h2>Přehled pohledávek</h2></div>

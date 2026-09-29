@@ -1,0 +1,1 @@
+ALTER TABLE products ADD COLUMN eshop_margin_percent NUMERIC(5, 2);

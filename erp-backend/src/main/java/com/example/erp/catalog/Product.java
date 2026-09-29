@@ -25,6 +25,9 @@ public class Product {
     @Column(name = "vat_rate")
     private BigDecimal vatRate;
 
+    @Column(name = "eshop_margin_percent")
+    private BigDecimal eshopMarginPercent;
+
     @Column(name = "category_id")
     private UUID categoryId;
 
@@ -35,15 +38,18 @@ public class Product {
     protected Product() { }
 
         public static Product create(String sku, String name, String unit, String description, BigDecimal price,
-            BigDecimal purchasePrice, BigDecimal vatRate, UUID categoryId, String imageUrl, boolean active) {
+                BigDecimal purchasePrice, BigDecimal vatRate, BigDecimal eshopMarginPercent, UUID categoryId,
+                String imageUrl, boolean active) {
         Product product = new Product();
         product.id = UUID.randomUUID();
-        product.update(sku, name, unit, description, price, purchasePrice, vatRate, categoryId, imageUrl, active);
+        product.update(sku, name, unit, description, price, purchasePrice, vatRate, eshopMarginPercent,
+            categoryId, imageUrl, active);
         return product;
     }
 
         public void update(String sku, String name, String unit, String description, BigDecimal price,
-            BigDecimal purchasePrice, BigDecimal vatRate, UUID categoryId, String imageUrl, boolean active) {
+                BigDecimal purchasePrice, BigDecimal vatRate, BigDecimal eshopMarginPercent, UUID categoryId,
+                String imageUrl, boolean active) {
         this.sku = sku;
         this.name = name;
         this.unit = unit;
@@ -51,6 +57,7 @@ public class Product {
         this.price = price;
         this.purchasePrice = purchasePrice;
         this.vatRate = vatRate;
+        this.eshopMarginPercent = eshopMarginPercent;
         this.categoryId = categoryId;
         this.imageUrl = imageUrl;
         this.active = active;
@@ -72,6 +79,7 @@ public class Product {
     public BigDecimal getPrice() { return price; }
     public BigDecimal getPurchasePrice() { return purchasePrice; }
     public BigDecimal getVatRate() { return vatRate; }
+    public BigDecimal getEshopMarginPercent() { return eshopMarginPercent; }
     public UUID getCategoryId() { return categoryId; }
     public String getImageUrl() { return imageUrl; }
     public boolean isActive() { return active; }

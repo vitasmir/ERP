@@ -2,16 +2,19 @@
 <%@ page import="com.example.erp.frontend.ecommerce.EcommerceView" %>
 <%@ page import="com.example.erp.frontend.ecommerce.EcommerceView.Category" %>
 <%@ page import="com.example.erp.frontend.ecommerce.EcommerceView.Product" %>
+<%@ page import="java.math.BigDecimal" %>
+<%@ page import="java.math.RoundingMode" %>
+<%! String money(BigDecimal value) { return value == null ? "-" : value.setScale(2, RoundingMode.HALF_UP).toPlainString(); } BigDecimal productMargin(Product product, BigDecimal globalMargin) { return product.eshopMarginPercent() == null ? globalMargin : product.eshopMarginPercent(); } BigDecimal netPrice(Product product) { if (product.price() == null) return null; BigDecimal vat = product.vatRate() == null ? BigDecimal.ZERO : product.vatRate(); return product.price().divide(BigDecimal.ONE.add(vat.movePointLeft(2)), 2, RoundingMode.HALF_UP); } %>
 <!doctype html>
 <html lang="cs">
 <head>
   <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
   <style>.catalog-actions-panel{display:none!important}.product-card-actions{display:flex;flex-direction:column;align-items:flex-end;gap:7px}.danger-button{background:#a8463d!important;border-color:#a8463d!important;color:#fff!important}.danger-button:hover{background:#8d342d!important;border-color:#8d342d!important}</style><script src="assets/ecommerce.js?v=20260929-1" defer></script>
-  <title>ERP | eCommerce</title><link rel="stylesheet" href="assets/base.css?v=20260928-160510"><link rel="stylesheet" href="assets/ecommerce.css?v=20260929-1">
+  <title>ERP | eCommerce</title><link rel="stylesheet" href="assets/base.css?v=20260928-160510"><link rel="stylesheet" href="assets/ecommerce.css?v=20260929-2">
   <style>@media(min-width:1200px){.product-list{grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}.product-card{padding:14px}.product-top{display:block}.product-card-actions{align-items:flex-start!important;margin-top:12px}.active-state{text-align:left}.delivery-form{grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}.delivery-form button{grid-column:1/-1}.product-edit-form{grid-template-columns:1fr}.product-edit-form .secondary{grid-column:1}}</style>
 </head>
 <body>
-<% EcommerceView data = (EcommerceView) request.getAttribute("ecommerce"); String error = (String) request.getAttribute("error"); String message = request.getParameter("message"); String actionError = request.getParameter("error"); java.util.UUID selectedCategoryId = (java.util.UUID) request.getAttribute("selectedCategoryId"); %>
+<% EcommerceView data = (EcommerceView) request.getAttribute("ecommerce"); String error = (String) request.getAttribute("error"); String message = request.getParameter("message"); String actionError = request.getParameter("error"); java.util.UUID selectedCategoryId = (java.util.UUID) request.getAttribute("selectedCategoryId"); BigDecimal eshopMarginPercent = (BigDecimal) request.getAttribute("eshopMarginPercent"); %>
 <main class="commerce-page">
   <header class="commerce-header"><a href="apps" class="back-link">← Aplikace</a><div><span class="eyebrow">OBCHOD / ECOMMERCE</span><h1>Obchod</h1><p>Navrhněte úvod, spravujte katalog a ověřte dostupnost zboží v každé lokalitě.</p></div><a href="#catalog" class="primary">Katalog produktů</a></header>
   <% if (error != null) { %><p class="commerce-message error"><%= error %></p><% } if (actionError != null) { %><p class="commerce-message error"><%= actionError %></p><% } if (message != null) { %><p class="commerce-message"><%= message %></p><% } %>
@@ -43,7 +46,7 @@
     </div>
   </section>
   <section class="pricing-panel panel">
-    <div class="section-heading"><div><span class="eyebrow">CENOTVORBA</span><h2>Nákupní ceny a DPH</h2></div><span class="panel-note">Prodejní cena se dopočítá podle globální marže</span></div>
+    <div class="section-heading"><div><span class="eyebrow">CENOTVORBA</span><h2>Nákupní ceny a DPH</h2></div><span class="panel-note">Globální marže: <%= money(eshopMarginPercent) %> %</span></div>
     <div class="catalog-product-actions">
       <% for (Product product : data.products()) { %>
       <form method="post" class="product-pricing-form">
@@ -55,8 +58,11 @@
         <input type="hidden" name="active" value="<%= product.active() ? "on" : "" %>">
         <strong><%= product.name() %></strong>
         <label>Nákupní cena bez DPH<input name="purchasePrice" type="number" min="0" step="0.01" value="<%= product.purchasePrice() == null ? "" : product.purchasePrice() %>" required></label>
+        <label>Marže (%)<input name="eshopMarginPercent" type="number" min="0" max="99.98" step="0.01" value="<%= money(productMargin(product, eshopMarginPercent)) %>" required></label>
         <label>DPH (%)<input name="vatRate" type="number" min="0" max="100" step="0.01" value="<%= product.vatRate() == null ? "21" : product.vatRate() %>" required></label>
-        <span>Prodejní cena: <strong><%= product.price() %> Kč</strong></span><button class="secondary" type="submit">Přepočítat cenu</button>
+        <span>Prodejní cena bez DPH: <strong><%= money(netPrice(product)) %> Kč</strong></span>
+        <span>Cena s DPH: <strong><%= money(product.price()) %> Kč</strong></span>
+        <button class="secondary" type="submit">Přepočítat cenu</button>
       </form>
       <% } %>
     </div>

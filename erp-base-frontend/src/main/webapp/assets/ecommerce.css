@@ -474,12 +474,20 @@
   resize: vertical;
 }
 .product-pricing-form {
-  display: grid;
-  grid-template-columns: minmax(160px, 1.4fr) minmax(150px, 1fr) minmax(110px, .7fr) minmax(150px, 1fr) auto;
+  display: flex;
+  flex-wrap: wrap;
   gap: 10px;
   align-items: end;
   padding: 10px 12px;
   border-bottom: 1px solid #e8e8df;
+}
+.product-pricing-form > strong,
+.product-pricing-form > label,
+.product-pricing-form > span {
+  flex: 1 1 145px;
+}
+.product-pricing-form > strong {
+  min-width: 170px;
 }
 .pricing-panel {
   margin-top: 16px;

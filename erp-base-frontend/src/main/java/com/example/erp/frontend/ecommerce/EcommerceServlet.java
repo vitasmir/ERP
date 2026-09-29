@@ -13,6 +13,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
+import com.example.erp.frontend.settings.SettingsView;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -33,19 +34,21 @@ public class EcommerceServlet extends HttpServlet {
     protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
         try {
             EcommerceView.Homepage homepage = get("/api/v1/catalog/homepage", EcommerceView.Homepage.class);
+            SettingsView settings = get("/api/v1/settings", SettingsView.class);
             List<EcommerceView.Category> categories = getList("/api/v1/catalog/categories/tree", new TypeReference<>() { });
             List<EcommerceView.Product> products = getList("/api/v1/catalog/products", new TypeReference<>() { });
             List<EcommerceView.Product> enriched = new ArrayList<>();
             for (EcommerceView.Product product : products) {
                 List<EcommerceView.Availability> availability = getList("/api/v1/catalog/products/" + product.id() + "/availability", new TypeReference<>() { });
                 enriched.add(new EcommerceView.Product(product.id(), product.sku(), product.name(), product.unit(), product.description(),
-                    product.price(), product.purchasePrice(), product.vatRate(), product.categoryId(), product.imageUrl(),
+                    product.price(), product.purchasePrice(), product.vatRate(), product.eshopMarginPercent(), product.categoryId(), product.imageUrl(),
                     product.active(), product.images(), availability));
             }
                 UUID selectedCategoryId = categoryId(request.getParameter("categoryId"));
                 List<EcommerceView.Product> visibleProducts = selectedCategoryId == null ? enriched : enriched.stream()
                     .filter(product -> selectedCategoryId.equals(product.categoryId())).toList();
                 request.setAttribute("selectedCategoryId", selectedCategoryId);
+                request.setAttribute("eshopMarginPercent", settings.eshopMarginPercent());
                 request.setAttribute("ecommerce", new EcommerceView(homepage, categories, visibleProducts));
         } catch (InterruptedException exception) {
             Thread.currentThread().interrupt();
@@ -131,10 +134,12 @@ public class EcommerceServlet extends HttpServlet {
         String price = request.getParameter("price");
         String purchasePrice = request.getParameter("purchasePrice");
         String vatRate = request.getParameter("vatRate");
+        String margin = request.getParameter("eshopMarginPercent");
         ProductRequest body = new ProductRequest(request.getParameter("sku"), request.getParameter("name"),
             request.getParameter("unit"), request.getParameter("description"), price == null || price.isBlank() ? null : new BigDecimal(price),
             purchasePrice == null || purchasePrice.isBlank() ? null : new BigDecimal(purchasePrice),
             vatRate == null || vatRate.isBlank() ? null : new BigDecimal(vatRate),
+            margin == null || margin.isBlank() ? null : new BigDecimal(margin),
             category == null || category.isBlank() ? null : UUID.fromString(category), request.getParameter("imageUrl"),
                 "on".equals(request.getParameter("active")));
         String path = productId == null || productId.isBlank() ? "/api/v1/catalog/products" : "/api/v1/catalog/products/" + UUID.fromString(productId);
@@ -220,7 +225,8 @@ public class EcommerceServlet extends HttpServlet {
     private record HomepageRequest(String design, String headline, String subheadline, BigDecimal textX, BigDecimal textY) { }
     private record CategoryRequest(String name, String slug, UUID parentId, int sortOrder, boolean active) { }
         private record ProductRequest(String sku, String name, String unit, String description, BigDecimal price,
-            BigDecimal purchasePrice, BigDecimal vatRate, UUID categoryId, String imageUrl, boolean active) { }
+            BigDecimal purchasePrice, BigDecimal vatRate, BigDecimal eshopMarginPercent, UUID categoryId,
+            String imageUrl, boolean active) { }
     @JsonIgnoreProperties(ignoreUnknown = true)
     private record ProductSaveResponse(UUID id, UUID categoryId) { }
     private record ImageRequest(String imageUrl, boolean active) { }

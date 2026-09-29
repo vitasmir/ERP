@@ -20,7 +20,13 @@ public class PricingService {
     public BigDecimal sellingPrice(BigDecimal purchasePrice, BigDecimal vatRate) {
         ErpSettings configuration = settings.findAll().stream().findFirst()
                 .orElseThrow(() -> new IllegalStateException("ERP settings were not found."));
-        BigDecimal marginFactor = ONE.subtract(configuration.getEshopMarginPercent().movePointLeft(2));
+        return sellingPrice(purchasePrice, vatRate, configuration.getEshopMarginPercent());
+        }
+
+        public BigDecimal sellingPrice(BigDecimal purchasePrice, BigDecimal vatRate, BigDecimal marginPercent) {
+        ErpSettings configuration = settings.findAll().stream().findFirst()
+            .orElseThrow(() -> new IllegalStateException("ERP settings were not found."));
+        BigDecimal marginFactor = ONE.subtract(marginPercent.movePointLeft(2));
         BigDecimal netPrice = purchasePrice.divide(marginFactor, 8, RoundingMode.HALF_UP);
         BigDecimal grossPrice = netPrice.multiply(ONE.add(vatRate.movePointLeft(2)));
         BigDecimal roundingUnit = configuration.getEshopRoundingUnit();
@@ -36,5 +42,11 @@ public class PricingService {
         return settings.findAll().stream().findFirst()
                 .orElseThrow(() -> new IllegalStateException("ERP settings were not found."))
                 .getEshopDefaultVatRate();
+    }
+
+    public BigDecimal currentMargin() {
+        return settings.findAll().stream().findFirst()
+                .orElseThrow(() -> new IllegalStateException("ERP settings were not found."))
+                .getEshopMarginPercent();
     }
 }

@@ -109,7 +109,8 @@ public class CatalogController {
         BigDecimal vatRate = vatRate(request);
         Product saved = products.save(Product.create(request.sku().trim(), request.name().trim(),
             request.unit().trim(), text(request.description()), sellingPrice(request, vatRate),
-            request.purchasePrice(), vatRate, request.categoryId(), textOrNull(request.imageUrl()), request.active()));
+            request.purchasePrice(), vatRate, request.eshopMarginPercent(), request.categoryId(),
+            textOrNull(request.imageUrl()), request.active()));
         ensureInventory(saved.getId());
         syncActiveImage(saved);
         return productResponse(saved);
@@ -124,8 +125,10 @@ public class CatalogController {
         String imageUrl = textOrNull(request.imageUrl());
         if (imageUrl == null) imageUrl = product.getImageUrl();
         BigDecimal vatRate = vatRate(request);
+        BigDecimal margin = request.eshopMarginPercent() == null ? product.getEshopMarginPercent() : request.eshopMarginPercent();
         product.update(request.sku().trim(), request.name().trim(), request.unit().trim(), text(request.description()),
-            sellingPrice(request, vatRate), request.purchasePrice(), vatRate, request.categoryId(), imageUrl, request.active());
+            sellingPrice(request, vatRate, margin), request.purchasePrice(), vatRate, margin,
+            request.categoryId(), imageUrl, request.active());
         Product saved = products.save(product);
         ensureInventory(saved.getId());
         syncActiveImage(saved);
@@ -224,11 +227,12 @@ public class CatalogController {
                 BigDecimal vatRate = vatRate(request);
                 product = Product.create(request.sku().trim(), request.name().trim(), request.unit().trim(),
                     text(request.description()), sellingPrice(request, vatRate), request.purchasePrice(), vatRate,
-                    request.categoryId(), textOrNull(request.imageUrl()), request.active());
+                    request.eshopMarginPercent(), request.categoryId(), textOrNull(request.imageUrl()), request.active());
             } else {
                 BigDecimal vatRate = vatRate(request);
+                BigDecimal margin = request.eshopMarginPercent() == null ? product.getEshopMarginPercent() : request.eshopMarginPercent();
                 product.update(request.sku().trim(), request.name().trim(), request.unit().trim(), text(request.description()),
-                    sellingPrice(request, vatRate), request.purchasePrice(), vatRate, request.categoryId(),
+                    sellingPrice(request, vatRate, margin), request.purchasePrice(), vatRate, margin, request.categoryId(),
                     textOrNull(request.imageUrl()), request.active());
             }
             products.save(product);
@@ -293,7 +297,8 @@ public class CatalogController {
                 .map(ImageResponse::from).toList();
         BigDecimal vatRate = product.getVatRate() == null ? BigDecimal.ZERO : product.getVatRate();
         BigDecimal sellingPrice = product.getPurchasePrice() == null
-            ? product.getPrice() : pricing.sellingPrice(product.getPurchasePrice(), vatRate);
+            ? product.getPrice() : pricing.sellingPrice(product.getPurchasePrice(), vatRate,
+                product.getEshopMarginPercent() == null ? pricing.currentMargin() : product.getEshopMarginPercent());
         return ProductResponse.from(product, sellingPrice, productImages);
     }
 
@@ -346,6 +351,8 @@ public class CatalogController {
             || (request.price() == null && request.purchasePrice() == null)
             || request.price() != null && request.price().signum() < 0
             || request.purchasePrice() != null && request.purchasePrice().signum() < 0
+            || request.eshopMarginPercent() != null && (request.eshopMarginPercent().signum() < 0
+                || request.eshopMarginPercent().compareTo(new BigDecimal("99.99")) >= 0)
             || request.vatRate() != null && (request.vatRate().signum() < 0
                 || request.vatRate().compareTo(BigDecimal.valueOf(100)) > 0)) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Product SKU, name, unit, and non-negative price data are required.");
@@ -370,7 +377,13 @@ public class CatalogController {
     }
 
     private BigDecimal sellingPrice(ProductRequest request, BigDecimal vatRate) {
-        return request.purchasePrice() == null ? request.price() : pricing.sellingPrice(request.purchasePrice(), vatRate);
+        return request.purchasePrice() == null ? request.price() : pricing.sellingPrice(request.purchasePrice(), vatRate,
+            request.eshopMarginPercent() == null ? pricing.currentMargin() : request.eshopMarginPercent());
+    }
+
+    private BigDecimal sellingPrice(ProductRequest request, BigDecimal vatRate, BigDecimal margin) {
+        return request.purchasePrice() == null ? request.price() : pricing.sellingPrice(request.purchasePrice(), vatRate,
+            margin == null ? pricing.currentMargin() : margin);
     }
 
     public record HomepageRequest(String design, String headline, String subheadline, BigDecimal textX, BigDecimal textY) { }
@@ -382,7 +395,8 @@ public class CatalogController {
     public record CategoryRequest(String name, String slug, UUID parentId, int sortOrder, boolean active) { }
     public record CategoryResponse(UUID id, UUID parentId, String name, String slug, int sortOrder, boolean active, List<CategoryResponse> children) { }
         public record ProductRequest(String sku, String name, String unit, String description, BigDecimal price,
-            BigDecimal purchasePrice, BigDecimal vatRate, UUID categoryId, String imageUrl, boolean active) { }
+            BigDecimal purchasePrice, BigDecimal vatRate, BigDecimal eshopMarginPercent, UUID categoryId,
+            String imageUrl, boolean active) { }
     public record ImageRequest(String imageUrl, boolean active) { }
     public record ImageResponse(UUID id, String imageUrl, boolean active, int sortOrder) {
         static ImageResponse from(ProductImage image) {
@@ -390,10 +404,12 @@ public class CatalogController {
         }
     }
     public record ProductResponse(UUID id, String sku, String name, String unit, String description, BigDecimal price,
-            BigDecimal purchasePrice, BigDecimal vatRate, UUID categoryId, String imageUrl, boolean active, List<ImageResponse> images) {
+            BigDecimal purchasePrice, BigDecimal vatRate, BigDecimal eshopMarginPercent, UUID categoryId,
+            String imageUrl, boolean active, List<ImageResponse> images) {
         static ProductResponse from(Product product, BigDecimal sellingPrice, List<ImageResponse> images) {
             return new ProductResponse(product.getId(), product.getSku(), product.getName(), product.getUnit(), product.getDescription(),
-                sellingPrice, product.getPurchasePrice(), product.getVatRate(), product.getCategoryId(), product.getImageUrl(), product.isActive(), images);
+                sellingPrice, product.getPurchasePrice(), product.getVatRate(), product.getEshopMarginPercent(),
+                product.getCategoryId(), product.getImageUrl(), product.isActive(), images);
         }
     }
     public record ImportResponse(int imported) { }

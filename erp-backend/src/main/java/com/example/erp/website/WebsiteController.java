@@ -37,6 +37,12 @@ public class WebsiteController {
                         .mapToInt(PageResponse::monthlyVisits).sum(), items);
     }
 
+        @GetMapping("/pages/public")
+        public PageResponse publicPage(@RequestParam String slug) {
+                return PageResponse.from(pages.findBySlugAndStatus(slug, WebsitePageStatus.PUBLISHED)
+                                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Website page was not found.")));
+        }
+
         @PostMapping("/pages/visit")
         public void recordVisit(@RequestParam String slug) {
                 pages.incrementMonthlyVisits(slug);

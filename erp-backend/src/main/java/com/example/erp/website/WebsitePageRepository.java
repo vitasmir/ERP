@@ -12,6 +12,8 @@ import org.springframework.transaction.annotation.Transactional;
 public interface WebsitePageRepository extends JpaRepository<WebsitePage, UUID> {
     List<WebsitePage> findAllByOrderByUpdatedAtDesc();
 
+    java.util.Optional<WebsitePage> findBySlugAndStatus(String slug, WebsitePageStatus status);
+
     @Modifying
     @Transactional
     @Query("update WebsitePage page set page.monthlyVisits = page.monthlyVisits + 1 "

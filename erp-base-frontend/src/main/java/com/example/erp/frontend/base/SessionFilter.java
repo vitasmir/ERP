@@ -39,6 +39,10 @@ public class SessionFilter implements Filter {
             Map.entry("/purchase", new ModuleCheck("/api/v1/purchase/overview", "Nákup")),
             Map.entry("/sales", new ModuleCheck("/api/v1/sales/overview", "Prodej")),
             Map.entry("/website", new ModuleCheck("/api/v1/website/overview", "Web")));
+    private static final Set<String> PRIVATE_PATHS = Set.of("", "/", "/apps", "/dashboard", "/roles", "/role-modules",
+            "/companies", "/settings", "/users", "/accounting", "/crm", "/documents", "/ecommerce", "/helpdesk",
+            "/hr", "/inventory", "/manufacturing", "/marketing", "/planning", "/pos", "/projects", "/promo",
+            "/purchase", "/sales", "/website");
     private final HttpClient client = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(3)).build();
     private final String backendUrl = System.getenv().getOrDefault("BACKEND_URL", "http://localhost:8080");
 
@@ -50,7 +54,9 @@ public class SessionFilter implements Filter {
         response.setHeader("X-Content-Type-Options", "nosniff");
         response.setHeader("Referrer-Policy", "same-origin");
         String path = request.getServletPath();
-        boolean publicPage = path.startsWith("/assets/") || Set.of("/login", "/shop", "/eshop").contains(path);
+        if (path.isEmpty()) path = request.getRequestURI().substring(request.getContextPath().length());
+        boolean publicPage = path.startsWith("/assets/") || Set.of("/login", "/shop", "/eshop").contains(path)
+            || !PRIVATE_PATHS.contains(path);
         if (!Set.of("GET", "HEAD", "OPTIONS").contains(request.getMethod()) && !sameOrigin(request)) {
             response.sendError(403, "Request origin could not be verified.");
             return;

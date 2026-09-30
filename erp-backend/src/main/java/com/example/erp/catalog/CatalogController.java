@@ -144,6 +144,17 @@ public class CatalogController {
         return productResponse(products.save(product));
     }
 
+    @PutMapping("/products/{id}/active")
+    @Transactional
+    public ProductResponse updateProductActivity(@PathVariable UUID id, @RequestBody ActiveRequest request) {
+        Product product = findProduct(id);
+        if (request == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Product activity state is required.");
+        }
+        product.setActive(request.active());
+        return productResponse(products.save(product));
+    }
+
     @DeleteMapping("/products/{id}")
     @Transactional
     public void deleteProduct(@PathVariable UUID id) {
@@ -393,6 +404,7 @@ public class CatalogController {
         }
     }
     public record CategoryRequest(String name, String slug, UUID parentId, int sortOrder, boolean active) { }
+    public record ActiveRequest(boolean active) { }
     public record CategoryResponse(UUID id, UUID parentId, String name, String slug, int sortOrder, boolean active, List<CategoryResponse> children) { }
         public record ProductRequest(String sku, String name, String unit, String description, BigDecimal price,
             BigDecimal purchasePrice, BigDecimal vatRate, BigDecimal eshopMarginPercent, UUID categoryId,

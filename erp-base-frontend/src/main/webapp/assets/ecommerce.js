@@ -21,6 +21,9 @@
       preview.appendChild(image);
     });
   });
+  const defaultVat = document.body.dataset.defaultVat;
+  const newProductVat = document.querySelector('form input[name="vatRate"][placeholder="21"]');
+  if (newProductVat && defaultVat) newProductVat.value = defaultVat;
   document.querySelectorAll(".product-image").forEach((thumbnail) => {
     let popup;
     const removePopup = () => {
@@ -64,10 +67,53 @@
     button.style.borderColor = "#a8463d";
     button.style.color = "#fff";
   });
-  const deleteRows = [
-    ...document.querySelectorAll(".catalog-product-actions > div"),
-  ];
+  document.querySelectorAll(".product-card .active-state").forEach((state) => {
+    const card = state.closest(".product-card");
+    const productId = card?.id.replace("product-", "");
+    if (!productId) return;
+    const active = state.classList.contains("is-active");
+    const form = document.createElement("form");
+    form.method = "post";
+    form.className = "product-visibility-form";
+    form.innerHTML = `<input type="hidden" name="action" value="toggleProduct"><input type="hidden" name="productId" value="${productId}"><input type="hidden" name="active" value="${active ? "" : "on"}"><button class="secondary" type="submit">${active ? "Skrýt" : "Zobrazit"}</button>`;
+    state.replaceWith(form);
+  });
+  document.querySelectorAll(".product-card").forEach((card) => {
+    const categorySelect = card.querySelector('.product-edit-form select[name="categoryId"]');
+    const sku = card.querySelector(".sku");
+    if (!categorySelect || !sku) return;
+    const category = document.createElement("span");
+    category.className = "product-category";
+    category.textContent = `Kategorie: ${categorySelect.selectedOptions[0]?.textContent.trim() || "Bez kategorie"}`;
+    sku.insertAdjacentElement("afterend", category);
+    const editSummary = card.querySelector(".product-edit summary");
+    if (editSummary) editSummary.textContent = "Kategorie a úprava";
+  });
+  const categoryCounts = new Map();
+  document.querySelectorAll('.product-card .product-edit-form select[name="categoryId"]').forEach((select) => {
+    if (!select.value) return;
+    categoryCounts.set(select.value, (categoryCounts.get(select.value) || 0) + 1);
+  });
+  document.querySelectorAll(".category-filter-link").forEach((link) => {
+    const categoryId = new URL(link.href, window.location.href).searchParams.get("categoryId");
+    const count = document.createElement("span");
+    count.className = "category-count";
+    count.textContent = ` (${categoryCounts.get(categoryId) || 0})`;
+    link.appendChild(count);
+  });
+  const catalogPanels = [...document.querySelectorAll(".catalog-actions-panel")];
+  const galleryPanel = catalogPanels[0];
+  const galleryRows = [...(galleryPanel?.querySelectorAll(".catalog-product-actions > div") ?? [])];
   const productCards = [...document.querySelectorAll(".product-card")];
+  galleryRows.forEach((row, index) => {
+    const card = productCards[index];
+    if (!card) return;
+    row.classList.add("product-gallery-content");
+    card.appendChild(row);
+  });
+  galleryPanel?.remove();
+  const catalogManagement = catalogPanels[1];
+  const deleteRows = [...(catalogManagement?.querySelectorAll(".catalog-product-actions > div") ?? [])];
   deleteRows.forEach((row, index) => {
     const card = productCards[index];
     const form = row.querySelector("form");
@@ -80,7 +126,8 @@
     priceColumn.style.gap = "7px";
     form.classList.add("product-delete-form");
     const productId = form.querySelector('input[name="productId"]')?.value;
-    if (productId) {
+    const categorySelect = card.querySelector('.product-edit-form select[name="categoryId"]');
+    if (productId && categorySelect?.value) {
       const removeForm = document.createElement("form");
       removeForm.method = "post";
       removeForm.className = "product-remove-category-form";
@@ -101,7 +148,7 @@
     }
     priceColumn.appendChild(form);
   });
-  document.querySelector(".catalog-actions-panel")?.remove();
+  catalogManagement?.remove();
   if (!stage || !copy) return;
   const setPosition = (x, y) => {
     x = Math.max(0, Math.min(100, x));

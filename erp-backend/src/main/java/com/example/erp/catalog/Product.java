@@ -71,6 +71,10 @@ public class Product {
         this.imageUrl = imageUrl;
     }
 
+    public void setActive(boolean active) {
+        this.active = active;
+    }
+
     public UUID getId() { return id; }
     public String getSku() { return sku; }
     public String getName() { return name; }

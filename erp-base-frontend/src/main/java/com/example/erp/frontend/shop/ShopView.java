@@ -10,7 +10,7 @@ public record ShopView(List<Category> categories, List<CategoryOption> categoryO
     public record Category(UUID id, UUID parentId, String name, String slug, int sortOrder,
             boolean active, List<Category> children) { }
 
-        public record CategoryOption(UUID id, String name, int depth) { }
+        public record CategoryOption(UUID id, String name, int depth, long productCount) { }
 
     public record Product(UUID id, String sku, String name, String unit, String description,
             BigDecimal price, UUID categoryId, String imageUrl, int availableQuantity) { }

@@ -139,17 +139,21 @@ public class ShopServlet extends HttpServlet {
             cartCount += quantity;
             cartTotal = cartTotal.add(lineTotal);
         }
+        Map<UUID, Long> productCounts = allProducts.stream()
+            .filter(product -> product.categoryId() != null)
+            .collect(Collectors.groupingBy(ShopView.Product::categoryId, Collectors.counting()));
         List<ShopView.CategoryOption> categoryOptions = new ArrayList<>();
-        flattenCategories(categories, 0, categoryOptions);
+        flattenCategories(categories, 0, categoryOptions, productCounts);
         return new ShopView(categories, categoryOptions, visibleProducts, visibleProducts.size(), selectedCategoryId,
             lines, cartCount, cartTotal.setScale(2), checkoutOpen, paymentOpen, deliveryFee, delivery);
     }
 
-    private void flattenCategories(List<ShopView.Category> categories, int depth,
-            List<ShopView.CategoryOption> result) {
+        private void flattenCategories(List<ShopView.Category> categories, int depth,
+            List<ShopView.CategoryOption> result, Map<UUID, Long> productCounts) {
         for (ShopView.Category category : categories) {
-            result.add(new ShopView.CategoryOption(category.id(), category.name(), depth));
-            flattenCategories(category.children(), depth + 1, result);
+            result.add(new ShopView.CategoryOption(category.id(), category.name(), depth,
+                productCounts.getOrDefault(category.id(), 0L)));
+            flattenCategories(category.children(), depth + 1, result, productCounts);
         }
     }
 

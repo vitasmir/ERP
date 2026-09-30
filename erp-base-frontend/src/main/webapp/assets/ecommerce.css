@@ -70,6 +70,27 @@
   color: #7f8c82;
   font: 10px "DM Mono";
 }
+.product-gallery-content {
+  display: grid;
+  gap: 8px;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid #e8e8df;
+}
+.product-gallery-content > div {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+.product-gallery-content > div > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.product-gallery-content form {
+  margin: 0;
+}
 .product-delete-form {
   margin: 8px 0;
 }
@@ -84,6 +105,11 @@
 .category-filter-link.selected {
   color: #3c8592;
   text-decoration: underline;
+}
+.category-count {
+  color: #b3564c;
+  font: 12px "DM Mono";
+  font-weight: 600;
 }
 .catalog-filter-meta {
   display: flex;
@@ -375,6 +401,13 @@
   font: 10px "DM Mono";
   color: #9a6d42;
 }
+.product-category {
+  display: block;
+  margin-top: 6px;
+  color: #34594d;
+  font: 12px "DM Mono";
+  font-weight: 600;
+}
 .product-card h3 {
   font-size: 18px;
   margin: 7px 0 4px;
@@ -491,6 +524,19 @@
 }
 .pricing-panel {
   margin-top: 16px;
+}
+.product-status-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border-bottom: 1px solid #e8e8df;
+}
+.product-status-row strong {
+  flex: 1;
+}
+.product-status-row .active-state {
+  min-width: 82px;
 }
 .product-pricing-form label {
   display: grid;

@@ -49,6 +49,7 @@ public class EcommerceServlet extends HttpServlet {
                     .filter(product -> selectedCategoryId.equals(product.categoryId())).toList();
                 request.setAttribute("selectedCategoryId", selectedCategoryId);
                 request.setAttribute("eshopMarginPercent", settings.eshopMarginPercent());
+                request.setAttribute("eshopDefaultVatRate", settings.eshopDefaultVatRate());
                 request.setAttribute("ecommerce", new EcommerceView(homepage, categories, visibleProducts));
         } catch (InterruptedException exception) {
             Thread.currentThread().interrupt();
@@ -81,6 +82,7 @@ public class EcommerceServlet extends HttpServlet {
                     ProductSaveResponse saved = saveProduct(request);
                     redirect(response, "Produkt byl uložen.", null, saved.categoryId(), saved.id());
                 }
+                case "toggleProduct" -> { toggleProduct(request); redirect(response, "Stav produktu byl změněn.", null); }
                 case "addImage" -> { addImage(request); redirect(response, "Obrázek byl přidán.", null); }
                 case "activateImage" -> { activateImage(request); redirect(response, "Aktivní obrázek byl změněn.", null); }
                 case "deleteImage" -> { deleteImage(request); redirect(response, "Obrázek byl odstraněn.", null); }
@@ -150,6 +152,12 @@ public class EcommerceServlet extends HttpServlet {
 
     private void removeFromCategory(HttpServletRequest request) throws IOException, InterruptedException {
         sendMutation("PUT", "/api/v1/catalog/products/" + UUID.fromString(request.getParameter("productId")) + "/category", "");
+    }
+
+    private void toggleProduct(HttpServletRequest request) throws IOException, InterruptedException {
+        UUID productId = UUID.fromString(request.getParameter("productId"));
+        ActiveRequest body = new ActiveRequest("on".equals(request.getParameter("active")));
+        sendMutation("PUT", "/api/v1/catalog/products/" + productId + "/active", mapper.writeValueAsString(body));
     }
 
     private void addImage(HttpServletRequest request) throws IOException, InterruptedException {
@@ -224,6 +232,7 @@ public class EcommerceServlet extends HttpServlet {
 
     private record HomepageRequest(String design, String headline, String subheadline, BigDecimal textX, BigDecimal textY) { }
     private record CategoryRequest(String name, String slug, UUID parentId, int sortOrder, boolean active) { }
+    private record ActiveRequest(boolean active) { }
         private record ProductRequest(String sku, String name, String unit, String description, BigDecimal price,
             BigDecimal purchasePrice, BigDecimal vatRate, BigDecimal eshopMarginPercent, UUID categoryId,
             String imageUrl, boolean active) { }

@@ -538,6 +538,7 @@ body {
 .category-filter span:last-child {
   font: 10px "DM Mono";
   color: #a3afa5;
+  font-weight: 700;
 }
 .subcategories {
   border-left: 2px solid #d9ed62;

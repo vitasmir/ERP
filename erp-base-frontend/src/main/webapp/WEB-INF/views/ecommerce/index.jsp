@@ -4,7 +4,7 @@
 <%@ page import="com.example.erp.frontend.ecommerce.EcommerceView.Product" %>
 <%@ page import="java.math.BigDecimal" %>
 <%@ page import="java.math.RoundingMode" %>
-<%! String money(BigDecimal value) { return value == null ? "-" : value.setScale(2, RoundingMode.HALF_UP).toPlainString(); } BigDecimal productMargin(Product product, BigDecimal globalMargin) { return product.eshopMarginPercent() == null ? globalMargin : product.eshopMarginPercent(); } BigDecimal netPrice(Product product) { if (product.price() == null) return null; BigDecimal vat = product.vatRate() == null ? BigDecimal.ZERO : product.vatRate(); return product.price().divide(BigDecimal.ONE.add(vat.movePointLeft(2)), 2, RoundingMode.HALF_UP); } String escapeHtml(String value) { if (value == null) return ""; return value.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace(\"\", "&quot;").replace("'", "&#39;"); } %>
+<%! String money(BigDecimal value) { return value == null ? "-" : value.setScale(2, RoundingMode.HALF_UP).toPlainString(); } BigDecimal productMargin(Product product, BigDecimal globalMargin) { return product.eshopMarginPercent() == null ? globalMargin : product.eshopMarginPercent(); } BigDecimal netPrice(Product product) { if (product.price() == null) return null; BigDecimal vat = product.vatRate() == null ? BigDecimal.ZERO : product.vatRate(); return product.price().divide(BigDecimal.ONE.add(vat.movePointLeft(2)), 2, RoundingMode.HALF_UP); } String escapeHtml(String value) { if (value == null) return ""; return value.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace("\"", "&quot;").replace("'", "&#39;"); } %>
 <!doctype html>
 <html lang="cs">
 <head>

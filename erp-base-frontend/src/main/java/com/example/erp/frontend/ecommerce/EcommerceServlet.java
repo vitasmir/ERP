@@ -102,7 +102,8 @@ public class EcommerceServlet extends HttpServlet {
 
     private void updateHomepage(HttpServletRequest request) throws IOException, InterruptedException {
         HomepageRequest body = new HomepageRequest(request.getParameter("design"), request.getParameter("headline"),
-                request.getParameter("subheadline"), new BigDecimal(request.getParameter("textX")), new BigDecimal(request.getParameter("textY")));
+                request.getParameter("subheadline"), new BigDecimal(request.getParameter("textX")),
+                new BigDecimal(request.getParameter("textY")));
         sendMutation("PUT", "/api/v1/catalog/homepage", mapper.writeValueAsString(body));
     }
 

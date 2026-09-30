@@ -4,7 +4,7 @@
 <%@ page import="com.example.erp.frontend.ecommerce.EcommerceView.Product" %>
 <%@ page import="java.math.BigDecimal" %>
 <%@ page import="java.math.RoundingMode" %>
-<%! String money(BigDecimal value) { return value == null ? "-" : value.setScale(2, RoundingMode.HALF_UP).toPlainString(); } BigDecimal productMargin(Product product, BigDecimal globalMargin) { return product.eshopMarginPercent() == null ? globalMargin : product.eshopMarginPercent(); } BigDecimal netPrice(Product product) { if (product.price() == null) return null; BigDecimal vat = product.vatRate() == null ? BigDecimal.ZERO : product.vatRate(); return product.price().divide(BigDecimal.ONE.add(vat.movePointLeft(2)), 2, RoundingMode.HALF_UP); } %>
+<%! String money(BigDecimal value) { return value == null ? "-" : value.setScale(2, RoundingMode.HALF_UP).toPlainString(); } BigDecimal productMargin(Product product, BigDecimal globalMargin) { return product.eshopMarginPercent() == null ? globalMargin : product.eshopMarginPercent(); } BigDecimal netPrice(Product product) { if (product.price() == null) return null; BigDecimal vat = product.vatRate() == null ? BigDecimal.ZERO : product.vatRate(); return product.price().divide(BigDecimal.ONE.add(vat.movePointLeft(2)), 2, RoundingMode.HALF_UP); } String escapeHtml(String value) { if (value == null) return ""; return value.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace(\"\", "&quot;").replace("'", "&#39;"); } %>
 <!doctype html>
 <html lang="cs">
 <head>
@@ -24,9 +24,9 @@
       <form method="post" id="homepage-form">
         <input type="hidden" name="action" value="homepage"><input type="hidden" name="textX" id="text-x" value="<%= data.homepage().textX() %>"><input type="hidden" name="textY" id="text-y" value="<%= data.homepage().textY() %>">
         <div class="design-stage design-<%= data.homepage().design().toLowerCase() %>" id="design-stage" tabindex="0" aria-label="Náhled úvodní stránky">
-          <div class="stage-copy" id="stage-copy" data-x="<%= data.homepage().textX() %>" data-y="<%= data.homepage().textY() %>"><span>Doručení ještě dnes</span><h3><%= data.homepage().headline() %></h3><p><%= data.homepage().subheadline() %></p></div>
+          <div class="stage-copy" id="stage-copy" data-x="<%= data.homepage().textX() %>" data-y="<%= data.homepage().textY() %>"><span>Doručení ještě dnes</span><h3><%= escapeHtml(data.homepage().headline()) %></h3><p><%= escapeHtml(data.homepage().subheadline()) %></p></div>
         </div>
-        <div class="editor-fields"><label>Design<select name="design" id="design-select"><option value="BOTANICAL" <%= "BOTANICAL".equals(data.homepage().design()) ? "selected" : "" %>>Botanická sklizeň</option><option value="MARKET" <%= "MARKET".equals(data.homepage().design()) ? "selected" : "" %>>Městský trh</option><option value="MINIMAL" <%= "MINIMAL".equals(data.homepage().design()) ? "selected" : "" %>>Čistý minimalismus</option></select></label><label>Nadpis<input name="headline" value="<%= data.homepage().headline() %>" maxlength="200"></label><label>Podnadpis<input name="subheadline" value="<%= data.homepage().subheadline() %>" maxlength="500"></label></div>
+        <div class="editor-fields"><label>Design<select name="design" id="design-select"><option value="BOTANICAL" <%= "BOTANICAL".equals(data.homepage().design()) ? "selected" : "" %>>Botanická sklizeň</option><option value="MARKET" <%= "MARKET".equals(data.homepage().design()) ? "selected" : "" %>>Městský trh</option><option value="MINIMAL" <%= "MINIMAL".equals(data.homepage().design()) ? "selected" : "" %>>Čistý minimalismus</option></select></label><label>Nadpis<input name="headline" value="<%= escapeHtml(data.homepage().headline()) %>" maxlength="200"></label><label>Podnadpis<input name="subheadline" value="<%= escapeHtml(data.homepage().subheadline()) %>" maxlength="500"></label></div>
         <button class="primary" type="submit">Uložit úvodní stránku</button>
       </form>
     </article>

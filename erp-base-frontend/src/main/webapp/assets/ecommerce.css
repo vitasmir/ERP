@@ -464,6 +464,19 @@
   height: 37px;
   white-space: nowrap;
 }
+.delivery-options {
+  margin-top: 16px;
+  border-top: 1px solid #e5e8df;
+  padding-top: 12px;
+}
+.delivery-options summary {
+  cursor: pointer;
+  color: #28543f;
+  font: 11px "DM Mono";
+}
+.delivery-options .delivery-form {
+  margin-top: 12px;
+}
 .product-edit {
   margin-top: 16px;
   border-top: 1px solid #e5e8df;

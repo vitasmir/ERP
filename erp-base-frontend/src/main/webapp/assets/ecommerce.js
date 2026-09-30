@@ -121,8 +121,9 @@
     if (!card || !form || !priceColumn) return;
     priceColumn.classList.add("product-card-actions");
     priceColumn.style.display = "flex";
-    priceColumn.style.flexDirection = "column";
-    priceColumn.style.alignItems = "flex-end";
+    priceColumn.style.flexDirection = "row";
+    priceColumn.style.alignItems = "center";
+    priceColumn.style.flexWrap = "wrap";
     priceColumn.style.gap = "7px";
     form.classList.add("product-delete-form");
     const productId = form.querySelector('input[name="productId"]')?.value;

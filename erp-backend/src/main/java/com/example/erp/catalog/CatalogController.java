@@ -328,6 +328,7 @@ public class CatalogController {
             image.deactivate();
             images.save(image);
         });
+        images.flush();
     }
 
     private ProductCategory findCategory(UUID id) {

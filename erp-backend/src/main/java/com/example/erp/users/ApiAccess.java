@@ -22,6 +22,7 @@ import jakarta.servlet.http.HttpServletResponse;
 
 @Component
 public class ApiAccess implements HandlerInterceptor {
+    private static final Set<String> DATABASE_ROLES = Set.of("administrator", "nakupci", "logistika");
     private final JdbcTemplate jdbc;
     private final UserRepository users;
 
@@ -117,25 +118,17 @@ public class ApiAccess implements HandlerInterceptor {
 
     public static boolean allowed(String role, String module, boolean read) {
         String normalized = normalize(role);
+        if (!DATABASE_ROLES.contains(normalized)) return false;
         if (isAdmin(role)) return true;
         return switch (module) {
-            case "auth" -> true;
-            case "accounting" -> Set.of("ucetni", "accountant").contains(normalized);
-            case "hr" -> Set.of("hr", "personalista").contains(normalized)
-                    || read && Set.of("vedouci tymu", "team lead", "zamestnanec", "employee").contains(normalized);
-            case "planning" -> Set.of("hr", "personalista", "planovac", "planner", "vedouci tymu", "team lead").contains(normalized)
-                    || read && Set.of("zamestnanec", "employee").contains(normalized);
-            case "website" -> Set.of("editor", "schvalovatel", "approver").contains(normalized);
-            case "marketing" -> Set.of("marketing", "marketer").contains(normalized);
-            case "dashboard" -> true;
+            case "catalog", "crm", "marketing", "promo", "purchase", "sales" -> normalized.equals("nakupci");
+            case "inventory" -> normalized.equals("logistika");
             case "users", "roles", "settings" -> false;
-            case "sales", "crm", "promo", "catalog", "purchase" -> Set.of("nakupci", "sales", "marketing", "marketer", "ucetni", "accountant").contains(normalized);
-            case "inventory", "planning-logistics" -> normalized.equals("logistika");
             default -> false;
         };
     }
 
-    public static boolean isAdmin(String role) { return Set.of("administrator", "admin").contains(normalize(role)); }
+        public static boolean isAdmin(String role) { return normalize(role).equals("administrator"); }
 
     public static String normalize(String role) {
         return Normalizer.normalize(role == null ? "" : role, Normalizer.Form.NFD).replaceAll("\\p{M}", "")

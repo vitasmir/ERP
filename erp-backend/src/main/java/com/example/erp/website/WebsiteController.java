@@ -13,6 +13,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
 
@@ -35,6 +36,11 @@ public class WebsiteController {
                 items.stream().filter(item -> item.status() == WebsitePageStatus.PUBLISHED)
                         .mapToInt(PageResponse::monthlyVisits).sum(), items);
     }
+
+        @PostMapping("/pages/visit")
+        public void recordVisit(@RequestParam String slug) {
+                pages.incrementMonthlyVisits(slug);
+        }
 
     @PostMapping("/pages")
     public PageResponse create(@Valid @RequestBody PageRequest request) {

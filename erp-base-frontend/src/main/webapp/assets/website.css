@@ -57,6 +57,45 @@
   letter-spacing: 0;
   margin: 9px 0;
 }
+.workflow-form {
+  margin: 0 0 44px;
+}
+.workflow-form h2 {
+  margin: 0 0 14px;
+  font-size: 27px;
+  letter-spacing: 0;
+}
+.workflow-form form {
+  display: grid;
+  grid-template-columns: minmax(0, 1.3fr) minmax(140px, .9fr) 150px minmax(140px, .9fr) auto;
+  gap: 10px;
+  align-items: start;
+}
+.workflow-form input,
+.workflow-form select,
+.workflow-form textarea {
+  width: 100%;
+  box-sizing: border-box;
+  border: 1px solid #d9ddd2;
+  background: #fffdf8;
+  color: #1e3548;
+  padding: 10px;
+  font: 12px "Space Grotesk";
+}
+.workflow-form input,
+.workflow-form select {
+  min-height: 42px;
+}
+.workflow-form textarea {
+  grid-column: 1 / span 4;
+  min-height: 92px;
+  resize: vertical;
+}
+.workflow-form .primary {
+  align-self: end;
+  min-height: 42px;
+  white-space: nowrap;
+}
 .section-head {
   display: flex;
   align-items: end;
@@ -210,6 +249,13 @@
   }
   .website-metrics {
     grid-template-columns: 1fr;
+  }
+  .workflow-form form {
+    grid-template-columns: 1fr 1fr;
+  }
+  .workflow-form textarea,
+  .workflow-form .primary {
+    grid-column: 1 / -1;
   }
   .web-card {
     grid-template-columns: 1fr;

@@ -8,7 +8,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>ERP | Web</title>
   <link rel="stylesheet" href="assets/base.css?v=20260928-160510">
-  <link rel="stylesheet" href="assets/website.css?v=20260930-1">
+  <link rel="stylesheet" href="assets/website.css?v=20260930-2">
 </head>
 <body>
   <% WebsiteOverviewView overview = (WebsiteOverviewView) request.getAttribute("overview"); String error = (String) request.getAttribute("error"); String message = request.getParameter("message"); String actionError = request.getParameter("error"); %>

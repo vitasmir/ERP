@@ -39,6 +39,12 @@ public class ShopServlet extends HttpServlet {
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
         try {
+            try {
+                recordVisit("/eshop");
+            } catch (InterruptedException exception) {
+                Thread.currentThread().interrupt();
+            } catch (IOException exception) {
+            }
             List<EcommerceView.Category> sourceCategories = getList("/api/v1/catalog/categories/tree", new TypeReference<>() { });
             List<EcommerceView.Product> sourceProducts = getList("/api/v1/catalog/products", new TypeReference<>() { });
             List<ShopView.Category> categories = sourceCategories.stream().map(this::toCategory).toList();
@@ -60,6 +66,14 @@ public class ShopServlet extends HttpServlet {
             request.setAttribute("error", "E-shop není dostupný: " + exception.getMessage());
         }
         request.getRequestDispatcher("/WEB-INF/views/shop/index.jsp").forward(request, response);
+    }
+
+    private void recordVisit(String slug) throws IOException, InterruptedException {
+        HttpRequest visitRequest = com.example.erp.frontend.base.BackendRequests.newBuilder(
+                URI.create(backendUrl + "/api/v1/website/pages/visit?slug="
+                        + java.net.URLEncoder.encode(slug, java.nio.charset.StandardCharsets.UTF_8)))
+                .POST(HttpRequest.BodyPublishers.noBody()).build();
+        client.send(visitRequest, HttpResponse.BodyHandlers.discarding());
     }
 
     @Override

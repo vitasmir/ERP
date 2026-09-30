@@ -61,7 +61,7 @@
 									<% for (InvoiceLineView line : invoice.lines()) { %>
 										<div class="invoice-item">
 											<% if (line.imageUrl() != null && !line.imageUrl().isBlank()) { %><img src="<%= line.imageUrl() %>" alt="<%= line.description() %>"><% } else { %><span class="invoice-item-placeholder">FM</span><% } %>
-											<div><strong><%= line.description() %></strong><small><%= line.quantity() %> ks · <%= line.unitPrice() %> Kč / kus</small></div>
+											<div><strong><%= line.description() %></strong><small><%= line.quantity().stripTrailingZeros().toPlainString() %> ks · <%= line.unitPrice() %> Kč / kus</small></div>
 										</div>
 									<% } %>
 								</div>

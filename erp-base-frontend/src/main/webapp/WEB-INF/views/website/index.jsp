@@ -8,7 +8,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>ERP | Web</title>
   <link rel="stylesheet" href="assets/base.css?v=20260928-160510">
-  <link rel="stylesheet" href="assets/website.css?v=20260928-154028">
+  <link rel="stylesheet" href="assets/website.css?v=20260930-1">
 </head>
 <body>
   <% WebsiteOverviewView overview = (WebsiteOverviewView) request.getAttribute("overview"); String error = (String) request.getAttribute("error"); String message = request.getParameter("message"); String actionError = request.getParameter("error"); %>
@@ -48,7 +48,13 @@
         <article class="web-card">
           <div class="web-main"><span class="content-type"><%= item.contentType().equals("LANDING") ? "ÚVOD" : item.contentType().equals("CATALOG") ? "KATALOG" : item.contentType().equals("CAMPAIGN") ? "KAMPAŇ" : "OBSAH" %></span><span class="status-chip status-<%= item.status().toLowerCase() %>"><%= item.status().equals("PUBLISHED") ? "PUBLIKOVÁNO" : "KONCEPT" %></span><h3><%= item.title() %></h3><p><%= item.slug() %> · správce: <%= item.ownerName() %></p></div>
           <dl><div><dt>Návštěvy / měsíc</dt><dd><%= String.format("%,d", item.monthlyVisits()).replace(',', ' ') %></dd></div><div><dt>Formulář</dt><dd><%= item.hasContactForm() ? "Aktivní" : "Bez formuláře" %></dd></div></dl>
-          <% if ("DRAFT".equals(item.status())) { %><form method="post"><input type="hidden" name="id" value="<%= item.id() %>"><button class="secondary" type="submit">Publikovat</button></form><% } else { %><span class="published-label">Stránka je online</span><% } %>
+          <div class="web-actions">
+            <% if ("DRAFT".equals(item.status())) { %><form method="post"><input type="hidden" name="action" value="publish"><input type="hidden" name="id" value="<%= item.id() %>"><button class="secondary" type="submit">Publikovat</button></form><% } else { %><span class="published-label">Stránka je online</span><% } %>
+            <details><summary class="secondary">Upravit</summary>
+              <form method="post" class="website-edit-form"><input type="hidden" name="action" value="edit"><input type="hidden" name="id" value="<%= item.id() %>"><input name="title" value="<%= item.title() %>" required maxlength="200"><input name="slug" value="<%= item.slug() %>" required><select name="contentType"><option value="CONTENT" <%= "CONTENT".equals(item.contentType()) ? "selected" : "" %>>Obsah</option><option value="LANDING" <%= "LANDING".equals(item.contentType()) ? "selected" : "" %>>Úvod</option><option value="CATALOG" <%= "CATALOG".equals(item.contentType()) ? "selected" : "" %>>Katalog</option><option value="CAMPAIGN" <%= "CAMPAIGN".equals(item.contentType()) ? "selected" : "" %>>Kampaň</option></select><input name="ownerName" value="<%= item.ownerName() %>" required><textarea name="content"><%= item.content() == null ? "" : item.content() %></textarea><button class="secondary" type="submit">Uložit změny</button></form>
+            </details>
+            <form method="post" onsubmit="return confirm('Opravdu smazat stránku?');"><input type="hidden" name="action" value="delete"><input type="hidden" name="id" value="<%= item.id() %>"><button class="danger-button" type="submit">Smazat</button></form>
+          </div>
         </article>
         <% } %>
       </div>

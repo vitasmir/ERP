@@ -96,18 +96,29 @@ public class PromoCampaignServlet extends HttpServlet {
                 HttpRequest.Builder backendRequest = com.example.erp.frontend.base.BackendRequests.newBuilder(URI.create(endpoint))
                     .header("Content-Type", "application/json")
                     .method(editing ? "PUT" : "POST", HttpRequest.BodyPublishers.ofString(body));
-                HttpResponse<Void> backendResponse = client.send(backendRequest.build(), HttpResponse.BodyHandlers.discarding());
+                HttpResponse<String> backendResponse = client.send(backendRequest.build(), HttpResponse.BodyHandlers.ofString());
                 int successStatus = editing ? HttpServletResponse.SC_OK : HttpServletResponse.SC_CREATED;
                 String parameter = backendResponse.statusCode() == successStatus ? "message" : "error";
                 String message = backendResponse.statusCode() == successStatus
                     ? (editing ? "Promo kampaň byla upravena." : "Promo kampaň byla přidána.")
-                    : (editing ? "Backend odmítl úpravu kampaně." : "Backend odmítl vytvoření kampaně.");
+                    : backendError(backendResponse.body(), editing ? "Backend odmítl úpravu kampaně." : "Backend odmítl vytvoření kampaně.");
             response.sendRedirect("promo?" + parameter + "=" + URLEncoder.encode(message, StandardCharsets.UTF_8));
         } catch (IllegalArgumentException | NullPointerException exception) {
             response.sendRedirect("promo?error=" + URLEncoder.encode("Vyplňte platné údaje kampaně.", StandardCharsets.UTF_8));
         } catch (InterruptedException exception) {
             Thread.currentThread().interrupt();
             response.sendRedirect("promo?error=" + URLEncoder.encode("Vytvoření kampaně bylo přerušeno.", StandardCharsets.UTF_8));
+        }
+    }
+
+    private String backendError(String responseBody, String fallback) {
+        if (responseBody == null || responseBody.isBlank()) return fallback;
+        try {
+            String detail = mapper.readTree(responseBody).path("detail").asText();
+            if (detail.isBlank()) detail = mapper.readTree(responseBody).path("message").asText();
+            return detail.isBlank() ? fallback : detail;
+        } catch (IOException exception) {
+            return fallback;
         }
     }
 

@@ -141,6 +141,56 @@
   font: 10px "DM Mono";
   color: #257453;
 }
+.web-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+.web-actions details {
+  position: relative;
+}
+.web-actions summary {
+  list-style: none;
+}
+.web-actions summary::-webkit-details-marker {
+  display: none;
+}
+.website-edit-form {
+  position: absolute;
+  z-index: 2;
+  right: 0;
+  top: calc(100% + 8px);
+  display: grid;
+  gap: 8px;
+  width: min(360px, 80vw);
+  padding: 14px;
+  background: #fffdf8;
+  border: 1px solid #d9ddd2;
+  box-shadow: 0 10px 25px rgba(30, 53, 72, 0.12);
+}
+.website-edit-form input,
+.website-edit-form select,
+.website-edit-form textarea {
+  width: 100%;
+  box-sizing: border-box;
+  border: 1px solid #d9ddd2;
+  padding: 8px;
+  font: 12px "Space Grotesk";
+}
+.website-edit-form textarea {
+  min-height: 80px;
+  resize: vertical;
+}
+.danger-button {
+  border: 1px solid #a8463d;
+  background: #a8463d;
+  color: #fff;
+  padding: 8px 11px;
+  font: 11px "Space Grotesk";
+  cursor: pointer;
+}
 .website-message {
   background: #dff0e3;
   color: #285f39;

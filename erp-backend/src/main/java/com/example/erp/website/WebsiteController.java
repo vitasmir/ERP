@@ -5,6 +5,7 @@ import java.util.List;
 import java.util.UUID;
 
 import org.springframework.http.HttpStatus;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -56,6 +57,13 @@ public class WebsiteController {
         page.publish();
         return PageResponse.from(pages.save(page));
     }
+
+        @DeleteMapping("/pages/{id}")
+        public void delete(@PathVariable UUID id) {
+                WebsitePage page = pages.findById(id)
+                                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Website page was not found."));
+                pages.delete(page);
+        }
 
     public record WebsiteOverview(long publishedPageCount, long draftPageCount, long formPageCount,
             int monthlyVisits, List<PageResponse> pages) { }

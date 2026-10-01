@@ -9,7 +9,7 @@
 	<meta charset="UTF-8">
 	<meta name="viewport" content="width=device-width, initial-scale=1">
 	<title>ERP | Účetnictví</title>
-										  <link rel="stylesheet" href="assets/base.css?v=20260928-160510">
+										  <link rel="stylesheet" href="assets/base.css?v=20261001-1">
 	<link rel="stylesheet" href="assets/accounting.css?v=20260929-011500">
 </head>
 <body>

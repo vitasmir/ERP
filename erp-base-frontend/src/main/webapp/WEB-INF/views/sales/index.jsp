@@ -10,7 +10,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>ERP | Prodej</title>
-  <link rel="stylesheet" href="assets/base.css?v=20260928-160510">
+  <link rel="stylesheet" href="assets/base.css?v=20261001-1">
   <link rel="stylesheet" href="assets/sales.css?v=20260928-160507">
 </head>
 <body>

@@ -13,7 +13,7 @@
   <title>ERP | Lidé</title>
   <link rel="stylesheet" href="assets/base.css?v=20260928-160510">
   <link rel="stylesheet" href="assets/hr.css?v=20260928-154028">
-  <link rel="stylesheet" href="assets/workforce.css?v=20261001-8">
+  <link rel="stylesheet" href="assets/workforce.css?v=20261001-10">
 </head>
 <body>
   <% HrOverviewView overview = (HrOverviewView) request.getAttribute("overview"); RoleOption[] roleOptions = (RoleOption[]) request.getAttribute("roleOptions"); String error = (String) request.getAttribute("error"); String message = request.getParameter("message"); String actionError = request.getParameter("error"); %>
@@ -53,6 +53,7 @@
           <input type="hidden" name="action" value="updateTeam">
           <input type="hidden" name="teamId" value="<%= team.id() %>">
           <input name="name" value="<%= escapeHtml(team.name()) %>" maxlength="150" required>
+          <span class="team-member-count">(<%= teamMemberCount %>)</span>
           <button class="secondary" type="submit">Přejmenovat</button>
         </form>
           <form method="post">
@@ -61,7 +62,6 @@
             <button class="secondary danger-action" type="submit">Smazat</button>
           </form>
           <button class="secondary team-filter-button" type="button" data-team-filter="<%= team.id() %>">Zobrazit členy týmu</button>
-          <span class="team-member-count">(<%= teamMemberCount %>)</span>
           <button class="secondary team-filter-button" type="button" data-show-all-employees>Zobrazit všechny zaměstnance</button>
         </div>
         <% } %>

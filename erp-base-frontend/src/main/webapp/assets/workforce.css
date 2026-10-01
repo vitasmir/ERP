@@ -23,8 +23,7 @@
   flex: 1;
 }
 .team-member-count {
-  min-width: 76px;
-  margin-left: -3px;
+  margin-left: 0;
   color: #d84a3a;
   font: 11px "DM Mono";
   text-align: right;

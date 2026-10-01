@@ -71,27 +71,58 @@
   font: 10px "DM Mono";
   color: #7b897f;
 }
-.ticket-list {
-  display: grid;
-  gap: 12px;
-}
-.ticket-card {
-  display: grid;
-  grid-template-columns: 1.3fr 1fr auto;
-  gap: 22px;
-  align-items: center;
-  background: #fffdf8;
+.ticket-table-wrap {
+  overflow-x: auto;
   border: 1px solid #e0e2da;
-  padding: 22px;
+  background: #fffdf8;
 }
-.ticket-card h3 {
-  margin: 8px 0 4px;
-  font-size: 17px;
+.ticket-table {
+  width: 100%;
+  min-width: 850px;
+  border-collapse: collapse;
+  text-align: left;
 }
-.ticket-card p {
-  margin: 0;
+.ticket-table th,
+.ticket-table td {
+  padding: 14px 16px;
+  border-bottom: 1px solid #eeece5;
+  vertical-align: middle;
+}
+.ticket-table th {
+  color: #87938b;
+  font: 9px "DM Mono";
+}
+.ticket-table td {
+  font-size: 12px;
+}
+.ticket-table tbody tr:hover td {
+  background: #eef5d9;
+}
+.ticket-table tbody tr:last-child td {
+  border-bottom: 0;
+}
+.ticket-table td:first-child {
+  min-width: 330px;
+}
+.ticket-table td:first-child strong,
+.ticket-table td:first-child > span:last-child {
+  display: block;
+}
+.ticket-table td:first-child strong {
+  margin-top: 8px;
+  font-size: 15px;
+}
+.ticket-table td:first-child > span:last-child {
+  margin-top: 4px;
   color: #748278;
   font: 11px "DM Mono";
+}
+.ticket-actions {
+  text-align: right;
+  white-space: nowrap;
+}
+.ticket-actions form {
+  margin: 0;
 }
 .priority,
 .status-chip {
@@ -173,19 +204,10 @@
   .helpdesk-metrics {
     grid-template-columns: 1fr;
   }
-  .ticket-card {
-    grid-template-columns: 1fr;
-  }
-  .ticket-card dl {
-    grid-template-columns: repeat(2, 1fr);
-  }
 }
 @media (max-width: 520px) {
   .helpdesk-page {
     padding: 28px 18px;
-  }
-  .ticket-card dl {
-    grid-template-columns: 1fr;
   }
   .helpdesk-header h1 {
     font-size: 36px;

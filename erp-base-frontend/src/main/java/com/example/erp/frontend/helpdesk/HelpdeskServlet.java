@@ -20,12 +20,17 @@ import jakarta.servlet.http.HttpServletResponse;
 
 @WebServlet("/helpdesk")
 public class HelpdeskServlet extends HttpServlet {
+    private static final String PAGE_VERSION = "20261001-2";
     private final HttpClient client = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(3)).build();
     private final ObjectMapper mapper = new ObjectMapper();
     private final String backendUrl = System.getenv().getOrDefault("BACKEND_URL", "http://localhost:8080");
 
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
+        if (!PAGE_VERSION.equals(request.getParameter("v"))) {
+            response.sendRedirect("helpdesk?v=" + PAGE_VERSION);
+            return;
+        }
         try {
             HttpRequest backendRequest = com.example.erp.frontend.base.BackendRequests.newBuilder(URI.create(backendUrl + "/api/v1/helpdesk/overview"))
                     .timeout(Duration.ofSeconds(5)).GET().build();
@@ -53,12 +58,12 @@ public class HelpdeskServlet extends HttpServlet {
             HttpResponse<Void> backendResponse = client.send(backendRequest, HttpResponse.BodyHandlers.discarding());
             String message = backendResponse.statusCode() == HttpServletResponse.SC_OK
                     ? "Požadavek byl označen jako vyřešený." : "Změnu stavu backend odmítl.";
-            response.sendRedirect("helpdesk?message=" + URLEncoder.encode(message, StandardCharsets.UTF_8));
+            response.sendRedirect("helpdesk?v=" + PAGE_VERSION + "&message=" + URLEncoder.encode(message, StandardCharsets.UTF_8));
         } catch (IllegalArgumentException exception) {
-            response.sendRedirect("helpdesk?error=" + URLEncoder.encode("Neplatný požadavek.", StandardCharsets.UTF_8));
+            response.sendRedirect("helpdesk?v=" + PAGE_VERSION + "&error=" + URLEncoder.encode("Neplatný požadavek.", StandardCharsets.UTF_8));
         } catch (InterruptedException exception) {
             Thread.currentThread().interrupt();
-            response.sendRedirect("helpdesk?error=" + URLEncoder.encode("Vyřešení požadavku bylo přerušeno.", StandardCharsets.UTF_8));
+            response.sendRedirect("helpdesk?v=" + PAGE_VERSION + "&error=" + URLEncoder.encode("Vyřešení požadavku bylo přerušeno.", StandardCharsets.UTF_8));
         }
     }
 }

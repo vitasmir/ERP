@@ -212,6 +212,9 @@ public class HrController {
                 Employee deputy = employees.findById(deputyId)
                         .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Deputy is required."));
                 if (deputy.getStatus() == EmployeeStatus.INACTIVE) throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Deputy must be active or onboarding.");
+                if (!ApiAccess.normalize(employee.getJobTitle()).equals(ApiAccess.normalize(deputy.getJobTitle()))) {
+                        throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Employee and deputy must have the same role.");
+                }
                 employee.assign(team, deputy);
                 if (deputy.getDeputy() == null) deputy.assignDeputy(employee);
         }

@@ -97,6 +97,21 @@ class HrTests {
     }
 
     @Test
+    void assigningDeputyWithDifferentRoleIsRejected() {
+        Team team = new Team(UUID.randomUUID(), "Team");
+        Employee deputy = new Employee(UUID.randomUUID(), "Deputy", "Team", "Logistika", LocalDate.now());
+        when(teams.findById(team.getId())).thenReturn(Optional.of(team));
+        when(employees.findById(deputy.getId())).thenReturn(Optional.of(deputy));
+        when(employees.save(any(Employee.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        HrController controllerWithTeams = new HrController(employees, teams, users, records, shifts, access, sessions);
+
+        assertThrows(ResponseStatusException.class, () -> controllerWithTeams.create(new HrController.EmployeeRequest(
+                "Employee", "", "Cashier", LocalDate.now(), team.getId(), deputy.getId())));
+        assertEquals(null, deputy.getDeputy());
+    }
+
+    @Test
     void overviewSeparatesEmployeeRoleFromAccountExistence() {
         Employee withoutAccount = new Employee(UUID.randomUUID(), "Without account", "Team", "Logistika", LocalDate.now());
         Employee withAccount = new Employee(UUID.randomUUID(), "With account", "Team", "Nákupčí", LocalDate.now());

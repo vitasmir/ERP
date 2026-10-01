@@ -47,7 +47,8 @@ public class HrServlet extends HttpServlet {
             } else {
                 Map<String, RoleOption> fallbackRoles = new LinkedHashMap<>();
                 overview.employees().stream().filter(employee -> employee.userRoleName() != null && !employee.userRoleName().isBlank())
-                    .forEach(employee -> fallbackRoles.put(employee.userRoleName(), new RoleOption(null, employee.userRoleName())));
+                    .forEach(employee -> fallbackRoles.put(employee.userRoleName(), new RoleOption(null, employee.userRoleName(),
+                            employee.userRoleName().substring(0, 1).toUpperCase(), "#D9ED62")));
                 request.setAttribute("roleOptions", fallbackRoles.values().toArray(RoleOption[]::new));
             }
             String employeeId = request.getParameter("employeeId");
@@ -141,5 +142,5 @@ public class HrServlet extends HttpServlet {
     }
 
     @JsonIgnoreProperties(ignoreUnknown = true)
-    public record RoleOption(UUID id, String name) { }
+    public record RoleOption(UUID id, String name, String initial, String color) { }
 }

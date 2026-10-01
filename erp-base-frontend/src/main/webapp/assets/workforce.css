@@ -155,7 +155,9 @@ summary:focus-visible {
 .employee-table-wrap {
   background: #fffdf8;
   border: 1px solid #e0e2da;
-  overflow-x: auto;
+  max-height: calc(100vh - 300px);
+  min-height: 240px;
+  overflow: auto;
 }
 .employee-table {
   width: 100%;
@@ -163,9 +165,13 @@ summary:focus-visible {
   border-collapse: collapse;
 }
 .employee-table th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
   padding: 13px 16px;
   text-align: left;
   border-bottom: 1px solid #dce4de;
+  background: #fffdf8;
   color: #88958c;
   font: 9px "DM Mono";
   letter-spacing: 0.04em;
@@ -191,6 +197,17 @@ summary:focus-visible {
   margin-top: 4px;
   color: #748278;
   font: 11px "DM Mono";
+}
+.employee-role-mark {
+  display: inline-grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  margin-right: 8px;
+  background: var(--role-color, #d9ed62);
+  color: #173b30;
+  font-weight: 800;
+  vertical-align: middle;
 }
 .employee-edit-row td {
   padding: 0 16px;

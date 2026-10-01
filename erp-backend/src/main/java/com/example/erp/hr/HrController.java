@@ -101,9 +101,12 @@ public class HrController {
         public EmployeeResponse create(@Valid @RequestBody EmployeeRequest request) {
                 records.lock();
                 Employee employee = new Employee(UUID.randomUUID(), request.fullName(), request.teamName(), request.jobTitle(), request.employmentStartDate());
+                Team team = findTeam(request.teamId());
+                Employee deputy = findDeputy(employee, request.deputyEmployeeId());
+                employee.assign(team, deputy);
                 Employee savedEmployee = employees.save(employee);
-                assign(savedEmployee, request.teamId(), request.deputyEmployeeId());
-                return response(employees.save(savedEmployee));
+                assignReciprocalDeputy(savedEmployee, deputy);
+                return response(savedEmployee);
         }
 
         @PutMapping("/employees/{id}")
@@ -203,11 +206,16 @@ public class HrController {
         private Employee find(UUID id) { return employees.findById(id)
                         .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Employee was not found.")); }
         private void assign(Employee employee, UUID teamId, UUID deputyId) {
-                Team team = teams.findById(teamId).orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Team is required."));
-                if (deputyId == null) {
-                        employee.assign(team, null);
-                        return;
-                }
+                Team team = findTeam(teamId);
+                Employee deputy = findDeputy(employee, deputyId);
+                employee.assign(team, deputy);
+                assignReciprocalDeputy(employee, deputy);
+        }
+        private Team findTeam(UUID teamId) {
+                return teams.findById(teamId).orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Team is required."));
+        }
+        private Employee findDeputy(Employee employee, UUID deputyId) {
+                if (deputyId == null) return null;
                 if (employee.getId().equals(deputyId)) throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Employee cannot be their own deputy.");
                 Employee deputy = employees.findById(deputyId)
                         .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Deputy is required."));
@@ -215,7 +223,10 @@ public class HrController {
                 if (!ApiAccess.normalize(employee.getJobTitle()).equals(ApiAccess.normalize(deputy.getJobTitle()))) {
                         throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Employee and deputy must have the same role.");
                 }
-                employee.assign(team, deputy);
+                return deputy;
+        }
+        private void assignReciprocalDeputy(Employee employee, Employee deputy) {
+                if (deputy == null) return;
                 if (deputy.getDeputy() == null) deputy.assignDeputy(employee);
         }
         private EmployeeResponse response(Employee employee) {

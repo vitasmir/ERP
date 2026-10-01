@@ -13,7 +13,7 @@
   <title>ERP | Lidé</title>
   <link rel="stylesheet" href="assets/base.css?v=20260928-160510">
   <link rel="stylesheet" href="assets/hr.css?v=20260928-154028">
-  <link rel="stylesheet" href="assets/workforce.css?v=20261001-2">
+  <link rel="stylesheet" href="assets/workforce.css?v=20261001-4">
 </head>
 <body>
   <% HrOverviewView overview = (HrOverviewView) request.getAttribute("overview"); RoleOption[] roleOptions = (RoleOption[]) request.getAttribute("roleOptions"); String error = (String) request.getAttribute("error"); String message = request.getParameter("message"); String actionError = request.getParameter("error"); %>
@@ -88,14 +88,16 @@
              : employee.fullName().substring(0, Math.min(2, employee.fullName().length()));
              boolean employmentStarted = !LocalDate.parse(employee.employmentStartDate()).isAfter(LocalDate.now());
              boolean jobTitleIsRole = false;
+             String roleInitial = employee.jobTitle() == null || employee.jobTitle().isBlank() ? "?" : employee.jobTitle().substring(0, 1).toUpperCase();
+             String roleColor = "#D9ED62";
              if (roleOptions != null) for (RoleOption option : roleOptions) {
-               if (option.name().equals(employee.jobTitle())) { jobTitleIsRole = true; break; }
+               if (option.name().equals(employee.jobTitle())) { jobTitleIsRole = true; roleInitial = option.initial(); roleColor = option.color(); break; }
              }
              String selectedRole = jobTitleIsRole ? employee.jobTitle() : employee.userRoleName(); %>
         <tr>
           <td><span class="status-chip status-<%= escapeHtml(employee.status().toLowerCase()) %>"><%= employee.status().equals("ONBOARDING") ? "NÁSTUP" : employee.status().equals("ACTIVE") ? "AKTIVNÍ" : "NEAKTIVNÍ" %></span></td>
           <td><div class="employee-main"><span class="employee-avatar"><%= escapeHtml(initials.toUpperCase()) %></span><strong><%= escapeHtml(employee.fullName()) %></strong></div></td>
-          <td><%= escapeHtml(employee.jobTitle()) %></td>
+          <td><span class="employee-role-mark" style="--role-color:<%= escapeHtml(roleColor) %>"><%= escapeHtml(roleInitial) %></span><%= escapeHtml(employee.jobTitle()) %></td>
           <td><%= escapeHtml(employee.teamName()) %></td>
           <td><%= escapeHtml(employee.deputyName()) %></td>
           <td><%= escapeHtml(employee.employmentStartDate()) %></td>

@@ -1,6 +1,9 @@
 <%@ page contentType="text/html; charset=UTF-8" pageEncoding="UTF-8" %>
 <%@ page import="com.example.erp.frontend.helpdesk.HelpdeskOverviewView" %>
 <%@ page import="com.example.erp.frontend.helpdesk.HelpdeskOverviewView.TicketView" %>
+<%@ page import="java.time.LocalDateTime" %>
+<%@ page import="java.time.format.DateTimeFormatter" %>
+<%! private String formatDueAt(String dueAt) { return LocalDateTime.parse(dueAt).format(DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm")); } %>
 <!doctype html>
 <html lang="cs">
 <head>
@@ -34,7 +37,7 @@
             <tr>
               <td data-label="Požadavek"><span class="priority priority-<%= ticket.priority().toLowerCase() %>"><%= ticket.priority().equals("HIGH") ? "VYSOKÁ" : ticket.priority().equals("MEDIUM") ? "STŘEDNÍ" : "NÍZKÁ" %></span><span class="status-chip status-<%= ticket.status().toLowerCase() %>"><%= ticket.status().equals("IN_PROGRESS") ? "ŘEŠÍ SE" : ticket.status().equals("RESOLVED") ? "VYŘEŠENO" : "OTEVŘENO" %></span><strong><%= ticket.subject() %></strong><span><%= ticket.ticketNumber() %> · <%= ticket.requesterName() %></span></td>
               <td data-label="Tým"><%= ticket.assignedTeam() %></td>
-              <td data-label="SLA termín"><%= ticket.dueAt().replace('T', ' ') %></td>
+              <td data-label="SLA termín"><%= formatDueAt(ticket.dueAt()) %></td>
               <td data-label="Stav"><%= ticket.status().equals("RESOLVED") ? "Požadavek uzavřen" : "Čeká na vyřešení" %></td>
               <td class="ticket-actions"><% if (!"RESOLVED".equals(ticket.status())) { %><form method="post"><input type="hidden" name="id" value="<%= ticket.id() %>"><button class="secondary" type="submit">Označit jako vyřešené</button></form><% } %></td>
             </tr>

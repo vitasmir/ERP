@@ -23,6 +23,8 @@
   flex: 1;
 }
 .team-member-count {
+  display: inline-flex;
+  align-items: center;
   margin-left: 0;
   color: #d84a3a;
   font: 11px "DM Mono";
@@ -185,6 +187,7 @@ summary:focus-visible {
   background: #fffdf8;
   color: #88958c;
   font: 9px "DM Mono";
+  font-weight: 700 !important;
   letter-spacing: 0.04em;
 }
 .employee-table td {

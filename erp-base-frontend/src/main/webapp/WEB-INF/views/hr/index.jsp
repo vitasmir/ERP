@@ -13,7 +13,7 @@
   <title>ERP | Lidé</title>
   <link rel="stylesheet" href="assets/base.css?v=20261001-1">
   <link rel="stylesheet" href="assets/hr.css?v=20260928-154028">
-  <link rel="stylesheet" href="assets/workforce.css?v=20261001-10">
+  <link rel="stylesheet" href="assets/workforce.css?v=20261002-1">
 </head>
 <body>
   <% HrOverviewView overview = (HrOverviewView) request.getAttribute("overview"); RoleOption[] roleOptions = (RoleOption[]) request.getAttribute("roleOptions"); String error = (String) request.getAttribute("error"); String message = request.getParameter("message"); String actionError = request.getParameter("error"); %>

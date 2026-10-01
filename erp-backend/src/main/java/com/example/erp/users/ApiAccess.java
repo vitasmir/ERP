@@ -78,8 +78,7 @@ public class ApiAccess implements HandlerInterceptor {
         if ("/api/v1/website/pages/public".equals(path)) return true;
         return "/api/v1/catalog/categories/tree".equals(path)
                 || "/api/v1/catalog/products".equals(path)
-                || path.matches("/api/v1/catalog/products/[^/]+/availability")
-                || "/api/v1/settings".equals(path);
+            || path.matches("/api/v1/catalog/products/[^/]+/availability");
     }
 
     private Permission requiredPermission(String path, String method) {

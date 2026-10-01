@@ -23,6 +23,7 @@ import jakarta.servlet.http.HttpSession;
 @WebFilter("/*")
 public class SessionFilter implements Filter {
     private static final Map<String, ModuleCheck> MODULE_CHECKS = Map.ofEntries(
+            Map.entry("/companies", new ModuleCheck("/api/v1/companies", "Společnosti")),
             Map.entry("/accounting", new ModuleCheck("/api/v1/accounting/overview", "Účetnictví")),
             Map.entry("/crm", new ModuleCheck("/api/v1/crm/overview", "CRM")),
             Map.entry("/documents", new ModuleCheck("/api/v1/documents/overview", "Dokumenty")),
@@ -30,7 +31,8 @@ public class SessionFilter implements Filter {
             Map.entry("/helpdesk", new ModuleCheck("/api/v1/helpdesk/overview", "Helpdesk")),
             Map.entry("/hr", new ModuleCheck("/api/v1/hr/overview", "Lidé")),
             Map.entry("/inventory", new ModuleCheck("/api/v1/inventory/overview", "Sklad")),
-            Map.entry("/manufacturing", new ModuleCheck("/api/v1/manufacturing/overview", "Výroba")),
+            Map.entry("/manufacturing", new
+             ModuleCheck("/api/v1/manufacturing/overview", "Výroba")),
             Map.entry("/marketing", new ModuleCheck("/api/v1/marketing/overview", "Marketing")),
             Map.entry("/planning", new ModuleCheck("/api/v1/planning/overview", "Plánování")),
             Map.entry("/pos", new ModuleCheck("/api/v1/pos/overview", "Pokladna")),
@@ -38,7 +40,11 @@ public class SessionFilter implements Filter {
             Map.entry("/promo", new ModuleCheck("/api/v1/promo-campaigns", "Promo kampaně")),
             Map.entry("/purchase", new ModuleCheck("/api/v1/purchase/overview", "Nákup")),
             Map.entry("/sales", new ModuleCheck("/api/v1/sales/overview", "Prodej")),
-            Map.entry("/website", new ModuleCheck("/api/v1/website/overview", "Web")));
+            Map.entry("/website", new ModuleCheck("/api/v1/website/overview", "Web")),
+            Map.entry("/roles", new ModuleCheck("/api/v1/roles", "Role a oprávnění")),
+            Map.entry("/role-modules", new ModuleCheck("/api/v1/roles", "Role pro moduly")),
+            Map.entry("/settings", new ModuleCheck("/api/v1/settings", "Nastavení")),
+            Map.entry("/users", new ModuleCheck("/api/v1/users", "Uživatelé")));
     private static final Set<String> PRIVATE_PATHS = Set.of("", "/", "/apps", "/dashboard", "/roles", "/role-modules",
             "/companies", "/settings", "/users", "/accounting", "/crm", "/documents", "/ecommerce", "/helpdesk",
             "/hr", "/inventory", "/manufacturing", "/marketing", "/planning", "/pos", "/projects", "/promo",

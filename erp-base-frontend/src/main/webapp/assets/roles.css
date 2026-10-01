@@ -39,6 +39,15 @@
 .permissions-table th:first-child {
   text-align: left;
   min-width: 170px;
+  position: sticky;
+  left: 0;
+  z-index: 2;
+  background: #fffdf8;
+  box-shadow: 1px 0 0 #e7e8df;
+}
+.permissions-table thead th:first-child {
+  z-index: 3;
+  background: #f4f4ed;
 }
 .permissions-table tbody th {
   color: #273b34;

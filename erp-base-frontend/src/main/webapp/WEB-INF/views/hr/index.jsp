@@ -13,7 +13,7 @@
   <title>ERP | Lidé</title>
   <link rel="stylesheet" href="assets/base.css?v=20260928-160510">
   <link rel="stylesheet" href="assets/hr.css?v=20260928-154028">
-  <link rel="stylesheet" href="assets/workforce.css?v=20261001-4">
+  <link rel="stylesheet" href="assets/workforce.css?v=20261001-8">
 </head>
 <body>
   <% HrOverviewView overview = (HrOverviewView) request.getAttribute("overview"); RoleOption[] roleOptions = (RoleOption[]) request.getAttribute("roleOptions"); String error = (String) request.getAttribute("error"); String message = request.getParameter("message"); String actionError = request.getParameter("error"); %>
@@ -46,7 +46,8 @@
         <button class="primary" type="submit">Založit tým</button>
       </form>
       <div class="team-list">
-        <% if (overview != null && overview.teams() != null) for (HrOverviewView.TeamView team : overview.teams()) { %>
+           <% if (overview != null && overview.teams() != null) for (HrOverviewView.TeamView team : overview.teams()) {
+             long teamMemberCount = overview.employees().stream().filter(employee -> team.id().equals(employee.teamId())).count(); %>
         <div class="team-row">
           <form method="post">
           <input type="hidden" name="action" value="updateTeam">
@@ -59,6 +60,9 @@
             <input type="hidden" name="teamId" value="<%= team.id() %>">
             <button class="secondary danger-action" type="submit">Smazat</button>
           </form>
+          <button class="secondary team-filter-button" type="button" data-team-filter="<%= team.id() %>">Zobrazit členy týmu</button>
+          <span class="team-member-count">(<%= teamMemberCount %>)</span>
+          <button class="secondary team-filter-button" type="button" data-show-all-employees>Zobrazit všechny zaměstnance</button>
         </div>
         <% } %>
       </div>
@@ -77,7 +81,7 @@
     </section>
     <% } %>
     <section id="employees" class="hr-section">
-      <div class="section-head"><div><span class="eyebrow">ZAMĚSTNANCI</span><h2>Organizace a nástupy</h2></div><span class="employee-count"><%= overview == null ? 0 : overview.employees().size() %> zaměstnanci</span></div>
+      <div class="section-head"><div><span class="eyebrow">ZAMĚSTNANCI</span><h2>Organizace a nástupy</h2></div><span class="employee-count" id="employee-count"><%= overview == null ? 0 : overview.employees().size() %> zaměstnanci</span></div>
       <div class="employee-table-wrap">
         <table class="employee-table">
           <thead><tr><th>STAV</th><th>ZAMĚSTNANEC</th><th>PRACOVNÍ ROLE</th><th>TÝM</th><th>ZÁSTUPCE</th><th>NÁSTUP</th><th>AKTIVACE</th><th>DOSTUPNOST</th><th>ÚČET</th></tr></thead>
@@ -94,7 +98,7 @@
                if (option.name().equals(employee.jobTitle())) { jobTitleIsRole = true; roleInitial = option.initial(); roleColor = option.color(); break; }
              }
              String selectedRole = jobTitleIsRole ? employee.jobTitle() : employee.userRoleName(); %>
-        <tr>
+        <tr class="employee-record" data-employee-team-id="<%= employee.teamId() %>">
           <td><span class="status-chip status-<%= escapeHtml(employee.status().toLowerCase()) %>"><%= employee.status().equals("ONBOARDING") ? "NÁSTUP" : employee.status().equals("ACTIVE") ? "AKTIVNÍ" : "NEAKTIVNÍ" %></span></td>
           <td><div class="employee-main"><span class="employee-avatar"><%= escapeHtml(initials.toUpperCase()) %></span><strong><%= escapeHtml(employee.fullName()) %></strong></div></td>
           <td><span class="employee-role-mark" style="--role-color:<%= escapeHtml(roleColor) %>"><%= escapeHtml(roleInitial) %></span><%= escapeHtml(employee.jobTitle()) %></td>
@@ -106,7 +110,7 @@
           <td class="employee-action-cell"><% if (admin) { if (employee.hasUserAccount()) { %><a href="users">Účet v Uživatelích</a><% } else { %><a href="users?employeeId=<%= employee.id() %>">Vytvořit účet</a><% } } %></td>
         </tr>
           <% if (edit) { %>
-        <tr class="employee-edit-row"><td colspan="9"><details class="workforce-edit"><summary>Upravit zaměstnance</summary>
+        <tr class="employee-edit-row" data-employee-team-id="<%= employee.teamId() %>"><td colspan="9"><details class="workforce-edit"><summary>Upravit zaměstnance</summary>
             <form method="post" class="workforce-form">
               <input type="hidden" name="action" value="update"><input type="hidden" name="id" value="<%= employee.id() %>">
               <label>Jméno a příjmení<input name="fullName" maxlength="200" value="<%= escapeHtml(employee.fullName()) %>" required></label>
@@ -148,6 +152,29 @@
     <% } %>
   </main>
   <script>
+    var employeeRows = document.querySelectorAll('[data-employee-team-id]');
+    var employeeCount = document.getElementById('employee-count');
+    function filterEmployees(teamId) {
+      var visibleEmployees = 0;
+      employeeRows.forEach(function (row) {
+        var visible = !teamId || row.dataset.employeeTeamId === teamId;
+        row.hidden = !visible;
+        if (visible && row.classList.contains('employee-record')) visibleEmployees += 1;
+      });
+      if (employeeCount) employeeCount.textContent = visibleEmployees + ' zaměstnanci';
+    }
+    document.querySelectorAll('[data-team-filter]').forEach(function (button) {
+      button.addEventListener('click', function () {
+        filterEmployees(button.dataset.teamFilter);
+        document.getElementById('employees').scrollIntoView({ behavior: 'smooth' });
+      });
+    });
+    document.querySelectorAll('[data-show-all-employees]').forEach(function (button) {
+      button.addEventListener('click', function () {
+        filterEmployees('');
+        document.getElementById('employees').scrollIntoView({ behavior: 'smooth' });
+      });
+    });
     document.querySelectorAll('[data-deputy-role-for]').forEach(function (deputySelect) {
       var roleSelect = document.getElementById(deputySelect.dataset.deputyRoleFor);
       var teamSelect = document.getElementById(deputySelect.dataset.deputyTeamFor);

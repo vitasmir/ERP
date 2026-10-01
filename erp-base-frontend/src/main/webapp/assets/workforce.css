@@ -5,12 +5,13 @@
 .team-list {
   display: grid;
   gap: 8px;
-  max-width: 600px;
+  max-width: 1100px;
 }
 .team-row {
   display: flex;
   gap: 8px;
   align-items: center;
+  flex-wrap: wrap;
 }
 .team-row form:first-child {
   display: flex;
@@ -20,6 +21,17 @@
 .team-row input {
   min-width: 0;
   flex: 1;
+}
+.team-member-count {
+  min-width: 76px;
+  margin-left: -3px;
+  color: #d84a3a;
+  font: 11px "DM Mono";
+  text-align: right;
+  white-space: nowrap;
+}
+.team-filter-button {
+  white-space: nowrap;
 }
 .team-row form:last-child {
   margin: 0;

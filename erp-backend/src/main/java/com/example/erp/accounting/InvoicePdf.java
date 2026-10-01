@@ -4,6 +4,8 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.UUID;
 
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.pdmodel.PDPage;
@@ -19,6 +21,10 @@ final class InvoicePdf {
     }
 
     static byte[] render(AccountInvoice invoice, String orderNumber) throws IOException {
+        return render(invoice, orderNumber, Map.of());
+    }
+
+    static byte[] render(AccountInvoice invoice, String orderNumber, Map<UUID, String> units) throws IOException {
         try (PDDocument document = new PDDocument();
                 var source = InvoicePdf.class.getResourceAsStream("/fonts/DejaVuSans.ttf");
                 ByteArrayOutputStream output = new ByteArrayOutputStream()) {
@@ -29,9 +35,11 @@ final class InvoicePdf {
                     "Issued: " + invoice.getIssueDate() + "     Due: " + invoice.getDueDate(), ""));
                 if (orderNumber != null && !orderNumber.isBlank()) content.add(1, "Order: " + orderNumber);
             for (InvoiceLine line : invoice.getLines()) {
+                String unit = line.getProductId() == null ? "ks" : units.getOrDefault(line.getProductId(), "ks");
                 content.add(line.getDescription());
-                content.add(line.getQuantity() + " x " + line.getUnitPrice() + " CZK | VAT " + line.getVatRate()
-                        + "%: " + line.getVatAmount() + " CZK | Total " + line.getTotalAmount() + " CZK");
+                content.add(line.getQuantity() + " " + unit + " | " + line.getUnitPrice() + " CZK bez DPH / jednotku"
+                    + " | bez DPH " + line.getNetAmount() + " CZK | DPH " + line.getVatAmount()
+                    + " CZK | s DPH " + line.getTotalAmount() + " CZK");
             }
             content.addAll(List.of("", "Total: " + invoice.getTotalAmount() + " CZK", "Paid: " + invoice.getPaidAmount()
                     + " CZK", "Outstanding: " + invoice.outstandingAmount() + " CZK"));

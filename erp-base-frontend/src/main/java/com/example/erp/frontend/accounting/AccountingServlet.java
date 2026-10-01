@@ -30,6 +30,11 @@ public class AccountingServlet extends HttpServlet {
 
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
+        String pdfId = request.getParameter("pdf");
+        if (pdfId != null && !pdfId.isBlank()) {
+            downloadPdf(pdfId, response);
+            return;
+        }
         try {
             HttpRequest backendRequest = com.example.erp.frontend.base.BackendRequests.newBuilder(URI.create(backendUrl + "/api/v1/accounting/overview"))
                     .timeout(Duration.ofSeconds(5)).GET().build();
@@ -50,6 +55,29 @@ public class AccountingServlet extends HttpServlet {
             request.setAttribute("error", "Backend pro účetnictví není dostupný: " + exception.getMessage());
         }
         request.getRequestDispatcher("/WEB-INF/views/accounting/index.jsp").forward(request, response);
+    }
+
+    private void downloadPdf(String invoiceId, HttpServletResponse response) throws IOException {
+        try {
+            UUID id = UUID.fromString(invoiceId);
+            HttpRequest backendRequest = com.example.erp.frontend.base.BackendRequests
+                    .newBuilder(URI.create(backendUrl + "/api/v1/accounting/invoices/" + id + "/pdf"))
+                    .timeout(Duration.ofSeconds(10)).GET().build();
+            HttpResponse<byte[]> backendResponse = client.send(backendRequest, HttpResponse.BodyHandlers.ofByteArray());
+            if (backendResponse.statusCode() != HttpServletResponse.SC_OK) {
+                response.sendError(backendResponse.statusCode(), "PDF faktury není dostupné.");
+                return;
+            }
+            response.setContentType("application/pdf");
+            backendResponse.headers().firstValue("Content-Disposition").ifPresent(value -> response.setHeader("Content-Disposition", value));
+            response.setContentLength(backendResponse.body().length);
+            response.getOutputStream().write(backendResponse.body());
+        } catch (IllegalArgumentException exception) {
+            response.sendError(HttpServletResponse.SC_BAD_REQUEST, "Neplatné číslo faktury.");
+        } catch (InterruptedException exception) {
+            Thread.currentThread().interrupt();
+            response.sendError(HttpServletResponse.SC_SERVICE_UNAVAILABLE, "Stahování PDF bylo přerušeno.");
+        }
     }
 
     @Override

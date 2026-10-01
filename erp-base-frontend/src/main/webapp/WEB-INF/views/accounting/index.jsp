@@ -79,6 +79,7 @@
 							</form>
 						<% } else { %>
 							<span class="paid-label">Uhrazeno <%= invoice.paidAmount() %> Kč</span>
+							<a class="invoice-pdf-link" href="accounting?pdf=<%= invoice.id() %>">Stáhnout PDF</a>
 						<% } %>
 						<% if ("DRAFT".equals(invoice.status())) { %>
 							<details class="invoice-edit"><summary>Upravit</summary>

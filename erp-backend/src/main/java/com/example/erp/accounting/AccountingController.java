@@ -237,9 +237,13 @@ public class AccountingController {
         @GetMapping(value = "/invoices/{id}/pdf", produces = MediaType.APPLICATION_PDF_VALUE)
         public ResponseEntity<byte[]> pdf(@PathVariable UUID id) throws IOException {
                 AccountInvoice invoice = find(id);
+                if (invoice.getStatus() == InvoiceStatus.PAID && pdfs != null) pdfs.createWhenPaid(invoice);
+                InvoiceRecords.Attachment stored = records.attachments(id).stream()
+                                .filter(item -> (invoice.getInvoiceNumber() + ".pdf").equals(item.filename()))
+                                .findFirst().orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Invoice PDF was not found."));
                 return ResponseEntity.ok().contentType(MediaType.APPLICATION_PDF)
-                                .header("Content-Disposition", ContentDisposition.attachment().filename("invoice-" + id + ".pdf").build().toString())
-                                .body(InvoicePdf.render(invoice));
+                                .header("Content-Disposition", ContentDisposition.attachment().filename(stored.filename()).build().toString())
+                                .body(records.content(id, stored.id()));
         }
 
     @ExceptionHandler({DataIntegrityViolationException.class, ObjectOptimisticLockingFailureException.class})

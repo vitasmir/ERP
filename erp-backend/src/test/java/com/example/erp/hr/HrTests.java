@@ -31,6 +31,7 @@ import com.example.erp.users.UserStatus;
 
 class HrTests {
     private final EmployeeRepository employees = mock(EmployeeRepository.class);
+    private final TeamRepository teams = mock(TeamRepository.class);
     private final UserRepository users = mock(UserRepository.class);
     private final WorkforceRecords records = mock(WorkforceRecords.class);
     private final PlanningShiftRepository shifts = mock(PlanningShiftRepository.class);
@@ -41,7 +42,7 @@ class HrTests {
 
     @Test
     void employmentActivationAndDepartureSynchronizeAccountAndRevokeSessions() {
-        ErpUser user = ErpUser.create(employee, "Employee", "Employee", "Company", UserStatus.INVITED, "#ffffff");
+        ErpUser user = ErpUser.create(employee, "Employee", "Company", UserStatus.INVITED, "#ffffff");
         when(employees.findById(employee.getId())).thenReturn(Optional.of(employee));
         when(employees.save(employee)).thenReturn(employee);
         when(users.findByEmployee_Id(employee.getId())).thenReturn(Optional.of(user));
@@ -61,6 +62,57 @@ class HrTests {
         assertThrows(ResponseStatusException.class, () -> controller.activate(employee.getId()));
         assertEquals(EmployeeStatus.ONBOARDING, employee.getStatus());
         verify(users, never()).save(any());
+    }
+
+    @Test
+    void assigningDeputyAlsoAssignsCreatorWhenDeputyHasNone() {
+        Team team = new Team(UUID.randomUUID(), "Team");
+        Employee deputy = new Employee(UUID.randomUUID(), "Deputy", "Team", "Cashier", LocalDate.now());
+        when(teams.findById(team.getId())).thenReturn(Optional.of(team));
+        when(employees.findById(deputy.getId())).thenReturn(Optional.of(deputy));
+        when(employees.save(any(Employee.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        HrController controllerWithTeams = new HrController(employees, teams, users, records, shifts, access, sessions);
+        HrController.EmployeeResponse response = controllerWithTeams.create(new HrController.EmployeeRequest(
+                "Employee", "", "Cashier", LocalDate.now(), team.getId(), deputy.getId()));
+
+        assertEquals(response.id(), deputy.getDeputy().getId());
+    }
+
+    @Test
+    void assigningDeputyDoesNotReplaceTheirExistingDeputy() {
+        Team team = new Team(UUID.randomUUID(), "Team");
+        Employee deputy = new Employee(UUID.randomUUID(), "Deputy", "Team", "Cashier", LocalDate.now());
+        Employee existingDeputy = new Employee(UUID.randomUUID(), "Existing", "Team", "Cashier", LocalDate.now());
+        deputy.assignDeputy(existingDeputy);
+        when(teams.findById(team.getId())).thenReturn(Optional.of(team));
+        when(employees.findById(deputy.getId())).thenReturn(Optional.of(deputy));
+        when(employees.save(any(Employee.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        HrController controllerWithTeams = new HrController(employees, teams, users, records, shifts, access, sessions);
+        controllerWithTeams.create(new HrController.EmployeeRequest(
+                "Employee", "", "Cashier", LocalDate.now(), team.getId(), deputy.getId()));
+
+        assertEquals(existingDeputy.getId(), deputy.getDeputy().getId());
+    }
+
+    @Test
+    void overviewSeparatesEmployeeRoleFromAccountExistence() {
+        Employee withoutAccount = new Employee(UUID.randomUUID(), "Without account", "Team", "Logistika", LocalDate.now());
+        Employee withAccount = new Employee(UUID.randomUUID(), "With account", "Team", "Nákupčí", LocalDate.now());
+        when(employees.findAllByOrderByEmploymentStartDateDesc()).thenReturn(List.of(withoutAccount, withAccount));
+        when(access.canSee(any(Employee.class))).thenReturn(true);
+        when(users.existsByEmployee_Id(withoutAccount.getId())).thenReturn(false);
+        when(users.existsByEmployee_Id(withAccount.getId())).thenReturn(true);
+        when(teams.findAllByOrderByNameAsc()).thenReturn(List.of());
+
+        HrController controllerWithTeams = new HrController(employees, teams, users, records, shifts, access, sessions);
+        List<HrController.EmployeeResponse> overview = controllerWithTeams.overview().employees();
+
+        assertFalse(overview.get(0).hasUserAccount());
+        assertEquals("Logistika", overview.get(0).userRoleName());
+        assertTrue(overview.get(1).hasUserAccount());
+        assertEquals("Nákupčí", overview.get(1).userRoleName());
     }
 
     @Test
@@ -96,7 +148,7 @@ class HrTests {
         when(employees.findById(colleague.getId())).thenReturn(Optional.of(colleague));
         when(employees.findById(outsider.getId())).thenReturn(Optional.of(outsider));
         WorkforceAccess policy = spy(new WorkforceAccess(employees));
-        ErpUser user = ErpUser.create(employee, "Employee", "Employee", "Company", UserStatus.ACTIVE, "#ffffff");
+        ErpUser user = ErpUser.create(employee, "Employee", "Company", UserStatus.ACTIVE, "#ffffff");
         doReturn(user).when(policy).currentUser();
         assertTrue(policy.canSee(employee));
         assertFalse(policy.canSee(colleague));
@@ -110,13 +162,13 @@ class HrTests {
         assertFalse(policy.canSee(own));
         assertThrows(ResponseStatusException.class, () -> policy.requireAssignment(employee.getId()));
 
-        user.update(employee, "Employee", "Team lead", "Company", UserStatus.ACTIVE, "#ffffff");
+        employee.update("Employee", "Team", "Team lead", LocalDate.now());
         assertTrue(policy.canSee(colleague));
         assertTrue(policy.canSee(own));
         assertFalse(policy.canSee(outsider));
         assertThrows(ResponseStatusException.class, () -> policy.requireAssignment(outsider.getId()));
 
-        user.update(employee, "Employee", "HR", "Company", UserStatus.ACTIVE, "#ffffff");
+        employee.update("Employee", "Team", "HR", LocalDate.now());
         assertTrue(policy.canSee(outsider));
         assertDoesNotThrow(() -> policy.requireAssignment(outsider.getId()));
     }

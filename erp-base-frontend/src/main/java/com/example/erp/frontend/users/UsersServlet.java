@@ -107,7 +107,6 @@ public class UsersServlet extends HttpServlet {
         values.put("fullName", request.getParameter("fullName"));
         values.put("username", request.getParameter("username"));
         values.put("password", request.getParameter("password"));
-        values.put("roleName", request.getParameter("roleName"));
         values.put("companyName", request.getParameter("companyName"));
         values.put("status", request.getParameter("status"));
         values.put("color", request.getParameter("color"));
@@ -174,7 +173,7 @@ public class UsersServlet extends HttpServlet {
         }
     }
 
-    public record EmployeeOption(UUID id, String fullName, String teamName, boolean hasAccount) { }
+    public record EmployeeOption(UUID id, String fullName, String teamName, String jobTitle, boolean hasAccount) { }
 
     @JsonIgnoreProperties(ignoreUnknown = true)
     public record RoleOption(UUID id, String name) { }

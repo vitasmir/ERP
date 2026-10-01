@@ -2,6 +2,28 @@
 .employee-table tbody tr:hover td {
   background: #eef5d9;
 }
+.team-list {
+  display: grid;
+  gap: 8px;
+  max-width: 600px;
+}
+.team-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+.team-row form:first-child {
+  display: flex;
+  flex: 1;
+  gap: 8px;
+}
+.team-row input {
+  min-width: 0;
+  flex: 1;
+}
+.team-row form:last-child {
+  margin: 0;
+}
 .workforce-section {
   margin: 28px 0;
   padding: 24px 0;
@@ -14,7 +36,7 @@
 }
 .workforce-form {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 210px), 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 180px), 1fr));
   gap: 16px;
   align-items: end;
   margin: 18px 0;

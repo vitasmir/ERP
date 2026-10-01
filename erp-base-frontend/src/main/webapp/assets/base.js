@@ -366,6 +366,15 @@ const userModal = document.getElementById("user-modal");
 const userForm = document.getElementById("user-form");
 const companyNameField = document.getElementById("user-company-name");
 const companyOptionsSource = document.getElementById("company-options-source");
+const selectOrAddOption = (select, value, label = value) => {
+  if (!select || !value) return;
+  let option = Array.from(select.options).find((item) => item.value === value);
+  if (!option) {
+    option = new Option(label, value);
+    select.add(option);
+  }
+  select.value = value;
+};
 if (companyNameField?.tagName === "INPUT" && companyOptionsSource) {
   const companySelect = document.createElement("select");
   companySelect.id = companyNameField.id;
@@ -390,7 +399,11 @@ const openUserDialog = (user) => {
   document.getElementById("user-id").value = user?.dataset.userId || "";
   const employeeSelect = document.getElementById("user-employee-id");
   if (employeeSelect) {
-    employeeSelect.value = user?.dataset.employeeId || "";
+    selectOrAddOption(
+      employeeSelect,
+      user?.dataset.employeeId || "",
+      user?.dataset.fullName || "",
+    );
     employeeSelect
       .querySelectorAll('option[data-has-account="true"]')
       .forEach((option) => {
@@ -406,10 +419,17 @@ const openUserDialog = (user) => {
   const passwordInput = document.getElementById("user-password");
   passwordInput.value = "";
   passwordInput.required = !user;
-  document.getElementById("user-role-name").value =
-    user?.dataset.roleName || "";
-  document.getElementById("user-company-name").value =
-    user?.dataset.companyName || "";
+  const roleInput = document.getElementById("user-role-name");
+  roleInput.disabled = true;
+    const syncUserRole = () => {
+      roleInput.value = user?.dataset.roleName || window.employeeRoles?.[employeeSelect?.value] || "";
+    };
+    syncUserRole();
+    employeeSelect?.addEventListener("change", syncUserRole);
+  selectOrAddOption(
+    document.getElementById("user-company-name"),
+    user?.dataset.companyName || "",
+  );
   const colorInput = document.getElementById("user-color");
   if (colorInput) {
     colorInput.value = user?.dataset.color || "#DCE9D7";

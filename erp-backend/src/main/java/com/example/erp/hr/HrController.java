@@ -4,6 +4,7 @@ import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -33,20 +34,28 @@ import jakarta.validation.constraints.Size;
 @Transactional
 public class HrController {
     private final EmployeeRepository employees;
+                private final TeamRepository teams;
         private final com.example.erp.users.UserRepository users;
         private final WorkforceRecords records;
         private final PlanningShiftRepository shifts;
         private final WorkforceAccess access;
         private final ApiAccess sessions;
 
-        public HrController(EmployeeRepository employees, com.example.erp.users.UserRepository users,
+        @Autowired
+        public HrController(EmployeeRepository employees, TeamRepository teams, com.example.erp.users.UserRepository users,
                         WorkforceRecords records, PlanningShiftRepository shifts, WorkforceAccess access, ApiAccess sessions) {
                 this.employees = employees;
+                this.teams = teams;
                 this.users = users;
                 this.records = records;
                 this.shifts = shifts;
                 this.access = access;
                 this.sessions = sessions;
+        }
+
+        public HrController(EmployeeRepository employees, com.example.erp.users.UserRepository users,
+                        WorkforceRecords records, PlanningShiftRepository shifts, WorkforceAccess access, ApiAccess sessions) {
+                this(employees, null, users, records, shifts, access, sessions);
         }
 
     @GetMapping("/overview")
@@ -56,14 +65,45 @@ public class HrController {
                 .map(employee -> EmployeeResponse.from(employee, users.existsByEmployee_Id(employee.getId()))).toList();
         return new HrOverview(items.stream().filter(item -> item.status() == EmployeeStatus.ACTIVE).count(),
                 items.stream().filter(item -> item.status() == EmployeeStatus.ONBOARDING).count(),
-                items.stream().map(EmployeeResponse::teamName).distinct().count(), items);
+                items.stream().map(EmployeeResponse::teamName).distinct().count(), items, teams.findAllByOrderByNameAsc().stream()
+                        .map(TeamResponse::from).toList());
     }
+
+        @GetMapping("/teams")
+        public List<TeamResponse> teamList() {
+                return teams.findAllByOrderByNameAsc().stream().map(TeamResponse::from).toList();
+        }
+
+        @PostMapping("/teams")
+        public TeamResponse createTeam(@Valid @RequestBody TeamRequest request) {
+                String name = request.name().trim();
+                if (teams.existsByNameIgnoreCase(name)) throw new ResponseStatusException(HttpStatus.CONFLICT, "Team already exists.");
+                return TeamResponse.from(teams.save(new Team(UUID.randomUUID(), name)));
+        }
+
+        @PutMapping("/teams/{id}")
+        public TeamResponse updateTeam(@PathVariable UUID id, @Valid @RequestBody TeamRequest request) {
+                Team team = teams.findById(id).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Team was not found."));
+                String name = request.name().trim();
+                if (teams.existsByNameIgnoreCaseAndIdNot(name, id)) throw new ResponseStatusException(HttpStatus.CONFLICT, "Team already exists.");
+                team.rename(name);
+                return TeamResponse.from(teams.save(team));
+        }
+
+        @DeleteMapping("/teams/{id}")
+        public void deleteTeam(@PathVariable UUID id) {
+                if (!teams.existsById(id)) throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Team was not found.");
+                if (employees.existsByTeam_Id(id)) throw new ResponseStatusException(HttpStatus.CONFLICT, "Team still has assigned employees.");
+                teams.deleteById(id);
+        }
 
         @PostMapping("/employees")
         public EmployeeResponse create(@Valid @RequestBody EmployeeRequest request) {
                 records.lock();
-                return response(employees.save(new Employee(UUID.randomUUID(), request.fullName(), request.teamName(),
-                                request.jobTitle(), request.employmentStartDate())));
+                Employee employee = new Employee(UUID.randomUUID(), request.fullName(), request.teamName(), request.jobTitle(), request.employmentStartDate());
+                Employee savedEmployee = employees.save(employee);
+                assign(savedEmployee, request.teamId(), request.deputyEmployeeId());
+                return response(employees.save(savedEmployee));
         }
 
         @PutMapping("/employees/{id}")
@@ -74,6 +114,7 @@ public class HrController {
                         throw new ResponseStatusException(HttpStatus.CONFLICT, "Employment start conflicts with assigned shifts.");
                 }
                 employee.update(request.fullName(), request.teamName(), request.jobTitle(), request.employmentStartDate());
+                assign(employee, request.teamId(), request.deputyEmployeeId());
                 return response(employees.save(employee));
         }
 
@@ -90,13 +131,16 @@ public class HrController {
                         users.save(user);
                 });
         Employee updatedEmployee = employees.save(employee);
-        return EmployeeResponse.from(updatedEmployee, users.existsByEmployee_Id(updatedEmployee.getId()));
+        return employeeResponse(updatedEmployee);
     }
 
         @PatchMapping("/employees/{id}/deactivate")
         public EmployeeResponse deactivate(@PathVariable UUID id) {
                 records.lock();
                 Employee employee = find(id);
+                if (employees.existsByDeputy_Id(id)) {
+                        throw new ResponseStatusException(HttpStatus.CONFLICT, "Reassign employees that depend on this deputy first.");
+                }
                 if (assignedShifts(employee).stream().anyMatch(shift -> shift.getEndAt().isAfter(java.time.LocalDateTime.now()))) {
                         throw new ResponseStatusException(HttpStatus.CONFLICT, "Reassign future shifts before ending employment.");
                 }
@@ -158,16 +202,38 @@ public class HrController {
 
         private Employee find(UUID id) { return employees.findById(id)
                         .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Employee was not found.")); }
+        private void assign(Employee employee, UUID teamId, UUID deputyId) {
+                Team team = teams.findById(teamId).orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Team is required."));
+                if (deputyId == null) {
+                        employee.assign(team, null);
+                        return;
+                }
+                if (employee.getId().equals(deputyId)) throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Employee cannot be their own deputy.");
+                Employee deputy = employees.findById(deputyId)
+                        .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Deputy is required."));
+                if (deputy.getStatus() == EmployeeStatus.INACTIVE) throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Deputy must be active or onboarding.");
+                employee.assign(team, deputy);
+                if (deputy.getDeputy() == null) deputy.assignDeputy(employee);
+        }
         private EmployeeResponse response(Employee employee) {
+                return employeeResponse(employee);
+        }
+
+        private EmployeeResponse employeeResponse(Employee employee) {
                 return EmployeeResponse.from(employee, users.existsByEmployee_Id(employee.getId()));
         }
 
-        public record EmployeeRequest(@NotBlank @Size(max = 200) String fullName, @NotBlank @Size(max = 150) String teamName,
+                public record EmployeeRequest(@NotBlank @Size(max = 200) String fullName, @Size(max = 150) String teamName,
                         @NotBlank @Size(max = 150) String jobTitle,
-                        @NotNull LocalDate employmentStartDate) { }
+                                                @NotNull LocalDate employmentStartDate, @NotNull UUID teamId, UUID deputyEmployeeId) { }
 
     public record HrOverview(long activeEmployeeCount, long onboardingCount, long teamCount,
-            List<EmployeeResponse> employees) { }
+                        List<EmployeeResponse> employees, List<TeamResponse> teams) { }
+
+        public record TeamRequest(@NotBlank @Size(max = 150) String name) { }
+        public record TeamResponse(UUID id, String name) {
+                static TeamResponse from(Team team) { return new TeamResponse(team.getId(), team.getName()); }
+        }
 
     /**
      * Represents the response for an employee in the HR overview.
@@ -180,11 +246,17 @@ public class HrController {
      * @param status            the current status of the employee
      * @param hasUserAccount    whether the employee has an associated user account
      */
-    public record EmployeeResponse(UUID id, String fullName, String teamName, String jobTitle,
-                        LocalDate employmentStartDate, EmployeeStatus status, boolean hasUserAccount) {
+        public record EmployeeResponse(UUID id, String fullName, String teamName, UUID teamId, String jobTitle,
+                                                LocalDate employmentStartDate, EmployeeStatus status, boolean hasUserAccount,
+                                                String userRoleName,
+                                                UUID deputyEmployeeId, String deputyName) {
                 static EmployeeResponse from(Employee employee, boolean hasUserAccount) {
-            return new EmployeeResponse(employee.getId(), employee.getFullName(), employee.getTeamName(),
-                                        employee.getJobTitle(), employee.getEmploymentStartDate(), employee.getStatus(), hasUserAccount);
+                        return new EmployeeResponse(employee.getId(), employee.getFullName(), employee.getTeamName(),
+                                                                                employee.getTeam() == null ? null : employee.getTeam().getId(), employee.getJobTitle(),
+                                                                                employee.getEmploymentStartDate(), employee.getStatus(), hasUserAccount,
+                                                                                employee.getJobTitle(),
+                                                                                employee.getDeputy() == null ? null : employee.getDeputy().getId(),
+                                                                                employee.getDeputy() == null ? "" : employee.getDeputy().getFullName());
         }
     }
 }

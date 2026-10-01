@@ -1,6 +1,7 @@
 <%@ page contentType="text/html; charset=UTF-8" pageEncoding="UTF-8" %>
 <%@ page import="com.example.erp.frontend.hr.HrOverviewView" %>
 <%@ page import="com.example.erp.frontend.hr.HrOverviewView.EmployeeView" %>
+<%@ page import="com.example.erp.frontend.hr.HrServlet.RoleOption" %>
 <%@ page import="com.fasterxml.jackson.databind.JsonNode" %>
 <%@ page import="static com.example.erp.frontend.base.RolesServlet.escapeHtml" %>
 <%@ page import="java.time.LocalDate" %>
@@ -12,10 +13,10 @@
   <title>ERP | Lidé</title>
   <link rel="stylesheet" href="assets/base.css?v=20260928-160510">
   <link rel="stylesheet" href="assets/hr.css?v=20260928-154028">
-  <link rel="stylesheet" href="assets/workforce.css?v=20260928-154028">
+  <link rel="stylesheet" href="assets/workforce.css?v=20261001-2">
 </head>
 <body>
-  <% HrOverviewView overview = (HrOverviewView) request.getAttribute("overview"); String error = (String) request.getAttribute("error"); String message = request.getParameter("message"); String actionError = request.getParameter("error"); %>
+  <% HrOverviewView overview = (HrOverviewView) request.getAttribute("overview"); RoleOption[] roleOptions = (RoleOption[]) request.getAttribute("roleOptions"); String error = (String) request.getAttribute("error"); String message = request.getParameter("message"); String actionError = request.getParameter("error"); %>
   <%
     JsonNode availability = (JsonNode) request.getAttribute("availability");
     Object selectedEmployeeId = request.getAttribute("selectedEmployeeId");
@@ -38,13 +39,39 @@
     </section>
     <% if (edit) { %>
     <section class="workforce-section">
+      <h2>Týmy</h2>
+      <form method="post" class="workforce-form">
+        <input type="hidden" name="action" value="createTeam">
+        <label>Nový tým<input name="name" maxlength="150" required></label>
+        <button class="primary" type="submit">Založit tým</button>
+      </form>
+      <div class="team-list">
+        <% if (overview != null && overview.teams() != null) for (HrOverviewView.TeamView team : overview.teams()) { %>
+        <div class="team-row">
+          <form method="post">
+          <input type="hidden" name="action" value="updateTeam">
+          <input type="hidden" name="teamId" value="<%= team.id() %>">
+          <input name="name" value="<%= escapeHtml(team.name()) %>" maxlength="150" required>
+          <button class="secondary" type="submit">Přejmenovat</button>
+        </form>
+          <form method="post">
+            <input type="hidden" name="action" value="deleteTeam">
+            <input type="hidden" name="teamId" value="<%= team.id() %>">
+            <button class="secondary danger-action" type="submit">Smazat</button>
+          </form>
+        </div>
+        <% } %>
+      </div>
+    </section>
+    <section class="workforce-section">
       <h2>Nový zaměstnanec</h2>
       <form method="post" class="workforce-form">
         <input type="hidden" name="action" value="create">
         <label>Jméno a příjmení<input name="fullName" maxlength="200" required></label>
-        <label>Tým<input name="teamName" maxlength="150" required></label>
-        <label>Pracovní role<input name="jobTitle" maxlength="150" required></label>
+        <label>Tým<select name="teamId" id="new-team" required><option value="" disabled selected>Vyberte tým</option><% if (overview != null && overview.teams() != null) for (HrOverviewView.TeamView team : overview.teams()) { %><option value="<%= team.id() %>" data-team-name="<%= escapeHtml(team.name()) %>"><%= escapeHtml(team.name()) %></option><% } %></select></label>
+        <label>Pracovní role<select name="jobTitle" id="new-job-title" required><option value="" disabled selected>Vyberte roli</option><% if (roleOptions != null) for (RoleOption option : roleOptions) { %><option value="<%= escapeHtml(option.name()) %>"><%= escapeHtml(option.name()) %></option><% } %></select></label>
         <label>Nástup<input type="date" name="employmentStartDate" required></label>
+        <label>Zástupce<select name="deputyEmployeeId" data-deputy-role-for="new-job-title" data-deputy-team-for="new-team" required><option value="" disabled selected>Vyberte zástupce</option><% if (overview != null) for (EmployeeView deputy : overview.employees()) { %><option value="<%= deputy.id() %>" data-user-role="<%= escapeHtml(deputy.userRoleName() == null ? "" : deputy.userRoleName()) %>" data-team-id="<%= deputy.teamId() %>" data-team-name="<%= escapeHtml(deputy.teamName() == null ? "" : deputy.teamName()) %>"><%= escapeHtml(deputy.fullName()) %></option><% } %></select></label>
         <button class="primary" type="submit">Založit zaměstnance</button>
       </form>
     </section>
@@ -53,31 +80,38 @@
       <div class="section-head"><div><span class="eyebrow">ZAMĚSTNANCI</span><h2>Organizace a nástupy</h2></div><span class="employee-count"><%= overview == null ? 0 : overview.employees().size() %> zaměstnanci</span></div>
       <div class="employee-table-wrap">
         <table class="employee-table">
-          <thead><tr><th>STAV</th><th>ZAMĚSTNANEC</th><th>PRACOVNÍ ROLE</th><th>TÝM</th><th>NÁSTUP</th><th>AKTIVACE</th><th>DOSTUPNOST</th><th>ÚČET</th></tr></thead>
+          <thead><tr><th>STAV</th><th>ZAMĚSTNANEC</th><th>PRACOVNÍ ROLE</th><th>TÝM</th><th>ZÁSTUPCE</th><th>NÁSTUP</th><th>AKTIVACE</th><th>DOSTUPNOST</th><th>ÚČET</th></tr></thead>
           <tbody>
         <% if (overview != null) for (EmployeeView employee : overview.employees()) {
              String initials = employee.fullName().chars().filter(character -> character == ' ').count() > 0
                  ? employee.fullName().substring(0, 1) + employee.fullName().substring(employee.fullName().lastIndexOf(' ') + 1, employee.fullName().lastIndexOf(' ') + 2)
              : employee.fullName().substring(0, Math.min(2, employee.fullName().length()));
-           boolean employmentStarted = !LocalDate.parse(employee.employmentStartDate()).isAfter(LocalDate.now()); %>
+             boolean employmentStarted = !LocalDate.parse(employee.employmentStartDate()).isAfter(LocalDate.now());
+             boolean jobTitleIsRole = false;
+             if (roleOptions != null) for (RoleOption option : roleOptions) {
+               if (option.name().equals(employee.jobTitle())) { jobTitleIsRole = true; break; }
+             }
+             String selectedRole = jobTitleIsRole ? employee.jobTitle() : employee.userRoleName(); %>
         <tr>
           <td><span class="status-chip status-<%= escapeHtml(employee.status().toLowerCase()) %>"><%= employee.status().equals("ONBOARDING") ? "NÁSTUP" : employee.status().equals("ACTIVE") ? "AKTIVNÍ" : "NEAKTIVNÍ" %></span></td>
           <td><div class="employee-main"><span class="employee-avatar"><%= escapeHtml(initials.toUpperCase()) %></span><strong><%= escapeHtml(employee.fullName()) %></strong></div></td>
           <td><%= escapeHtml(employee.jobTitle()) %></td>
           <td><%= escapeHtml(employee.teamName()) %></td>
+          <td><%= escapeHtml(employee.deputyName()) %></td>
           <td><%= escapeHtml(employee.employmentStartDate()) %></td>
           <td class="employee-action-cell"><% if (edit) { %><form method="post"><input type="hidden" name="id" value="<%= employee.id() %>"><input type="hidden" name="action" value="<%= "ACTIVE".equals(employee.status()) ? "deactivate" : "activate" %>"><% if ("ACTIVE".equals(employee.status()) || employmentStarted) { %><button class="secondary" type="submit"><%= "ACTIVE".equals(employee.status()) ? "Ukončit pracovní poměr" : "Aktivovat nástup" %></button><% } else { %><button class="secondary" type="button" disabled title="Aktivace bude možná po datu nástupu">Aktivovat po nástupu</button><% } %></form><% } %></td>
           <td class="employee-action-cell"><a href="hr?employeeId=<%= employee.id() %>#availability">Dostupnost a kvalifikace</a></td>
           <td class="employee-action-cell"><% if (admin) { if (employee.hasUserAccount()) { %><a href="users">Účet v Uživatelích</a><% } else { %><a href="users?employeeId=<%= employee.id() %>">Vytvořit účet</a><% } } %></td>
         </tr>
           <% if (edit) { %>
-        <tr class="employee-edit-row"><td colspan="8"><details class="workforce-edit"><summary>Upravit zaměstnance</summary>
+        <tr class="employee-edit-row"><td colspan="9"><details class="workforce-edit"><summary>Upravit zaměstnance</summary>
             <form method="post" class="workforce-form">
               <input type="hidden" name="action" value="update"><input type="hidden" name="id" value="<%= employee.id() %>">
               <label>Jméno a příjmení<input name="fullName" maxlength="200" value="<%= escapeHtml(employee.fullName()) %>" required></label>
-              <label>Tým<input name="teamName" maxlength="150" value="<%= escapeHtml(employee.teamName()) %>" required></label>
-              <label>Pracovní role<input name="jobTitle" maxlength="150" value="<%= escapeHtml(employee.jobTitle()) %>" required></label>
+              <label>Tým<select name="teamId" id="team-<%= employee.id() %>" required><% if (overview.teams() != null) for (HrOverviewView.TeamView team : overview.teams()) { %><option value="<%= team.id() %>" data-team-name="<%= escapeHtml(team.name()) %>" <%= team.id().equals(employee.teamId()) ? "selected" : "" %>><%= escapeHtml(team.name()) %></option><% } %></select></label>
+              <label>Pracovní role<select name="jobTitle" id="job-title-<%= employee.id() %>" required><% if (roleOptions != null) for (RoleOption option : roleOptions) { %><option value="<%= escapeHtml(option.name()) %>" <%= option.name().equals(selectedRole) ? "selected" : "" %>><%= escapeHtml(option.name()) %></option><% } %></select></label>
               <label>Nástup<input type="date" name="employmentStartDate" value="<%= escapeHtml(employee.employmentStartDate()) %>" required></label>
+              <label>Zástupce<select name="deputyEmployeeId" data-deputy-role-for="job-title-<%= employee.id() %>" data-deputy-team-for="team-<%= employee.id() %>" required><% if (overview.employees() != null) for (EmployeeView deputy : overview.employees()) { if (!deputy.id().equals(employee.id())) { %><option value="<%= deputy.id() %>" data-user-role="<%= escapeHtml(deputy.userRoleName() == null ? "" : deputy.userRoleName()) %>" data-team-id="<%= deputy.teamId() %>" data-team-name="<%= escapeHtml(deputy.teamName() == null ? "" : deputy.teamName()) %>" <%= deputy.id().equals(employee.deputyEmployeeId()) ? "selected" : "" %>><%= escapeHtml(deputy.fullName()) %></option><% } } %></select></label>
               <button type="submit" class="secondary">Uložit profil</button>
             </form>
           </details></td></tr>
@@ -111,6 +145,40 @@
     </section>
     <% } %>
   </main>
+  <script>
+    document.querySelectorAll('[data-deputy-role-for]').forEach(function (deputySelect) {
+      var roleSelect = document.getElementById(deputySelect.dataset.deputyRoleFor);
+      var teamSelect = document.getElementById(deputySelect.dataset.deputyTeamFor);
+      if (!roleSelect || !teamSelect) return;
+      var selectedDeputy = deputySelect.value;
+      function normalizedRole(value) {
+        return value.normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim().toLowerCase();
+      }
+      function normalizedTeam(value) {
+        return value.normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim().toLowerCase();
+      }
+      function filterDeputies() {
+        var role = normalizedRole(roleSelect.value);
+        var team = teamSelect.value;
+        var teamName = normalizedTeam(teamSelect.options[teamSelect.selectedIndex]?.dataset.teamName || '');
+        var availableDeputies = 0;
+        Array.from(deputySelect.options).forEach(function (option) {
+          var sameTeam = option.dataset.teamId === team || normalizedTeam(option.dataset.teamName || '') === teamName;
+          var matches = !option.value || normalizedRole(option.dataset.userRole) === role && sameTeam;
+          option.hidden = !matches;
+          option.disabled = !matches;
+          if (matches && option.value) availableDeputies += 1;
+        });
+        deputySelect.required = availableDeputies > 0;
+        if (selectedDeputy && !deputySelect.querySelector('option[value="' + selectedDeputy + '"]:not([disabled])')) {
+          deputySelect.value = '';
+        }
+        selectedDeputy = deputySelect.value;
+      }
+      roleSelect.addEventListener('change', filterDeputies);
+      filterDeputies();
+    });
+  </script>
   <script src="assets/base.js?v=20260928-160511"></script>
 </body>
 </html>

@@ -39,7 +39,7 @@ public class UserController {
     public List<EmployeeOption> employeeOptions() {
         return employees.findAllByOrderByEmploymentStartDateDesc().stream()
                 .map(employee -> new EmployeeOption(employee.getId(), employee.getFullName(), employee.getTeamName(),
-                        users.existsByEmployee_Id(employee.getId())))
+                employee.getJobTitle(), users.existsByEmployee_Id(employee.getId())))
                 .toList();
     }
 
@@ -48,7 +48,7 @@ public class UserController {
     public UserResponse create(@RequestBody UserRequest request) {
         UserData data = validate(request, null);
         return UserResponse.from(users.save(ErpUser.create(data.employee(), data.fullName(), data.username(), data.password(),
-            data.roleName(), data.companyName(), data.status(), data.color())));
+            data.companyName(), data.status(), data.color())));
     }
 
     @PutMapping("/{id}")
@@ -56,7 +56,7 @@ public class UserController {
         ErpUser user = findUser(id);
         UserData data = validate(request, id);
         String color = request.color() == null ? user.getColor() : data.color();
-        user.update(data.employee(), data.fullName(), data.roleName(), data.companyName(), data.status(), color);
+        user.update(data.employee(), data.fullName(), data.companyName(), data.status(), color);
         if (!isBlank(data.password())) user.changePassword(data.password());
         return UserResponse.from(users.save(user));
     }
@@ -74,7 +74,7 @@ public class UserController {
 
     private UserData validate(UserRequest request, UUID currentUserId) {
         if (request == null || isBlank(request.fullName()) || isBlank(request.username())
-                || isBlank(request.roleName()) || isBlank(request.companyName())) {
+                || isBlank(request.companyName())) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "User fields are required.");
         }
         String username = request.username().trim().toLowerCase(Locale.ROOT);
@@ -96,7 +96,7 @@ public class UserController {
                 : users.existsByEmployee_IdAndIdNot(employee.getId(), currentUserId))) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Employee already has a user account.");
         }
-        return new UserData(employee, request.fullName().trim(), username, request.password(), request.roleName().trim(), request.companyName().trim(), status,
+        return new UserData(employee, request.fullName().trim(), username, request.password(), request.companyName().trim(), status,
             validColor(request.color(), "#DCE9D7"));
     }
 
@@ -119,10 +119,10 @@ public class UserController {
     }
 
     public record UserRequest(String employeeId, String fullName, String username, String password,
-            String roleName, String companyName, String status, String color) { }
+            String companyName, String status, String color) { }
 
     private record UserData(Employee employee, String fullName, String username, String password,
-            String roleName, String companyName, UserStatus status, String color) { }
+            String companyName, UserStatus status, String color) { }
 
     public record UserResponse(UUID id, String fullName, String roleName, String companyName,
             UserStatus status, String lastAccessAt, UUID employeeId, String username, String color) {
@@ -133,5 +133,5 @@ public class UserController {
         }
     }
 
-    public record EmployeeOption(UUID id, String fullName, String teamName, boolean hasAccount) { }
+    public record EmployeeOption(UUID id, String fullName, String teamName, String jobTitle, boolean hasAccount) { }
 }

@@ -8,9 +8,12 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.UUID;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import jakarta.servlet.ServletException;
@@ -34,7 +37,19 @@ public class HrServlet extends HttpServlet {
             if (backendResponse.statusCode() != HttpServletResponse.SC_OK) {
                 throw new IOException("Backend returned HTTP " + backendResponse.statusCode());
             }
-            request.setAttribute("overview", mapper.readValue(backendResponse.body(), HrOverviewView.class));
+            HrOverviewView overview = mapper.readValue(backendResponse.body(), HrOverviewView.class);
+            request.setAttribute("overview", overview);
+            HttpResponse<String> rolesResponse = client.send(com.example.erp.frontend.base.BackendRequests.newBuilder(
+                    URI.create(backendUrl + "/api/v1/roles")).timeout(Duration.ofSeconds(5)).GET().build(),
+                    HttpResponse.BodyHandlers.ofString());
+            if (rolesResponse.statusCode() == HttpServletResponse.SC_OK) {
+                request.setAttribute("roleOptions", mapper.readValue(rolesResponse.body(), RoleOption[].class));
+            } else {
+                Map<String, RoleOption> fallbackRoles = new LinkedHashMap<>();
+                overview.employees().stream().filter(employee -> employee.userRoleName() != null && !employee.userRoleName().isBlank())
+                    .forEach(employee -> fallbackRoles.put(employee.userRoleName(), new RoleOption(null, employee.userRoleName())));
+                request.setAttribute("roleOptions", fallbackRoles.values().toArray(RoleOption[]::new));
+            }
             String employeeId = request.getParameter("employeeId");
             if (employeeId != null) {
                 HttpResponse<String> availability = client.send(com.example.erp.frontend.base.BackendRequests.newBuilder(
@@ -62,10 +77,25 @@ public class HrServlet extends HttpServlet {
             HttpRequest backendRequest;
             String action = request.getParameter("action");
             if ("create".equals(action) || "update".equals(action)) {
-                String body = mapper.writeValueAsString(Map.of("fullName", request.getParameter("fullName"), "teamName", request.getParameter("teamName"),
-                        "jobTitle", request.getParameter("jobTitle"), "employmentStartDate", request.getParameter("employmentStartDate")));
+                Map<String, Object> values = new HashMap<>();
+                values.put("fullName", request.getParameter("fullName"));
+                values.put("teamName", "");
+                values.put("jobTitle", request.getParameter("jobTitle"));
+                values.put("employmentStartDate", request.getParameter("employmentStartDate"));
+                values.put("teamId", UUID.fromString(request.getParameter("teamId")));
+                String deputyId = request.getParameter("deputyEmployeeId");
+                if (deputyId != null && !deputyId.isBlank()) values.put("deputyEmployeeId", UUID.fromString(deputyId));
+                String body = mapper.writeValueAsString(values);
                 boolean update = "update".equals(action);
                 backendRequest = jsonRequest(backendUrl + "/api/v1/hr/employees" + (update ? "/" + UUID.fromString(id) : ""), update ? "PUT" : "POST", body);
+            } else if ("createTeam".equals(action)) {
+                backendRequest = jsonRequest(backendUrl + "/api/v1/hr/teams", "POST",
+                        mapper.writeValueAsString(Map.of("name", request.getParameter("name"))));
+            } else if ("updateTeam".equals(action)) {
+                backendRequest = jsonRequest(backendUrl + "/api/v1/hr/teams/" + UUID.fromString(request.getParameter("teamId")), "PUT",
+                        mapper.writeValueAsString(Map.of("name", request.getParameter("name"))));
+            } else if ("deleteTeam".equals(action)) {
+                backendRequest = jsonRequest(backendUrl + "/api/v1/hr/teams/" + UUID.fromString(request.getParameter("teamId")), "DELETE", "{}");
             } else if ("absence".equals(action)) {
                 backendRequest = jsonRequest(backendUrl + "/api/v1/hr/employees/" + UUID.fromString(id) + "/absences", "POST",
                         mapper.writeValueAsString(Map.of("startAt", request.getParameter("startAt"), "endAt", request.getParameter("endAt"), "reason", request.getParameter("reason"))));
@@ -109,4 +139,7 @@ public class HrServlet extends HttpServlet {
         return com.example.erp.frontend.base.BackendRequests.newBuilder(URI.create(url)).header("Content-Type", "application/json")
                 .method(method, HttpRequest.BodyPublishers.ofString(body)).build();
     }
+
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    public record RoleOption(UUID id, String name) { }
 }

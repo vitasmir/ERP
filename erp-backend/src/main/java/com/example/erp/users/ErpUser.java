@@ -24,9 +24,6 @@ public class ErpUser {
     @Column(name = "full_name")
     private String fullName;
 
-    @Column(name = "role_name")
-    private String roleName;
-
     @Column(name = "company_name")
     private String companyName;
 
@@ -36,7 +33,7 @@ public class ErpUser {
     @Column(name = "password_hash", nullable = false)
     private String passwordHash;
 
-    @OneToOne(fetch = FetchType.LAZY)
+    @OneToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "employee_id", unique = true)
     private Employee employee;
 
@@ -52,30 +49,28 @@ public class ErpUser {
     protected ErpUser() { }
 
     public static ErpUser create(Employee employee, String fullName, String username, String password,
-            String roleName, String companyName, UserStatus status, String color) {
+            String companyName, UserStatus status, String color) {
         ErpUser user = new ErpUser();
         user.id = UUID.randomUUID();
         user.employee = employee;
         user.fullName = fullName;
         user.username = username;
         user.passwordHash = PasswordHasher.hash(password);
-        user.roleName = roleName;
         user.companyName = companyName;
         user.status = status;
         user.color = color;
         return user;
     }
 
-    public static ErpUser create(Employee employee, String fullName, String roleName,
-            String companyName, UserStatus status, String color) {
+    public static ErpUser create(Employee employee, String fullName, String companyName,
+            UserStatus status, String color) {
         return create(employee, fullName, "user-" + employee.getId(), "test-password",
-                roleName, companyName, status, color);
+                companyName, status, color);
     }
 
-    public void update(Employee employee, String fullName, String roleName, String companyName, UserStatus status, String color) {
+    public void update(Employee employee, String fullName, String companyName, UserStatus status, String color) {
         this.employee = employee;
         this.fullName = fullName;
-        this.roleName = roleName;
         this.companyName = companyName;
         this.status = status;
         this.color = color;
@@ -86,7 +81,7 @@ public class ErpUser {
     public UUID getId() { return id; }
     public UUID getEmployeeId() { return employee == null ? null : employee.getId(); }
     public String getFullName() { return fullName; }
-    public String getRoleName() { return roleName; }
+    public String getRoleName() { return employee == null ? null : employee.getJobTitle(); }
     public String getCompanyName() { return companyName; }
     public String getUsername() { return username; }
     public String getPasswordHash() { return passwordHash; }

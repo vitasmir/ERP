@@ -8,12 +8,12 @@
 <html lang="cs">
 <head>
   <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Fresh Market | E-shop</title><link rel="stylesheet" href="assets/shop.css?v=20260930-1">
+  <title>All Market | E-shop</title><link rel="stylesheet" href="assets/shop.css?v=20260930-1">
   <style>@media(min-width:1200px){.shop-products{grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}.shop-product{padding:12px;grid-template-columns:74px 1fr;gap:10px;min-height:220px}.shop-product-image,.product-placeholder{width:74px;height:100px}.product-info h3{font-size:15px}.product-info p{font-size:10px}.product-buy{gap:7px;flex-wrap:wrap}.product-buy strong{font-size:17px}.stock-label{width:100%;margin-right:0}.product-buy form{width:100%}.add-button{width:100%}}</style>
 </head>
 <body>
 <% ShopView shop = (ShopView) request.getAttribute("shop"); String error = request.getParameter("error"); boolean orderCompleted = "completed".equals(request.getParameter("order")); String categoryInput = shop != null && shop.selectedCategoryId() != null ? "<input type=\"hidden\" name=\"categoryId\" value=\"" + shop.selectedCategoryId() + "\">" : ""; %>
-<header class="shop-header"><a class="shop-brand" href="eshop"><span class="brand-mark">F</span><span><strong>FRESH MARKET</strong><small>lokální nákup bez čekání</small></span></a><nav><a href="#catalog">Katalog</a><a href="#delivery">Doručení</a><a class="admin-link" href="ecommerce">Administrace</a></nav><a class="cart-jump" href="#cart">Košík <b><%= shop == null ? 0 : shop.cartCount() %></b></a></header>
+<header class="shop-header"><a class="shop-brand" href="eshop"><span class="brand-mark">A</span><span><strong>ALL MARKET</strong><small>lokální nákup bez čekání</small></span></a><nav><a href="#catalog">Katalog</a><a href="#delivery">Doručení</a><a class="admin-link" href="ecommerce">Administrace</a></nav><a class="cart-jump" href="#cart">Košík <b><%= shop == null ? 0 : shop.cartCount() %></b></a></header>
 <main class="shop-shell">
   <% if (error != null) { %><p class="shop-error"><%= error %></p><% } %>
   <% if (shop == null) { %><section class="shop-error">Katalog se nepodařilo načíst.</section><% } else { %>

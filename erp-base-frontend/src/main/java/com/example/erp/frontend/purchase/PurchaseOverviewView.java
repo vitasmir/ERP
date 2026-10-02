@@ -10,6 +10,6 @@ public record PurchaseOverviewView(BigDecimal requestedValue, BigDecimal ordered
             String expectedDeliveryDate, BigDecimal totalAmount, String status, UUID sourceWarehouseId,
             UUID destinationWarehouseId, UUID productId, Integer quantity, int receivedQuantity) { }
 
-    public record WarehouseView(UUID id, String name, String ownerType) { }
-    public record ProductView(UUID id, String name, String sku, String unit) { }
+        public record WarehouseView(UUID id, String name, String ownerType) { }
+        public record ProductView(UUID id, String name, String sku, String unit, String description) { }
 }

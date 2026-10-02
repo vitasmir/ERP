@@ -693,6 +693,7 @@ const closeModule = () => {
   drawer?.classList.remove("open");
   backdrop.classList.remove("visible");
   drawer?.setAttribute("aria-hidden", "true");
+  document.activeElement?.blur();
 };
 moduleTiles.forEach((tile) =>
   tile.addEventListener("click", () => openModule(tile)),

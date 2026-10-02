@@ -1,0 +1,181 @@
+openapi: 3.1.0
+info:
+  title: Mock Remote Warehouse API
+  version: 1.0.0
+  description: REST/JSON API for a demo remote warehouse catalog, prices, and availability.
+servers:
+  - url: http://localhost:8091/api/v1
+paths:
+  /health:
+    get:
+      summary: Service health
+      responses:
+        "200":
+          description: Service is available
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Health"
+  /warehouses:
+    get:
+      summary: List warehouses
+      responses:
+        "200":
+          description: Warehouse list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Warehouse"
+  /categories:
+    get:
+      summary: List product categories
+      responses:
+        "200":
+          description: Category list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Category"
+  /products:
+    get:
+      summary: List products and prices
+      parameters:
+        - in: query
+          name: categoryId
+          schema:
+            type: string
+        - in: query
+          name: q
+          description: Search by SKU, GTIN, or product name
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Product list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Product"
+  /products/{sku}:
+    get:
+      summary: Get a product with its acquisition and sales prices
+      parameters:
+        - in: path
+          name: sku
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Product details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Product"
+        "404":
+          description: Product not found
+  /availability:
+    get:
+      summary: List availability by product and warehouse
+      parameters:
+        - in: query
+          name: warehouseCode
+          schema:
+            type: string
+        - in: query
+          name: sku
+          schema:
+            type: string
+        - in: query
+          name: availableOnly
+          schema:
+            type: boolean
+            default: false
+      responses:
+        "200":
+          description: Availability list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Availability"
+  /products/{sku}/availability:
+    get:
+      summary: List a product's availability at every warehouse
+      parameters:
+        - in: path
+          name: sku
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Availability for the product
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Availability"
+        "404":
+          description: Product not found
+components:
+  schemas:
+    Health:
+      type: object
+      required: [status, service, apiVersion]
+      properties:
+        status: { type: string, example: UP }
+        service: { type: string, example: mock-remote-warehouse }
+        apiVersion: { type: string, example: v1 }
+    Warehouse:
+      type: object
+      required: [code, name, gln]
+      properties:
+        code: { type: string, example: WH-PRAHA }
+        name: { type: string, example: Praha - centrální sklad }
+        gln: { type: string, pattern: "^[0-9]{13}$", example: "8599999000006" }
+    Category:
+      type: object
+      required: [id, name, slug]
+      properties:
+        id: { type: string, example: meat }
+        name: { type: string, example: Maso }
+        slug: { type: string, example: meat }
+        parentId: { type: [string, "null"], example: fresh-food }
+    Product:
+      type: object
+      required: [sku, gtin, name, categoryId, unit, currency, purchasePriceNet, marginPercent, vatRatePercent, salePriceNet, salePriceGross]
+      properties:
+        sku: { type: string, example: PORK-NECK-01 }
+        gtin: { type: string, pattern: "^[0-9]{14}$", example: "08590000000015" }
+        name: { type: string, example: Vepřová krkovice bez kosti }
+        categoryId: { type: string, example: meat }
+        unit: { type: string, example: kg }
+        description: { type: string }
+        currency: { type: string, example: CZK }
+        purchasePriceNet: { type: number, format: double, example: 129.9 }
+        marginPercent: { type: number, format: double, example: 28 }
+        vatRatePercent: { type: number, format: double, example: 12 }
+        salePriceNet: { type: number, format: double, example: 180.42 }
+        salePriceGross: { type: number, format: double, example: 202.07 }
+    Availability:
+      type: object
+      required: [sku, gtin, warehouseCode, warehouseName, onHand, reserved, availableQuantity, available, updatedAt]
+      properties:
+        sku: { type: string }
+        gtin: { type: string, pattern: "^[0-9]{14}$" }
+        warehouseCode: { type: string }
+        warehouseName: { type: string }
+        onHand: { type: integer, minimum: 0 }
+        reserved: { type: integer, minimum: 0 }
+        availableQuantity: { type: integer, minimum: 0 }
+        available: { type: boolean }
+        updatedAt: { type: string, format: date-time }

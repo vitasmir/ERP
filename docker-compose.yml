@@ -45,6 +45,14 @@ services:
     networks:
       - projects-network
 
+  remote-warehouse-mock:
+    build: ./erp-remote-warehouse
+    restart: unless-stopped
+    ports:
+      - "8091:8080"
+    networks:
+      - projects-network
+
 volumes:
   erp-postgres-data:
 

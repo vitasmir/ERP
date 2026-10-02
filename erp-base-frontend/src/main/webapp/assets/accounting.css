@@ -94,8 +94,13 @@
 .invoice-table tbody tr:last-child td {
   border-bottom: 0;
 }
+.invoice-table tbody tr:hover th,
 .invoice-table tbody tr:hover td {
   background: #eef5d9;
+}
+.invoice-table tbody th,
+.invoice-table tbody td {
+  vertical-align: middle;
 }
 .invoice-table td strong {
   font-size: 14px;
@@ -115,6 +120,9 @@
 }
 .invoice-items {
   min-width: 190px;
+}
+.invoice-items-cell {
+  cursor: pointer;
 }
 .invoice-items summary {
   display: flex;
@@ -332,6 +340,22 @@
   margin: 0;
   color: #748278;
   font: 11px "DM Mono";
+}
+.invoice-card-actions {
+  display: grid;
+  justify-items: start;
+  gap: 8px;
+}
+.invoice-card-actions form {
+  margin: 0;
+}
+.invoice-pdf-link {
+  color: #28716a;
+  font: 10px "DM Mono";
+  text-decoration: none;
+}
+.invoice-pdf-link:hover {
+  text-decoration: underline;
 }
 .invoice-card dl {
   display: grid;

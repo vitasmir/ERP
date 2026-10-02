@@ -10,7 +10,7 @@
 	<meta name="viewport" content="width=device-width, initial-scale=1">
 	<title>ERP | Účetnictví</title>
 										  <link rel="stylesheet" href="assets/base.css?v=20261001-1">
-	<link rel="stylesheet" href="assets/accounting.css?v=20260929-011500">
+	<link rel="stylesheet" href="assets/accounting.css?v=20261002-3">
 </head>
 <body>
 	<%
@@ -49,14 +49,15 @@
 			</div>
 			<div class="invoice-table-wrap">
 				<table class="invoice-table">
-					<thead><tr><th>Stav</th><th>Faktura</th><th>Odběratel</th><th>Vystaveno</th><th>Splatnost</th><th>Celkem</th><th>Akce</th></tr></thead>
+					<thead><tr><th>Stav</th><th>Faktura</th><th>Položky</th><th>Odběratel</th><th>Vystaveno</th><th>Splatnost</th><th>Celkem</th><th>Akce</th></tr></thead>
 					<tbody>
 				<% if (overview != null) for (InvoiceView invoice : overview.invoices()) { %>
 					<tr class="invoice-row">
 						<td><span class="status-chip status-<%= invoice.status().toLowerCase() %>"><%= invoice.status() %></span></td>
-						<td>
+						<td><strong><%= invoice.invoiceNumber() %></strong></td>
+						<td class="invoice-items-cell">
 							<details class="invoice-items">
-								<summary><strong><%= invoice.invoiceNumber() %></strong><span><%= invoice.lines().size() %> položek</span></summary>
+								<summary><span><%= invoice.lines().size() %> položek</span></summary>
 								<div class="invoice-items-panel">
 									<% for (InvoiceLineView line : invoice.lines()) { %>
 										<div class="invoice-item">
@@ -105,6 +106,15 @@
 			</div>
 		</section>
 	</main>
+	<script>
+		document.querySelectorAll('.invoice-items-cell').forEach(function (cell) {
+			cell.addEventListener('click', function (event) {
+				var details = cell.querySelector('.invoice-items');
+				if (!details || event.target.closest('summary')) return;
+				details.open = !details.open;
+			});
+		});
+	</script>
 	<script src="assets/base.js?v=20260928-160511"></script>
 </body>
 </html>

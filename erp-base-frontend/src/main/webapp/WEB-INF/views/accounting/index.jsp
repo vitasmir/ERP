@@ -10,7 +10,7 @@
 	<meta name="viewport" content="width=device-width, initial-scale=1">
 	<title>ERP | Účetnictví</title>
 										  <link rel="stylesheet" href="assets/base.css?v=20261001-1">
-	<link rel="stylesheet" href="assets/accounting.css?v=20261002-3">
+	<link rel="stylesheet" href="assets/accounting.css?v=20261002-4">
 </head>
 <body>
 	<%
@@ -49,7 +49,7 @@
 			</div>
 			<div class="invoice-table-wrap">
 				<table class="invoice-table">
-					<thead><tr><th>Stav</th><th>Faktura</th><th>Položky</th><th>Odběratel</th><th>Vystaveno</th><th>Splatnost</th><th>Celkem</th><th>Akce</th></tr></thead>
+					<thead><tr><th>Stav</th><th>Faktura</th><th>Položky</th><th>Odběratel</th><th>Vystaveno</th><th>Splatnost</th><th>Celkem</th><th>Úhrada</th><th>Akce</th></tr></thead>
 					<tbody>
 				<% if (overview != null) for (InvoiceView invoice : overview.invoices()) { %>
 					<tr class="invoice-row">
@@ -72,14 +72,21 @@
 						<td><%= invoice.issueDate() %></td>
 						<td><%= invoice.dueDate() %></td>
 						<td><strong><%= invoice.totalAmount() %> Kč</strong></td>
+						<td class="invoice-payment-cell">
+						<% if ("PAID".equals(invoice.status())) { %>
+							<span class="paid-label">Uhrazeno <%= invoice.paidAmount() %> Kč</span>
+						<% } else { %>
+							<span class="unpaid-label">Neuhrazeno</span>
+						<% } %>
+						</td>
 						<td class="invoice-action-cell">
 						<% if (!"PAID".equals(invoice.status())) { %>
 							<form method="post">
 								<input type="hidden" name="id" value="<%= invoice.id() %>">
 								<button class="secondary" type="submit">Označit jako uhrazenou</button>
 							</form>
-						<% } else { %>
-							<span class="paid-label">Uhrazeno <%= invoice.paidAmount() %> Kč</span>
+						<% } %>
+						<% if ("PAID".equals(invoice.status())) { %>
 							<a class="invoice-pdf-link" href="accounting?pdf=<%= invoice.id() %>">Stáhnout PDF</a>
 						<% } %>
 						<% if ("DRAFT".equals(invoice.status())) { %>

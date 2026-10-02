@@ -19,7 +19,7 @@ class AccountInvoiceTests {
         try (var document = org.apache.pdfbox.Loader.loadPDF(InvoicePdf.render(invoice))) {
             String text = new org.apache.pdfbox.text.PDFTextStripper().getText(document);
             assertTrue(text.contains("\u010cesk\u00fd odb\u011bratel"));
-            assertTrue(text.contains("121.00 CZK"));
+            assertTrue(text.contains("121.00 Kč"));
         }
     }
 

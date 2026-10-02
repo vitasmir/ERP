@@ -112,6 +112,9 @@
   text-align: right;
   white-space: nowrap;
 }
+.invoice-payment-cell {
+  white-space: nowrap;
+}
 .invoice-action-cell form {
   margin: 0;
 }
@@ -250,6 +253,11 @@
   margin-top: 6px;
 }
 .invoice-table .paid-label {
+  white-space: nowrap;
+}
+.unpaid-label {
+  color: #9e4f54;
+  font: 10px "DM Mono";
   white-space: nowrap;
 }
 .accounting-page {

@@ -44,7 +44,7 @@ final class InvoicePdf {
             for (InvoiceLine line : invoice.getLines()) {
                 String unit = line.getProductId() == null ? "ks" : units.getOrDefault(line.getProductId(), "ks");
                 String description = line.getDescription();
-                float rowHeight = Math.max(24, wrap(description, font, 10, 180).size() * 13 + 10);
+                float rowHeight = Math.max(24, wrap(description, font, 10, 210).size() * 13 + 10);
                 if (y - rowHeight < 145) {
                     stream.close();
                     page = new PDPage(PDRectangle.A4);
@@ -54,11 +54,11 @@ final class InvoicePdf {
                     y = drawTableHeader(stream, font, y);
                 }
                 drawLine(stream, MARGIN, y - rowHeight, PAGE_WIDTH - MARGIN, y - rowHeight, new Color(220, 225, 224));
-                drawWrapped(stream, font, description, MARGIN + 6, y - 16, 10, 180, 13);
-                drawRight(stream, font, line.getQuantity().stripTrailingZeros().toPlainString() + " " + unit, 10, 365, y - 16);
-                drawRight(stream, font, money(line.getUnitPrice()), 10, 438, y - 16);
-                drawRight(stream, font, line.getVatRate().stripTrailingZeros().toPlainString() + " %", 10, 490, y - 16);
-                drawRight(stream, font, money(line.getTotalAmount()), 10, PAGE_WIDTH - MARGIN - 6, y - 16);
+                drawWrapped(stream, font, description, MARGIN + 6, y - 16, 10, 210, 13);
+                drawRight(stream, font, line.getQuantity().stripTrailingZeros().toPlainString() + " " + unit, 8, 320, y - 16);
+                drawRight(stream, font, money(line.getNetAmount()), 8, 410, y - 16);
+                drawRight(stream, font, money(line.getVatAmount()), 8, 475, y - 16);
+                drawRight(stream, font, money(line.getTotalAmount()), 8, PAGE_WIDTH - MARGIN - 6, y - 16);
                 y -= rowHeight;
             }
             drawTotals(stream, font, invoice, y - 12);
@@ -93,10 +93,10 @@ final class InvoicePdf {
         stream.addRect(MARGIN, y - 24, CONTENT_WIDTH, 24);
         stream.fill();
         drawText(stream, font, "Položka", 9, MARGIN + 6, y - 16, Color.WHITE);
-        drawRight(stream, font, "Množství", 9, 365, y - 16, Color.WHITE);
-        drawRight(stream, font, "Cena bez DPH", 9, 438, y - 16, Color.WHITE);
-        drawRight(stream, font, "DPH", 9, 490, y - 16, Color.WHITE);
-        drawRight(stream, font, "Cena s DPH", 9, PAGE_WIDTH - MARGIN - 6, y - 16, Color.WHITE);
+        drawRight(stream, font, "Množství", 8, 320, y - 16, Color.WHITE);
+        drawRight(stream, font, "Bez DPH", 8, 410, y - 16, Color.WHITE);
+        drawRight(stream, font, "DPH", 8, 475, y - 16, Color.WHITE);
+        drawRight(stream, font, "S DPH", 8, PAGE_WIDTH - MARGIN - 6, y - 16, Color.WHITE);
         return y - 24;
     }
 
@@ -172,6 +172,6 @@ final class InvoicePdf {
     }
 
     private static String money(java.math.BigDecimal amount) {
-        return amount.setScale(2, java.math.RoundingMode.HALF_UP).toPlainString() + " CZK";
+        return amount.setScale(2, java.math.RoundingMode.HALF_UP).toPlainString() + " Kč";
     }
 }

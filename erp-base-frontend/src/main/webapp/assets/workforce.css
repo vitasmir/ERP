@@ -120,11 +120,9 @@ summary:focus-visible {
   color: #53665c;
   font-size: 12px;
 }
-.planning-page .shift-card,
 .hr-page .employee-card {
   min-width: 0;
 }
-.planning-page .shift-card > *,
 .hr-page .employee-card > * {
   min-width: 0;
   overflow-wrap: anywhere;
@@ -149,7 +147,6 @@ summary:focus-visible {
     gap: 10px;
     margin: 20px 0;
   }
-  .planning-page .shift-card,
   .hr-page .employee-card {
     grid-template-columns: minmax(0, 1fr);
     padding: 18px;

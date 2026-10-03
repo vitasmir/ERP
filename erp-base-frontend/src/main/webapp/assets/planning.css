@@ -71,27 +71,102 @@
   font: 10px "DM Mono";
   color: #7b897f;
 }
-.shift-list {
-  display: grid;
-  gap: 12px;
-}
-.shift-card {
-  display: grid;
-  grid-template-columns: 1.3fr 1fr auto;
-  gap: 22px;
-  align-items: center;
+.shift-table-wrap {
+  overflow-x: auto;
+  margin-top: 16px;
   background: #fbfdf9;
   border: 1px solid #dce4de;
-  padding: 22px;
 }
-.shift-card h3 {
-  margin: 8px 0 4px;
-  font-size: 17px;
+.shift-table {
+  width: 100%;
+  min-width: 1080px;
+  border-collapse: collapse;
+  table-layout: fixed;
 }
-.shift-card p {
-  margin: 0;
+.shift-table th {
+  padding: 13px 16px;
+  border-bottom: 1px solid #d5ddd7;
+  text-align: left;
+  color: #718078;
+  font: 9px "DM Mono";
+  font-weight: 400;
+  text-transform: uppercase;
+}
+.shift-table td {
+  padding: 16px;
+  border-bottom: 1px solid #e8ebe5;
+  vertical-align: middle;
+  color: #53645a;
+  font-size: 13px;
+}
+.shift-table tbody tr:last-child td {
+  border-bottom: 0;
+}
+.shift-table tbody tr.shift-row:hover td {
+  background: #eef5d9;
+}
+.shift-table th:nth-child(1) {
+  width: 25%;
+}
+.shift-table th:nth-child(2),
+.shift-table th:nth-child(3) {
+  width: 17%;
+}
+.shift-table th:nth-child(4) {
+  width: 41%;
+}
+.shift-table td strong,
+.shift-table td small {
+  display: block;
+}
+.shift-table td strong {
+  margin-top: 8px;
+  color: #253b35;
+  font-size: 16px;
+}
+.shift-table td small {
+  margin-top: 4px;
   color: #748278;
   font: 11px "DM Mono";
+}
+.shift-table .shift-action-cell {
+  white-space: normal;
+}
+.shift-table .shift-action-cell form {
+  margin: 0;
+}
+.shift-table .workforce-actions {
+  justify-content: flex-start;
+  gap: 8px;
+}
+.shift-table .workforce-actions a {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 34px;
+  border: 1px solid #366b61;
+  border-radius: 6px;
+  padding: 8px 11px;
+  color: #285b53;
+  font: 11px "Space Grotesk";
+  text-decoration: none;
+  white-space: nowrap;
+  transition: background-color 0.16s ease, border-color 0.16s ease, box-shadow 0.16s ease;
+}
+.shift-table .workforce-actions a:hover {
+  background: #eef7f1;
+  border-color: #285b53;
+  box-shadow: 0 6px 14px rgba(34, 88, 77, 0.08);
+}
+.shift-edit-row td {
+  padding: 0 16px;
+}
+.shift-edit-row .workforce-edit {
+  padding: 0;
+  border: 0;
+}
+.shift-edit-row .workforce-edit summary {
+  padding: 12px 0;
 }
 .status-chip {
   display: inline-block;
@@ -108,20 +183,12 @@
   background: #fff0cf;
   color: #935f13;
 }
-.shift-card dl {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 18px;
-  margin: 0;
-}
-.shift-card dt {
-  font: 9px "DM Mono";
-  color: #88958c;
-  margin-bottom: 6px;
-}
-.shift-card dd {
-  margin: 0;
-  font-size: 13px;
+.workforce-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 10px;
 }
 .secondary {
   border: 1px solid #366b61;
@@ -131,6 +198,13 @@
   font: 11px "Space Grotesk";
   cursor: pointer;
   white-space: nowrap;
+  border-radius: 6px;
+  transition: background-color 0.16s ease, border-color 0.16s ease, color 0.16s ease, box-shadow 0.16s ease;
+}
+.secondary:hover {
+  background: #eef7f1;
+  border-color: #285b53;
+  box-shadow: 0 6px 14px rgba(34, 88, 77, 0.08);
 }
 .published-label {
   font: 10px "DM Mono";
@@ -156,19 +230,10 @@
   .planning-metrics {
     grid-template-columns: 1fr;
   }
-  .shift-card {
-    grid-template-columns: 1fr;
-  }
-  .shift-card dl {
-    grid-template-columns: repeat(2, 1fr);
-  }
 }
 @media (max-width: 520px) {
   .planning-page {
     padding: 28px 18px;
-  }
-  .shift-card dl {
-    grid-template-columns: 1fr;
   }
   .planning-header h1 {
     font-size: 36px;

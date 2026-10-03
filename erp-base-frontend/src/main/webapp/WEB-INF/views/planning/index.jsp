@@ -10,7 +10,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>ERP | Plánování</title>
   <link rel="stylesheet" href="assets/base.css?v=20261001-1">
-  <link rel="stylesheet" href="assets/planning.css?v=20260928-154028">
+  <link rel="stylesheet" href="assets/planning.css?v=20261003-1">
   <link rel="stylesheet" href="assets/workforce.css?v=20260928-154028">
 </head>
 <body>
@@ -74,36 +74,46 @@
     <section id="schedule" class="planning-section">
       <% if (edit) { %><form method="post" id="publish-plan" class="workforce-actions"><input type="hidden" name="action" value="publishPlan"><button class="secondary" type="submit">Publikovat vybrané směny</button></form><% } %>
       <div class="section-head"><div><span class="eyebrow">TÝDENNÍ PLÁN</span><h2>Směny a kapacity</h2></div><span class="shift-count"><%= overview == null ? 0 : overview.shifts().size() %> sloty</span></div>
-      <div class="shift-list">
-        <% if (overview != null) for (ShiftView shift : overview.shifts()) { %>
-        <article class="shift-card">
-          <div class="shift-main"><span class="status-chip status-<%= escapeHtml(shift.status().toLowerCase()) %>"><%= shift.status().equals("PUBLISHED") ? "PUBLIKOVÁNO" : "NÁVRH" %></span><h3><%= escapeHtml(shift.roleName()) %></h3><p><%= escapeHtml(shift.department()) %> · <%= shift.employeeName() == null ? "Neobsazeno" : escapeHtml(shift.employeeName()) %></p></div>
-          <dl><div><dt>Začátek</dt><dd><%= shift.startAt().replace('T', ' ') %></dd></div><div><dt>Konec</dt><dd><%= shift.endAt().replace('T', ' ') %></dd></div></dl>
-          <div class="workforce-actions">
-            <% if (edit && "DRAFT".equals(shift.status())) { %>
-            <label><input type="checkbox" form="publish-plan" name="shiftIds" value="<%= shift.id() %>"> Vybrat</label>
-            <form method="post"><input type="hidden" name="action" value="publish"><input type="hidden" name="id" value="<%= shift.id() %>"><button class="secondary" type="submit">Publikovat směnu</button></form>
-            <form method="post" data-confirm-delete data-confirm-message="Opravdu chcete tento koncept smazat?"><input type="hidden" name="action" value="delete"><input type="hidden" name="id" value="<%= shift.id() %>"><button class="secondary" type="submit">Smazat koncept</button></form>
+      <div class="shift-table-wrap">
+        <table class="shift-table">
+          <thead><tr><th>Směna</th><th>Začátek</th><th>Konec</th><th>Akce</th></tr></thead>
+          <tbody>
+            <% if (overview != null) for (ShiftView shift : overview.shifts()) { %>
+            <tr class="shift-row">
+              <td data-label="Směna"><span class="status-chip status-<%= escapeHtml(shift.status().toLowerCase()) %>"><%= shift.status().equals("PUBLISHED") ? "PUBLIKOVÁNO" : "NÁVRH" %></span><strong><%= escapeHtml(shift.roleName()) %></strong><small><%= escapeHtml(shift.department()) %> · <%= shift.employeeName() == null ? "Neobsazeno" : escapeHtml(shift.employeeName()) %></small></td>
+              <td data-label="Začátek"><%= escapeHtml(shift.startAt().replace('T', ' ')) %></td>
+              <td data-label="Konec"><%= escapeHtml(shift.endAt().replace('T', ' ')) %></td>
+              <td data-label="Akce" class="shift-action-cell">
+                <div class="workforce-actions">
+                  <% if (edit && "DRAFT".equals(shift.status())) { %>
+                  <label><input type="checkbox" form="publish-plan" name="shiftIds" value="<%= shift.id() %>"> Vybrat</label>
+                  <form method="post"><input type="hidden" name="action" value="publish"><input type="hidden" name="id" value="<%= shift.id() %>"><button class="secondary" type="submit">Publikovat směnu</button></form>
+                  <form method="post" data-confirm-delete data-confirm-message="Opravdu chcete tento koncept smazat?"><input type="hidden" name="action" value="delete"><input type="hidden" name="id" value="<%= shift.id() %>"><button class="secondary" type="submit">Smazat koncept</button></form>
+                  <% } %>
+                  <a href="planning?audit=<%= shift.id() %>#audit">Historie</a>
+                </div>
+              </td>
+            </tr>
+            <% if (edit) { %>
+            <tr class="shift-edit-row"><td colspan="4">
+              <details class="workforce-edit"><summary>Upravit směnu</summary>
+                <form method="post" class="workforce-form">
+                  <input type="hidden" name="action" value="update"><input type="hidden" name="id" value="<%= shift.id() %>"><input type="hidden" name="version" value="<%= shift.version() %>">
+                  <label>Zaměstnanec<select name="employeeId"><% if (manageAll) { %><option value="">Neobsazeno</option><% } %>
+                    <% if (employees != null) for (JsonNode employee : employees) { %><option value="<%= escapeHtml(employee.path("id").asText()) %>" <%= employee.path("id").asText().equals(String.valueOf(shift.employeeId())) ? "selected" : "" %>><%= escapeHtml(employee.path("fullName").asText() + " / " + employee.path("teamName").asText()) %></option><% } %>
+                  </select></label>
+                  <label>Pracovní role<input name="roleName" value="<%= escapeHtml(shift.roleName()) %>" maxlength="150" list="role-options" required></label>
+                  <label>Pracoviště<select name="department" required><% if (workplaces != null) for (JsonNode workplace : workplaces) { %><option value="<%= escapeHtml(workplace.path("name").asText()) %>" <%= workplace.path("name").asText().equals(shift.department()) ? "selected" : "" %>><%= escapeHtml(workplace.path("name").asText()) %></option><% } %></select></label>
+                  <label>Začátek<input type="datetime-local" name="startAt" value="<%= escapeHtml(shift.startAt()) %>" required></label>
+                  <label>Konec<input type="datetime-local" name="endAt" value="<%= escapeHtml(shift.endAt()) %>" required></label>
+                  <button type="submit" class="secondary">Uložit směnu</button>
+                </form>
+              </details>
+            </td></tr>
             <% } %>
-            <a href="planning?audit=<%= shift.id() %>#audit">Historie</a>
-          </div>
-          <% if (edit) { %>
-          <details class="workforce-edit"><summary>Upravit směnu</summary>
-            <form method="post" class="workforce-form">
-              <input type="hidden" name="action" value="update"><input type="hidden" name="id" value="<%= shift.id() %>"><input type="hidden" name="version" value="<%= shift.version() %>">
-              <label>Zaměstnanec<select name="employeeId"><% if (manageAll) { %><option value="">Neobsazeno</option><% } %>
-                <% if (employees != null) for (JsonNode employee : employees) { %><option value="<%= escapeHtml(employee.path("id").asText()) %>" <%= employee.path("id").asText().equals(String.valueOf(shift.employeeId())) ? "selected" : "" %>><%= escapeHtml(employee.path("fullName").asText() + " / " + employee.path("teamName").asText()) %></option><% } %>
-              </select></label>
-              <label>Pracovní role<input name="roleName" value="<%= escapeHtml(shift.roleName()) %>" maxlength="150" list="role-options" required></label>
-              <label>Pracoviště<select name="department" required><% if (workplaces != null) for (JsonNode workplace : workplaces) { %><option value="<%= escapeHtml(workplace.path("name").asText()) %>" <%= workplace.path("name").asText().equals(shift.department()) ? "selected" : "" %>><%= escapeHtml(workplace.path("name").asText()) %></option><% } %></select></label>
-              <label>Začátek<input type="datetime-local" name="startAt" value="<%= escapeHtml(shift.startAt()) %>" required></label>
-              <label>Konec<input type="datetime-local" name="endAt" value="<%= escapeHtml(shift.endAt()) %>" required></label>
-              <button type="submit" class="secondary">Uložit směnu</button>
-            </form>
-          </details>
-          <% } %>
-        </article>
-        <% } %>
+            <% } %>
+          </tbody>
+        </table>
       </div>
       <% if (overview != null && overview.shifts().isEmpty()) { %><p>Žádné směny.</p><% } %>
     </section>

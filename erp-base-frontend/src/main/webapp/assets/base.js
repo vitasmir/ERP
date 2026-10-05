@@ -247,7 +247,7 @@ document.addEventListener("keydown", (event) => {
     closeDatePicker();
   }
 });
-document.querySelectorAll('input[type="date"], input[type="datetime-local"]').forEach((input) => {
+document.querySelectorAll('input[type="date"]:not([data-native-date-picker]), input[type="datetime-local"]:not([data-native-date-picker])').forEach((input) => {
   const nativeType = input.type;
   const wrapper = document.createElement("span");
   const display = document.createElement("input");

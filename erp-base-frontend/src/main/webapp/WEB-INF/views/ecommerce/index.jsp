@@ -77,5 +77,5 @@
           <form method="post"><input type="hidden" name="action" value="import"><textarea name="products" rows="8">
 []</textarea><button class="primary" type="submit">Importovat produkty</button></form></section>
 </main>
-<script src="assets/base.js?v=20260928-1605111"></script>
+<script src="assets/base.js?v=20261005-1"></script>
 </body></html>

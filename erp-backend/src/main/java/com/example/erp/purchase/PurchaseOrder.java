@@ -89,6 +89,22 @@ public class PurchaseOrder {
     public Integer getQuantity() { return quantity; }
     public int getReceivedQuantity() { return receivedQuantity; }
 
+    public void updateRequested(String supplierName, LocalDate requestedOn, LocalDate expectedDeliveryDate,
+            BigDecimal totalAmount, UUID sourceWarehouseId, UUID destinationWarehouseId,
+            UUID productId, int quantity) {
+        if (status != PurchaseOrderStatus.REQUESTED) {
+            throw new IllegalStateException("Only requested purchases can be edited.");
+        }
+        this.supplierName = supplierName;
+        this.requestedOn = requestedOn;
+        this.expectedDeliveryDate = expectedDeliveryDate;
+        this.totalAmount = totalAmount;
+        this.sourceWarehouseId = sourceWarehouseId;
+        this.destinationWarehouseId = destinationWarehouseId;
+        this.productId = productId;
+        this.quantity = quantity;
+    }
+
     public void order() { status = PurchaseOrderStatus.ORDERED; }
 
     public void receive(int receivedQuantity) {

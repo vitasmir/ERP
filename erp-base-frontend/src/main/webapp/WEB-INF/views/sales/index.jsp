@@ -53,6 +53,6 @@
       </div>
     </section>
   </main>
-  <script src="assets/base.js?v=20260928-160511"></script>
+  <script src="assets/base.js?v=20261005-1"></script>
 </body>
 </html>

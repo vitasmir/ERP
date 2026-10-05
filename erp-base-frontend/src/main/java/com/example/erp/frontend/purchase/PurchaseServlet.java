@@ -10,6 +10,7 @@ import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
@@ -56,17 +57,36 @@ public class PurchaseServlet extends HttpServlet {
     protected void doPost(HttpServletRequest request, HttpServletResponse response) throws IOException {
         String id = request.getParameter("id");
         try {
-            if ("create".equals(request.getParameter("action"))) {
+            if ("create".equals(request.getParameter("action")) || "update".equals(request.getParameter("action"))) {
+            String[] productIds = request.getParameterValues("productId");
+            String[] quantities = request.getParameterValues("quantity");
+            String[] unitPrices = request.getParameterValues("unitPrice");
+            if (productIds == null || quantities == null || unitPrices == null
+                    || productIds.length != quantities.length || quantities.length != unitPrices.length) {
+                throw new IllegalArgumentException("Missing purchase lines.");
+            }
+            List<PurchaseLineRequest> lines = new ArrayList<>();
+            for (int index = 0; index < productIds.length; index++) {
+                lines.add(new PurchaseLineRequest(UUID.fromString(productIds[index]), Integer.parseInt(quantities[index]),
+                    new BigDecimal(unitPrices[index])));
+            }
             String body = mapper.writeValueAsString(new CreatePurchaseOrderRequest(request.getParameter("supplierName"),
                 LocalDate.parse(request.getParameter("requestedOn")), LocalDate.parse(request.getParameter("expectedDeliveryDate")),
-                new BigDecimal(request.getParameter("totalAmount")), UUID.fromString(request.getParameter("sourceWarehouseId")),
-                UUID.fromString(request.getParameter("destinationWarehouseId")), UUID.fromString(request.getParameter("productId")),
-                Integer.parseInt(request.getParameter("quantity"))));
-            HttpRequest backendRequest = com.example.erp.frontend.base.BackendRequests.newBuilder(URI.create(backendUrl + "/api/v1/purchase/orders"))
-                .header("Content-Type", "application/json").POST(HttpRequest.BodyPublishers.ofString(body)).build();
+                UUID.fromString(request.getParameter("sourceWarehouseId")),
+                UUID.fromString(request.getParameter("destinationWarehouseId")), lines));
+            boolean update = "update".equals(request.getParameter("action"));
+            String endpoint = update ? backendUrl + "/api/v1/purchase/orders/" + UUID.fromString(id)
+                : backendUrl + "/api/v1/purchase/orders";
+            HttpRequest.Builder requestBuilder = com.example.erp.frontend.base.BackendRequests.newBuilder(URI.create(endpoint))
+                .header("Content-Type", "application/json");
+            HttpRequest backendRequest = update
+                ? requestBuilder.PUT(HttpRequest.BodyPublishers.ofString(body)).build()
+                : requestBuilder.POST(HttpRequest.BodyPublishers.ofString(body)).build();
             HttpResponse<Void> backendResponse = client.send(backendRequest, HttpResponse.BodyHandlers.discarding());
-                String message = backendResponse.statusCode() == HttpServletResponse.SC_CREATED
-                ? "Nákupní objednávka byla vytvořena." : "Objednávku se nepodařilo vytvořit.";
+                String message = (update ? backendResponse.statusCode() == HttpServletResponse.SC_OK
+                    : backendResponse.statusCode() == HttpServletResponse.SC_CREATED)
+                ? (update ? "Nákupní objednávka byla upravena." : "Nákupní objednávka byla vytvořena.")
+                : "Objednávku se nepodařilo uložit.";
             response.sendRedirect("purchase?message=" + URLEncoder.encode(message, StandardCharsets.UTF_8));
             return;
             }
@@ -76,7 +96,8 @@ public class PurchaseServlet extends HttpServlet {
                 HttpRequest backendRequest = "receive".equals(action)
                     ? requestBuilder.header("Content-Type", "application/json")
                     .method("PATCH", HttpRequest.BodyPublishers.ofString(mapper.writeValueAsString(
-                        new ReceivePurchaseRequest(Integer.parseInt(request.getParameter("quantity")))))).build()
+                        new ReceivePurchaseRequest(request.getParameter("quantity") == null
+                            ? null : Integer.parseInt(request.getParameter("quantity")))))).build()
                     : requestBuilder.method("PATCH", HttpRequest.BodyPublishers.noBody()).build();
             HttpResponse<Void> backendResponse = client.send(backendRequest, HttpResponse.BodyHandlers.discarding());
                 String message = backendResponse.statusCode() == HttpServletResponse.SC_OK
@@ -92,9 +113,10 @@ public class PurchaseServlet extends HttpServlet {
     }
 
     private record CreatePurchaseOrderRequest(String supplierName, LocalDate requestedOn,
-            LocalDate expectedDeliveryDate, BigDecimal totalAmount, UUID sourceWarehouseId,
-            UUID destinationWarehouseId, UUID productId, int quantity) { }
-        private record ReceivePurchaseRequest(int quantity) { }
+            LocalDate expectedDeliveryDate, UUID sourceWarehouseId,
+            UUID destinationWarehouseId, List<PurchaseLineRequest> lines) { }
+        private record PurchaseLineRequest(UUID productId, int quantity, BigDecimal unitPrice) { }
+        private record ReceivePurchaseRequest(Integer quantity) { }
 
         private <T> List<T> getList(String path, TypeReference<List<T>> type) throws IOException, InterruptedException {
         HttpRequest backendRequest = com.example.erp.frontend.base.BackendRequests.newBuilder(URI.create(backendUrl + path))

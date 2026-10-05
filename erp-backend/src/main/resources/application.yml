@@ -2,7 +2,7 @@ spring:
   application:
     name: erp-backend
   datasource:
-    url: ${DB_URL:jdbc:postgresql://localhost:5432/erp}
+    url: ${DB_URL:jdbc:postgresql://postgres:5432/erp}
     username: ${DB_USERNAME:erp}
     password: ${DB_PASSWORD:erp}
   jpa:

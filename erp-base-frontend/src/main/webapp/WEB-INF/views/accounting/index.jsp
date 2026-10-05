@@ -86,9 +86,7 @@
 								<button class="secondary" type="submit">Označit jako uhrazenou</button>
 							</form>
 						<% } %>
-						<% if ("PAID".equals(invoice.status())) { %>
 							<a class="invoice-pdf-link" href="accounting?pdf=<%= invoice.id() %>">Stáhnout PDF</a>
-						<% } %>
 						<% if ("DRAFT".equals(invoice.status())) { %>
 							<details class="invoice-edit"><summary>Upravit</summary>
 								<form method="post">

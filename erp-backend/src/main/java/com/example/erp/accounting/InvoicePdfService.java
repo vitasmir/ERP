@@ -20,8 +20,7 @@ public class InvoicePdfService {
         this.products = products;
     }
 
-    public void createWhenPaid(AccountInvoice invoice) {
-        if (invoice.getStatus() != InvoiceStatus.PAID) return;
+    public void createIfMissing(AccountInvoice invoice) {
         String filename = invoice.getInvoiceNumber() + ".pdf";
         if (records.attachments(invoice.getId()).stream().anyMatch(item -> filename.equals(item.filename()))) return;
         String orderNumber = null;

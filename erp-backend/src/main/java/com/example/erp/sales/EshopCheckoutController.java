@@ -106,7 +106,7 @@ public class EshopCheckoutController {
             entityManager.flush();
             invoiceRecords.payment(invoice.getId(), total, LocalDate.now(), "Platba kartou v e-shopu");
             invoiceRecords.event(invoice.getId(), "PAYMENT", "Platba kartou v e-shopu");
-            pdfs.createWhenPaid(invoice);
+            pdfs.createIfMissing(invoice);
         }
         return new CheckoutResponse(order.getId(), invoice.getId(), orderNumber, invoiceNumber, invoice.getStatus());
     }

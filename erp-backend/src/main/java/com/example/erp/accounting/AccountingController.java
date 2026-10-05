@@ -163,7 +163,7 @@ public class AccountingController {
         invoices.saveAndFlush(invoice);
         records.payment(id, request.amount(), request.paidOn(), request.reference());
         records.event(id, "PAYMENT", request.amount().toPlainString() + " / " + request.reference());
-        if (pdfs != null) pdfs.createWhenPaid(invoice);
+        if (pdfs != null) pdfs.createIfMissing(invoice);
         return InvoiceResponse.from(invoice);
     }
 
@@ -237,7 +237,7 @@ public class AccountingController {
         @GetMapping(value = "/invoices/{id}/pdf", produces = MediaType.APPLICATION_PDF_VALUE)
         public ResponseEntity<byte[]> pdf(@PathVariable UUID id) throws IOException {
                 AccountInvoice invoice = find(id);
-                if (invoice.getStatus() == InvoiceStatus.PAID && pdfs != null) pdfs.createWhenPaid(invoice);
+                if (pdfs != null) pdfs.createIfMissing(invoice);
                 InvoiceRecords.Attachment stored = records.attachments(id).stream()
                                 .filter(item -> (invoice.getInvoiceNumber() + ".pdf").equals(item.filename()))
                                 .findFirst().orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Invoice PDF was not found."));

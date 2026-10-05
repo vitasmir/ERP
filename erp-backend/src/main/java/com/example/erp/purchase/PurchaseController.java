@@ -12,15 +12,16 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestAttribute;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
 
 import com.example.erp.catalog.ProductRepository;
-import com.example.erp.inventory.InventoryItem;
-import com.example.erp.inventory.InventoryItemRepository;
+import com.example.erp.inventory.InventoryStockService;
 import com.example.erp.inventory.Warehouse;
 import com.example.erp.inventory.WarehouseOwnerType;
 import com.example.erp.inventory.WarehouseRepository;
+import com.example.erp.users.ErpUser;
 
 @RestController
 @RequestMapping("/api/v1/purchase")
@@ -28,10 +29,10 @@ public class PurchaseController {
     private final PurchaseOrderRepository orders;
         private final WarehouseRepository warehouses;
         private final ProductRepository products;
-        private final InventoryItemRepository inventory;
+        private final InventoryStockService inventory;
 
         public PurchaseController(PurchaseOrderRepository orders, WarehouseRepository warehouses,
-                        ProductRepository products, InventoryItemRepository inventory) {
+                        ProductRepository products, InventoryStockService inventory) {
                 this.orders = orders;
                 this.warehouses = warehouses;
                 this.products = products;
@@ -79,8 +80,9 @@ public class PurchaseController {
         }
 
     @PatchMapping("/orders/{id}/order")
+    @org.springframework.transaction.annotation.Transactional
     public PurchaseOrderResponse order(@PathVariable UUID id) {
-        PurchaseOrder purchaseOrder = orders.findById(id)
+        PurchaseOrder purchaseOrder = orders.findForUpdate(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Purchase order was not found."));
         purchaseOrder.order();
         return PurchaseOrderResponse.from(orders.save(purchaseOrder));
@@ -88,20 +90,21 @@ public class PurchaseController {
 
         @org.springframework.transaction.annotation.Transactional
         @PatchMapping("/orders/{id}/receive")
-        public PurchaseOrderResponse receive(@PathVariable UUID id, @RequestBody ReceivePurchaseRequest request) {
-                PurchaseOrder order = orders.findById(id)
+        public PurchaseOrderResponse receive(@PathVariable UUID id, @RequestBody ReceivePurchaseRequest request,
+                        @RequestAttribute("erpUser") ErpUser actor) {
+                PurchaseOrder order = orders.findForUpdate(id)
                                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Purchase order was not found."));
                 if (request == null || request.quantity() <= 0 || order.getProductId() == null
                                 || order.getDestinationWarehouseId() == null) {
                         throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Purchase order has no receivable stock line.");
                 }
                 Warehouse destination = warehouse(order.getDestinationWarehouseId(), WarehouseOwnerType.COMPANY);
-                ProductRepository productRepository = products;
-                productRepository.findById(order.getProductId()).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Product was not found."));
-                InventoryItem item = inventory.findByProductIdAndWarehouseId(order.getProductId(), destination.getId())
-                                .orElseGet(() -> InventoryItem.create(order.getProductId(), destination.getId(), destination.getName()));
-                item.receive(request.quantity());
-                inventory.save(item);
+                if (order.getStatus() != PurchaseOrderStatus.ORDERED || order.getQuantity() == null
+                                || request.quantity() > order.getQuantity() - order.getReceivedQuantity()) {
+                        throw new ResponseStatusException(HttpStatus.CONFLICT, "Neplatné množství nebo stav nákupní objednávky.");
+                }
+                inventory.receivePurchase(order.getProductId(), destination.getId(), destination.getName(),
+                                request.quantity(), order.getOrderNumber(), actor);
                 order.receive(request.quantity());
                 return PurchaseOrderResponse.from(orders.save(order));
         }

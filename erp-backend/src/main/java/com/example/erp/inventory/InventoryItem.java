@@ -1,6 +1,7 @@
 package com.example.erp.inventory;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.UUID;
 
 import jakarta.persistence.Column;
@@ -34,6 +35,9 @@ public class InventoryItem {
     @Column(name = "ordered_from_central")
     private int orderedFromCentral;
 
+    @Column(name = "updated_at")
+    private LocalDateTime updatedAt;
+
     protected InventoryItem() { }
 
     public static InventoryItem create(UUID productId, String locationName) {
@@ -50,6 +54,7 @@ public class InventoryItem {
         item.reorderLevel = 0;
         item.unitCost = BigDecimal.ZERO;
         item.orderedFromCentral = 0;
+        item.updatedAt = LocalDateTime.now();
         return item;
     }
 
@@ -63,7 +68,11 @@ public class InventoryItem {
     public int getOrderedFromCentral() { return orderedFromCentral; }
 
     public void receive(int receivedQuantity) {
-        quantity += receivedQuantity;
+        if (receivedQuantity <= 0) {
+            throw new IllegalArgumentException("Received quantity must be positive.");
+        }
+        quantity = Math.addExact(quantity, receivedQuantity);
+        updatedAt = LocalDateTime.now();
     }
 
     public void dispatch(int dispatchedQuantity) {
@@ -71,14 +80,17 @@ public class InventoryItem {
             throw new IllegalArgumentException("Dispatched quantity exceeds available stock.");
         }
         quantity -= dispatchedQuantity;
+        updatedAt = LocalDateTime.now();
     }
 
     public void updateStockSettings(int newReorderLevel, BigDecimal newUnitCost) {
         reorderLevel = newReorderLevel;
         unitCost = newUnitCost;
+        updatedAt = LocalDateTime.now();
     }
 
     public void orderFromCentral(int requestedQuantity) {
         orderedFromCentral = requestedQuantity;
+        updatedAt = LocalDateTime.now();
     }
 }

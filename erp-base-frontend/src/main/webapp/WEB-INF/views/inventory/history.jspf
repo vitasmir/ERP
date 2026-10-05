@@ -1,0 +1,76 @@
+<%@ page pageEncoding="UTF-8" %>
+<%
+  InventoryMovementsView movementPage = (InventoryMovementsView) request.getAttribute("movements");
+  String historyError = (String) request.getAttribute("historyError");
+  String selectedItem = String.valueOf(request.getAttribute("selectedItemId"));
+  java.time.format.DateTimeFormatter movementDate = java.time.format.DateTimeFormatter
+      .ofPattern("dd.MM.yyyy HH:mm:ss").withZone(java.time.ZoneId.of("Europe/Prague"));
+%>
+<section id="history" class="inventory-section inventory-view-panel" role="tabpanel" aria-labelledby="tab-history"
+    <%= "history".equals(selectedView) ? "" : "hidden" %>>
+  <div class="section-head">
+    <div><span class="eyebrow">AUDIT ZÁSOB</span><h2>Historie příjmů a výdejů</h2></div>
+  </div>
+  <p class="inventory-help">Pohyby nelze upravovat ani mazat. Opravu evidujte jako opačný pohyb s odkazem na původní doklad.
+    Počáteční stav zachycuje zásoby při zavedení evidence. Časy jsou v pásmu Europe/Prague.</p>
+  <form method="get" class="inventory-history-filter">
+    <input type="hidden" name="view" value="history">
+    <label for="history-item">Skladová položka</label>
+    <select id="history-item" name="itemId">
+      <option value="">Všechny položky</option>
+      <% if (overview != null) for (InventoryItemView item : overview.items()) { %>
+        <option value="<%= item.id() %>" <%= item.id().toString().equals(selectedItem) ? "selected" : "" %>>
+          <%= escapeHtml(item.productName() + " / " + item.locationName()) %>
+        </option>
+      <% } %>
+    </select>
+    <button class="secondary" type="submit">Zobrazit</button>
+  </form>
+  <% if (historyError != null) { %>
+    <p class="inventory-message error" role="alert"><%= escapeHtml(historyError) %></p>
+  <% } %>
+  <% if (movementPage != null) { %>
+    <div class="stock-table-wrap">
+      <table class="stock-table movement-table">
+        <caption class="inventory-help">Příjmy, výdeje a stav po každém pohybu</caption>
+        <thead>
+          <tr><th scope="col">Datum / ID</th><th scope="col">Produkt / lokace</th><th scope="col">Typ</th>
+            <th scope="col">Množství</th><th scope="col">Stav po pohybu</th><th scope="col">Doklad / poznámka</th><th scope="col">Uživatel</th></tr>
+        </thead>
+        <tbody>
+          <% for (MovementView movement : movementPage.items()) { %>
+            <tr>
+              <td data-label="Datum / ID"><time><%= movementDate.format(java.time.Instant.parse(movement.createdAt())) %></time><br>#<%= movement.id() %></td>
+              <td data-label="Produkt / lokace"><strong><%= escapeHtml(movement.productName()) %></strong><span><%= escapeHtml(movement.sku()) %></span><span><%= escapeHtml(movement.locationName()) %></span></td>
+              <td data-label="Typ"><span class="status-chip <%= "ISSUE".equals(movement.type()) ? "status-low" : "status-ok" %>">
+                <%= "ISSUE".equals(movement.type()) ? "VÝDEJ" : "RECEIPT".equals(movement.type()) ? "PŘÍJEM" : "POČÁTEČNÍ STAV" %>
+              </span></td>
+              <td data-label="Množství"><%= "ISSUE".equals(movement.type()) ? "−" : "+" %><%= movement.quantity() %> <%= escapeHtml(movement.unit()) %></td>
+              <td data-label="Stav po pohybu"><%= movement.balanceAfter() %> <%= escapeHtml(movement.unit()) %></td>
+              <td data-label="Doklad / poznámka"><strong><%= escapeHtml(movement.reference()) %></strong><span class="movement-note"><%= escapeHtml(movement.note()) %></span></td>
+              <td data-label="Uživatel"><%= escapeHtml(movement.actorName()) %></td>
+            </tr>
+          <% } %>
+          <% if (movementPage.items().isEmpty()) { %>
+            <tr><td colspan="7">Pro tento výběr nejsou evidovány žádné pohyby.</td></tr>
+          <% } %>
+        </tbody>
+      </table>
+    </div>
+    <%
+      long totalPages = (movementPage.totalElements() + movementPage.size() - 1) / movementPage.size();
+      String historyFilter = request.getAttribute("selectedItemId") == null ? "" : "&amp;itemId=" + selectedItem;
+    %>
+    <nav class="inventory-pagination" aria-label="Stránkování historie">
+      <span>Celkem <%= movementPage.totalElements() %> pohybů · Strana <%= totalPages == 0 ? 0 : movementPage.page() + 1 %> / <%= totalPages %></span>
+      <div>
+        <% if (movementPage.page() > 0) { %>
+          <a class="secondary" href="inventory?view=history&amp;page=<%= movementPage.page() - 1 %><%= historyFilter %>">Předchozí</a>
+        <% } %>
+        <% if (movementPage.page() + 1 < totalPages) { %>
+          <a class="secondary" href="inventory?view=history&amp;page=<%= movementPage.page() + 1 %><%= historyFilter %>">Další</a>
+        <% } %>
+      </div>
+    </nav>
+  <% } %>
+</section>

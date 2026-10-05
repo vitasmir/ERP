@@ -41,6 +41,7 @@ public class InventoryServlet extends HttpServlet {
         } catch (IOException exception) {
             request.setAttribute("error", "Backend pro sklad není dostupný: " + exception.getMessage());
         }
+        loadMovements(request);
         request.getRequestDispatcher("/WEB-INF/views/inventory/index.jsp").forward(request, response);
     }
 
@@ -50,33 +51,55 @@ public class InventoryServlet extends HttpServlet {
             saveOrder(request, response);
             return;
         }
-        String id = request.getParameter("id");
-        String quantity = request.getParameter("quantity");
-        String reorderLevel = request.getParameter("reorderLevel");
-        String unitCost = request.getParameter("unitCost");
         try {
-            UUID.fromString(id);
-            int receivedQuantity = Integer.parseInt(quantity);
-            int minimumQuantity = Integer.parseInt(reorderLevel);
-            BigDecimal receivedUnitCost = new BigDecimal(unitCost.replace(',', '.'));
-            if (receivedQuantity <= 0 || minimumQuantity < 0 || receivedUnitCost.signum() < 0) {
+            UUID id = UUID.fromString(request.getParameter("id"));
+            int quantity = Integer.parseInt(request.getParameter("quantity"));
+            String action = request.getParameter("action");
+            if (action != null && !"receive".equals(action) && !"dispatch".equals(action)) {
+                throw new IllegalArgumentException("Unknown stock action.");
+            }
+            String reference = request.getParameter("reference");
+            String note = request.getParameter("note");
+            if (quantity <= 0 || reference == null || reference.isBlank() || reference.length() > 120
+                    || (note != null && note.length() > 500)) {
                 throw new IllegalArgumentException();
             }
-            String requestBody = mapper.writeValueAsString(
-                    new ReceiveStockRequest(receivedQuantity, minimumQuantity, receivedUnitCost));
-            HttpRequest backendRequest = com.example.erp.frontend.base.BackendRequests.newBuilder(URI.create(backendUrl + "/api/v1/inventory/items/" + id + "/receive"))
+            boolean dispatch = "dispatch".equals(action);
+            String requestBody;
+            if (dispatch) {
+                requestBody = mapper.writeValueAsString(new DispatchStockRequest(quantity, reference.trim(), note));
+            } else {
+                int minimumQuantity = Integer.parseInt(request.getParameter("reorderLevel"));
+                String cost = request.getParameter("unitCost");
+                if (cost == null || cost.isBlank()) {
+                    throw new IllegalArgumentException();
+                }
+                BigDecimal receivedUnitCost = new BigDecimal(cost.replace(',', '.'));
+                if (minimumQuantity < 0 || receivedUnitCost.signum() < 0 || receivedUnitCost.scale() > 2
+                        || receivedUnitCost.compareTo(new BigDecimal("9999999999.99")) > 0) {
+                    throw new IllegalArgumentException();
+                }
+                requestBody = mapper.writeValueAsString(
+                        new ReceiveStockRequest(quantity, minimumQuantity, receivedUnitCost, reference.trim(), note));
+            }
+            HttpRequest backendRequest = com.example.erp.frontend.base.BackendRequests.newBuilder(
+                    URI.create(backendUrl + "/api/v1/inventory/items/" + id + (dispatch ? "/dispatch" : "/receive")))
                     .header("Content-Type", "application/json")
                     .method("PATCH", HttpRequest.BodyPublishers.ofString(requestBody)).build();
-            HttpResponse<Void> backendResponse = client.send(backendRequest, HttpResponse.BodyHandlers.discarding());
-            String message = backendResponse.statusCode() == HttpServletResponse.SC_OK
-                    ? "Příjem zásoby byl zaevidován." : "Příjem zásoby backend odmítl.";
-            response.sendRedirect("inventory?message=" + URLEncoder.encode(message, StandardCharsets.UTF_8));
+            HttpResponse<String> backendResponse = client.send(backendRequest, HttpResponse.BodyHandlers.ofString());
+            if (backendResponse.statusCode() == HttpServletResponse.SC_OK) {
+                redirect(response, "message", dispatch ? "Výdej zásoby byl zaevidován." : "Příjem zásoby byl zaevidován.");
+            } else {
+                redirect(response, "error", backendError(backendResponse, "Skladový pohyb backend odmítl."));
+            }
         } catch (IllegalArgumentException exception) {
-            response.sendRedirect("inventory?error=" + URLEncoder.encode(
-                    "Zadejte platné množství příjmu, minimum a jednotkovou cenu.", StandardCharsets.UTF_8));
+            redirect(response, "error", "Zadejte kladné celočíselné množství, doklad, platné minimum a cenu.");
         } catch (InterruptedException exception) {
             Thread.currentThread().interrupt();
-            response.sendRedirect("inventory?error=" + URLEncoder.encode("Příjem zásoby byl přerušen.", StandardCharsets.UTF_8));
+            redirect(response, "error", "Odesílání bylo přerušeno. Před opakováním ověřte historii pohybů.");
+        } catch (IOException exception) {
+            getServletContext().log("Inventory movement request failed.", exception);
+            redirect(response, "error", "Spojení se skladem selhalo. Před opakováním ověřte historii pohybů.");
         }
     }
 
@@ -95,11 +118,12 @@ public class InventoryServlet extends HttpServlet {
             HttpRequest backendRequest = com.example.erp.frontend.base.BackendRequests.newBuilder(URI.create(backendUrl + "/api/v1/inventory/orders"))
                     .header("Content-Type", "application/json")
                     .method("PATCH", HttpRequest.BodyPublishers.ofString(requestBody)).build();
-            HttpResponse<Void> backendResponse = client.send(backendRequest, HttpResponse.BodyHandlers.discarding());
-            String message = backendResponse.statusCode() == HttpServletResponse.SC_OK
-                    ? "Objednávka z hlavního skladu byla uložena." : "Objednávku backend odmítl.";
+            HttpResponse<String> backendResponse = client.send(backendRequest, HttpResponse.BodyHandlers.ofString());
+            boolean success = backendResponse.statusCode() == HttpServletResponse.SC_OK;
+            String message = success ? "Objednávka z hlavního skladu byla uložena."
+                    : backendError(backendResponse, "Objednávku backend odmítl.");
             String location = URLEncoder.encode(locationName, StandardCharsets.UTF_8);
-            response.sendRedirect("inventory?message=" + URLEncoder.encode(message, StandardCharsets.UTF_8)
+            response.sendRedirect("inventory?" + (success ? "message=" : "error=") + URLEncoder.encode(message, StandardCharsets.UTF_8)
                     + "&warehouseName=" + location + "&view=products");
         } catch (IllegalArgumentException exception) {
             response.sendRedirect("inventory?error="
@@ -108,10 +132,67 @@ public class InventoryServlet extends HttpServlet {
             Thread.currentThread().interrupt();
             response.sendRedirect("inventory?error="
                     + URLEncoder.encode("Objednávka byla přerušena.", StandardCharsets.UTF_8));
+        } catch (IOException exception) {
+            getServletContext().log("Inventory order request failed.", exception);
+            redirect(response, "error", "Objednávku se nepodařilo odeslat. Ověřte stav před opakováním.");
         }
     }
 
-    private record ReceiveStockRequest(int quantity, int reorderLevel, BigDecimal unitCost) { }
+    private void loadMovements(HttpServletRequest request) {
+        try {
+            String itemId = request.getParameter("itemId");
+            String pageParameter = request.getParameter("page");
+            int page = pageParameter == null ? 0 : Integer.parseInt(pageParameter);
+            if (page < 0) {
+                throw new IllegalArgumentException();
+            }
+            String filter = itemId == null || itemId.isBlank() ? "" : "&itemId=" + UUID.fromString(itemId);
+            if (!filter.isEmpty()) {
+                request.setAttribute("selectedItemId", UUID.fromString(itemId));
+            }
+            HttpResponse<String> result = client.send(com.example.erp.frontend.base.BackendRequests.newBuilder(
+                    URI.create(backendUrl + "/api/v1/inventory/movements?page=" + page + filter)).GET().build(),
+                    HttpResponse.BodyHandlers.ofString());
+            if (result.statusCode() != HttpServletResponse.SC_OK) {
+                throw new IOException(backendError(result, "Historii pohybů backend odmítl."));
+            }
+            request.setAttribute("movements", mapper.readValue(result.body(), InventoryMovementsView.class));
+        } catch (IllegalArgumentException exception) {
+            request.setAttribute("historyError", "Neplatný filtr nebo stránka historie.");
+        } catch (InterruptedException exception) {
+            Thread.currentThread().interrupt();
+            request.setAttribute("historyError", "Načítání historie bylo přerušeno.");
+        } catch (IOException exception) {
+            request.setAttribute("historyError", "Historii pohybů se nepodařilo načíst: " + exception.getMessage());
+        }
+    }
+
+    private String backendError(HttpResponse<String> response, String fallback) throws IOException {
+        if (response.statusCode() == HttpServletResponse.SC_UNAUTHORIZED) {
+            return "Přihlášení vypršelo. Přihlaste se znovu.";
+        }
+        if (response.statusCode() == HttpServletResponse.SC_FORBIDDEN) {
+            return "Nemáte oprávnění k této skladové operaci.";
+        }
+        String contentType = response.headers().firstValue("Content-Type").orElse("");
+        if (contentType.contains("json") && response.body() != null && !response.body().isBlank()) {
+            var body = mapper.readTree(response.body());
+            String detail = body.path("detail").asText("");
+            String message = body.path("message").asText("");
+            if (!detail.isBlank()) return detail;
+            if (!message.isBlank()) return message;
+        }
+        return fallback + " (HTTP " + response.statusCode() + ")";
+    }
+
+    private void redirect(HttpServletResponse response, String parameter, String message) throws IOException {
+        response.sendRedirect("inventory?" + parameter + "=" + URLEncoder.encode(message, StandardCharsets.UTF_8));
+    }
+
+    private record ReceiveStockRequest(int quantity, int reorderLevel, BigDecimal unitCost,
+            String reference, String note) { }
+
+    private record DispatchStockRequest(int quantity, String reference, String note) { }
 
     private record OrderStockRequest(UUID productId, String locationName, int quantity) { }
 }

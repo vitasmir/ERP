@@ -107,6 +107,10 @@ public class ApiAccess implements HandlerInterceptor {
         return matches != null && matches > 0;
     }
 
+    public boolean canEdit(ErpUser user, String module) {
+        return hasPermission(user.getRoleName(), module, Permission.EDIT);
+    }
+
     private enum Permission {
         READ("can_read"), INSERT("can_insert"), EDIT("can_edit"), DELETE("can_delete"), MANAGE("can_manage");
 

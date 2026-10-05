@@ -18,6 +18,8 @@ import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestAttribute;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
 
@@ -25,6 +27,17 @@ import com.example.erp.catalog.Product;
 import com.example.erp.catalog.ProductCategory;
 import com.example.erp.catalog.ProductCategoryRepository;
 import com.example.erp.catalog.ProductRepository;
+import com.example.erp.users.ApiAccess;
+import com.example.erp.users.ErpUser;
+
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.DecimalMin;
+import jakarta.validation.constraints.Digits;
+import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
+import org.springframework.transaction.annotation.Transactional;
 
 @RestController
 @RequestMapping("/api/v1/inventory")
@@ -32,16 +45,22 @@ public class InventoryController {
     private final InventoryItemRepository items;
     private final ProductRepository products;
     private final ProductCategoryRepository categories;
+    private final InventoryStockService stock;
+    private final InventoryRecords records;
+    private final ApiAccess access;
 
     public InventoryController(InventoryItemRepository items, ProductRepository products,
-            ProductCategoryRepository categories) {
+            ProductCategoryRepository categories, InventoryStockService stock, InventoryRecords records, ApiAccess access) {
         this.items = items;
         this.products = products;
         this.categories = categories;
+        this.stock = stock;
+        this.records = records;
+        this.access = access;
     }
 
     @GetMapping("/overview")
-    public InventoryOverview overview() {
+    public InventoryOverview overview(@RequestAttribute("erpUser") ErpUser actor) {
         CategoryTree categoryTree = categoryTree();
         List<InventoryItem> inventoryItems = items.findAllByOrderByQuantityAsc();
         Map<UUID, Product> productsById = new HashMap<>();
@@ -53,30 +72,47 @@ public class InventoryController {
                         .thenComparing(InventoryItemResponse::productName)
                         .thenComparing(InventoryItemResponse::locationName)).toList();
         List<InventoryProductResponse> productRows = productRows(inventoryItems, productsById, categoryTree);
-        int totalQuantity = rows.stream().mapToInt(InventoryItemResponse::quantity).sum();
+        long totalQuantity = rows.stream().mapToLong(InventoryItemResponse::quantity).sum();
         long lowStockCount = rows.stream().filter(row -> row.quantity() < row.reorderLevel()).count();
         BigDecimal stockValue = rows.stream().map(row -> row.unitCost().multiply(BigDecimal.valueOf(row.quantity())))
                 .reduce(BigDecimal.ZERO, BigDecimal::add).setScale(2);
-        return new InventoryOverview(totalQuantity, stockValue, lowStockCount, rows, productRows);
+        return new InventoryOverview(totalQuantity, stockValue, lowStockCount, rows, productRows,
+                access.canEdit(actor, "inventory"));
     }
 
     @PatchMapping("/items/{id}/receive")
-    public InventoryItemResponse receive(@PathVariable UUID id, @RequestBody ReceiveStockRequest request) {
+    public InventoryItemResponse receive(@PathVariable UUID id, @Valid @RequestBody ReceiveStockRequest request,
+            @RequestAttribute("erpUser") ErpUser actor) {
         if (request == null || request.quantity() <= 0 || request.reorderLevel() < 0
                 || request.unitCost() == null || request.unitCost().signum() < 0) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
                     "Received quantity, minimum, and unit cost must be valid non-negative values.");
         }
-        InventoryItem item = items.findById(id)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Inventory item was not found."));
-        item.updateStockSettings(request.reorderLevel(), request.unitCost());
-        item.receive(request.quantity());
-        InventoryItem saved = items.save(item);
+        InventoryItem saved = stock.receive(id, request.quantity(), request.reorderLevel(), request.unitCost(),
+                request.reference(), request.note(), actor);
         Product product = product(saved.getProductId());
         return InventoryItemResponse.from(saved, product, categoryTree().detailsFor(product.getCategoryId()));
     }
 
+    @PatchMapping("/items/{id}/dispatch")
+    public InventoryItemResponse dispatch(@PathVariable UUID id, @Valid @RequestBody DispatchStockRequest request,
+            @RequestAttribute("erpUser") ErpUser actor) {
+        InventoryItem saved = stock.dispatch(id, request.quantity(), request.reference(), request.note(), actor);
+        Product product = product(saved.getProductId());
+        return InventoryItemResponse.from(saved, product, categoryTree().detailsFor(product.getCategoryId()));
+    }
+
+    @GetMapping("/movements")
+    public InventoryRecords.MovementPage movements(@RequestParam(required = false) UUID itemId,
+            @RequestParam(defaultValue = "0") int page, @RequestParam(defaultValue = "20") int size) {
+        if (itemId != null && !items.existsById(itemId)) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Skladová položka nebyla nalezena.");
+        }
+        return records.movements(itemId, page, size);
+    }
+
     @PatchMapping("/orders")
+    @Transactional
     public InventoryItemResponse orderFromCentral(@RequestBody OrderStockRequest request) {
         if (request == null || request.productId() == null || request.locationName() == null
                 || request.locationName().isBlank() || request.quantity() < 0) {
@@ -87,7 +123,8 @@ public class InventoryController {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
                     "Orders can only be created for a non-central warehouse.");
         }
-        Product product = product(request.productId());
+        Product product = products.findForUpdate(request.productId())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Product was not found."));
         boolean knownWarehouse = items.findAll().stream()
                 .anyMatch(item -> locationName.equals(item.getLocationName()) && !isCentralLocation(item.getLocationName()));
         if (!knownWarehouse) {
@@ -187,12 +224,17 @@ public class InventoryController {
         }
     }
 
-    public record ReceiveStockRequest(int quantity, int reorderLevel, BigDecimal unitCost) { }
+    public record ReceiveStockRequest(@Min(1) int quantity, @Min(0) int reorderLevel,
+            @NotNull @DecimalMin("0") @Digits(integer = 10, fraction = 2) BigDecimal unitCost,
+            @Size(max = 120) String reference, @Size(max = 500) String note) { }
+
+    public record DispatchStockRequest(@Min(1) int quantity, @NotBlank @Size(max = 120) String reference,
+            @Size(max = 500) String note) { }
 
     public record OrderStockRequest(UUID productId, String locationName, int quantity) { }
 
-    public record InventoryOverview(int totalQuantity, BigDecimal stockValue, long lowStockCount,
-            List<InventoryItemResponse> items, List<InventoryProductResponse> products) { }
+    public record InventoryOverview(long totalQuantity, BigDecimal stockValue, long lowStockCount,
+            List<InventoryItemResponse> items, List<InventoryProductResponse> products, boolean canEdit) { }
 
     public record InventoryItemResponse(UUID id, String productName, String imageUrl, String sku, String locationName, int quantity,
             int reorderLevel, BigDecimal unitCost, int orderedFromCentral, String unit, String categoryPath,
@@ -205,8 +247,8 @@ public class InventoryController {
     }
 
     public record InventoryProductResponse(UUID productId, String productName, String sku, String unit,
-            String description, String imageUrl, String categoryPath, int categoryDepth, int centralQuantity,
-            int warehouseQuantity, int locationCount, List<WarehouseStockResponse> warehouses) { }
+            String description, String imageUrl, String categoryPath, int categoryDepth, long centralQuantity,
+            long warehouseQuantity, int locationCount, List<WarehouseStockResponse> warehouses) { }
 
     public record WarehouseStockResponse(UUID inventoryItemId, String locationName, int quantity,
             int orderedFromCentral) { }
@@ -214,8 +256,8 @@ public class InventoryController {
     private static final class ProductStock {
         private final Product product;
         private final CategoryDetails category;
-        private int centralQuantity;
-        private int warehouseQuantity;
+        private long centralQuantity;
+        private long warehouseQuantity;
         private int locationCount;
 
         private ProductStock(Product product, CategoryDetails category) {

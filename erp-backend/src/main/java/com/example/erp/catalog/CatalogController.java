@@ -22,6 +22,7 @@ import org.springframework.web.server.ResponseStatusException;
 
 import com.example.erp.inventory.InventoryItem;
 import com.example.erp.inventory.InventoryItemRepository;
+import com.example.erp.inventory.InventoryRecords;
 
 @RestController
 @RequestMapping("/api/v1/catalog")
@@ -35,10 +36,12 @@ public class CatalogController {
     private final DeliveryOptionRepository deliveryOptions;
         private final ProductImageRepository images;
     private final PricingService pricing;
+    private final InventoryRecords inventoryRecords;
 
     public CatalogController(ProductRepository products, ProductCategoryRepository categories,
             HomepageSettingsRepository homepage, InventoryItemRepository inventory,
-            DeliveryOptionRepository deliveryOptions, ProductImageRepository images, PricingService pricing) {
+            DeliveryOptionRepository deliveryOptions, ProductImageRepository images, PricingService pricing,
+            InventoryRecords inventoryRecords) {
         this.products = products;
         this.categories = categories;
         this.homepage = homepage;
@@ -46,6 +49,7 @@ public class CatalogController {
         this.deliveryOptions = deliveryOptions;
         this.images = images;
         this.pricing = pricing;
+        this.inventoryRecords = inventoryRecords;
     }
 
     @GetMapping("/homepage")
@@ -119,9 +123,13 @@ public class CatalogController {
     @PutMapping("/products/{id}")
     @Transactional
     public ProductResponse updateProduct(@PathVariable UUID id, @RequestBody ProductRequest request) {
-        Product product = products.findById(id)
+        Product product = products.findForUpdate(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Product was not found."));
         validateProduct(request, id);
+        if (!product.getUnit().equals(request.unit().trim()) && inventoryRecords.hasMovements(id)) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "Jednotku produktu s historií skladových pohybů nelze změnit.");
+        }
         String imageUrl = textOrNull(request.imageUrl());
         if (imageUrl == null) imageUrl = product.getImageUrl();
         BigDecimal vatRate = vatRate(request);
@@ -158,8 +166,13 @@ public class CatalogController {
     @DeleteMapping("/products/{id}")
     @Transactional
     public void deleteProduct(@PathVariable UUID id) {
-        Product product = products.findById(id)
+        Product product = products.findForUpdate(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Product was not found."));
+        if (inventoryRecords.hasMovements(id) || inventory.findAllByProductIdOrderByQuantityDesc(id).stream()
+                .anyMatch(item -> item.getQuantity() > 0)) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "Produkt se zásobami nebo historií pohybů nelze smazat. Můžete jej deaktivovat.");
+        }
         inventory.deleteAllByProductId(product.getId());
         products.delete(product);
     }

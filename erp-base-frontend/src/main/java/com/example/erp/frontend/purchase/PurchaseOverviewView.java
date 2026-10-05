@@ -11,5 +11,9 @@ public record PurchaseOverviewView(BigDecimal requestedValue, BigDecimal ordered
             UUID destinationWarehouseId, UUID productId, Integer quantity, int receivedQuantity) { }
 
         public record WarehouseView(UUID id, String name, String ownerType) { }
-        public record ProductView(UUID id, String name, String sku, String unit, String description) { }
+        public record ProductView(UUID id, String sku, String name, String unit, String description,
+                BigDecimal price, BigDecimal purchasePrice, BigDecimal vatRate,
+                BigDecimal eshopMarginPercent, UUID categoryId, String imageUrl, boolean active,
+                List<ProductImageView> images) { }
+        public record ProductImageView(UUID id, String imageUrl, boolean active, int sortOrder) { }
 }

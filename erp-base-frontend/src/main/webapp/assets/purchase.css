@@ -1,7 +1,3 @@
-.order-table tbody tr:hover th,
-.order-table tbody tr:hover td {
-  background: #eef5d9;
-}
 .purchase-actions {
   display: flex;
   gap: 10px;
@@ -221,7 +217,7 @@ dialog.order-dialog[open] .new-order-form input {
 }
 .order-table {
   width: 100%;
-  min-width: 900px;
+  min-width: 1040px;
   border-collapse: collapse;
   table-layout: fixed;
 }
@@ -240,25 +236,42 @@ dialog.order-dialog[open] .new-order-form input {
   vertical-align: middle;
   color: #53645a;
   font-size: 12px;
+  overflow-wrap: anywhere;
+  transition: background-color 140ms ease, box-shadow 140ms ease;
+}
+.order-table tbody tr:hover td,
+.order-table tbody tr:focus-within td {
+  background: #eef5d9;
+}
+.order-table tbody tr:hover td:first-child,
+.order-table tbody tr:focus-within td:first-child {
+  box-shadow: inset 3px 0 #557f65;
+}
+.order-table tbody tr:hover td:last-child,
+.order-table tbody tr:focus-within td:last-child {
+  box-shadow: inset -3px 0 #557f65;
 }
 .order-table tbody tr:last-child td {
   border-bottom: 0;
 }
 .order-table th:nth-child(1) {
-  width: 20%;
+  width: 16%;
 }
 .order-table th:nth-child(2) {
-  width: 21%;
+  width: 18%;
 }
 .order-table th:nth-child(3),
 .order-table th:nth-child(4) {
-  width: 13%;
+  width: 14%;
 }
 .order-table th:nth-child(5) {
-  width: 16%;
+  width: 12%;
 }
 .order-table th:nth-child(6) {
-  width: 17%;
+  width: 14%;
+}
+.order-table th:nth-child(7) {
+  width: 12%;
 }
 .order-table td strong {
   display: block;
@@ -272,6 +285,13 @@ dialog.order-dialog[open] .new-order-form input {
 }
 .order-table .secondary {
   white-space: nowrap;
+}
+.order-table .secondary:focus-visible,
+.dialog-close:focus-visible,
+.purchase-actions a:focus-visible,
+.purchase-actions button:focus-visible {
+  outline: 2px solid #3c8592;
+  outline-offset: 2px;
 }
 .purchase-page {
   min-height: 100vh;

@@ -1,0 +1,36 @@
+{% extends 'base.html.twig' %}
+
+{% block stylesheets %}
+    <link rel="stylesheet" href="{{ asset('assets/roles.css') }}">
+    <style>.topbar .breadcrumb { display: none !important; }.role-column-mark { background: var(--card-color, #d9ed62); }</style>
+{% endblock %}
+
+{% block body %}
+    <section class="section-head compact">
+        <div><span class="eyebrow">BASE / MODULE ACCESS</span><h2>Role pro moduly</h2><p>Nastavení přístupu jednotlivých rolí k modulům ERP.</p></div>
+        <button class="primary" id="save-module-permissions" type="submit" form="module-permissions-form">Uložit oprávnění</button>
+    </section>
+    {% if message %}<div class="page-alert success-alert">{{ message }}</div>{% endif %}
+    {% if error %}<div class="page-alert error-alert">{{ error }}</div>{% endif %}
+    <form id="module-permissions-form" method="post" action="/role-modules">
+        <input type="hidden" name="action" value="save-module-permissions">
+        <div class="permissions-table-wrap"><table class="permissions-table">
+            <thead><tr><th>Modul</th>{% for role in roles %}<th><span class="role-column-mark" style="--card-color:{{ role.color|default('#D9ED62') }}">{{ role.initial }}</span>{{ role.name }}</th>{% endfor %}</tr></thead>
+            <tbody>
+                {% for module in matrix.modules|default([]) %}
+                    <tr><th scope="row">{{ module.name }}</th>
+                        {% for role in roles %}
+                            {% set enabled = role.name == 'Administrátor' %}
+                            {% for permission in matrix.permissions|default([]) %}
+                                {% if permission.roleId == role.id and permission.moduleKey == module.key %}{% set enabled = true %}{% endif %}
+                            {% endfor %}
+                            <td><input type="checkbox" name="permission_{{ role.id }}_{{ module.key }}" {{ enabled ? 'checked' : '' }} {{ role.name == 'Administrátor' ? 'disabled' : '' }} aria-label="{{ module.name }} - {{ role.name }}"></td>
+                        {% endfor %}
+                    </tr>
+                {% else %}
+                    {% if not error %}<tr><td colspan="{{ roles|length + 1 }}">Moduly nejsou dostupné.</td></tr>{% endif %}
+                {% endfor %}
+            </tbody>
+        </table></div>
+    </form>
+{% endblock %}

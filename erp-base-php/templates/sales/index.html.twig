@@ -1,0 +1,58 @@
+{% extends 'base.html.twig' %}
+{% set pageTitle = 'Prodej' %}
+{% block stylesheets %}<link rel="stylesheet" href="{{ asset('assets/sales.css') }}">{% endblock %}
+{% block body %}
+<main class="sales-page">
+    <header class="sales-header">
+        <a href="/apps" class="back-link">← Aplikace</a>
+        <div><span class="eyebrow">OBCHOD / PRODEJ</span><h1>Prodej</h1><p>Převádějte nabídky do objednávek a mějte pod kontrolou dodávky pro zákazníky.</p></div>
+    </header>
+    {% for text in [error, actionError] %}{% if text %}<p class="sales-message error" role="alert">{{ text }}</p>{% endif %}{% endfor %}
+    {% if message %}<p class="sales-message" role="status">{{ message }}</p>{% endif %}
+    <section class="sales-metrics">
+        <article><span>Hodnota nabídek</span><strong>{{ overview ? overview.quoteValue|number_format(2, '.', '') : '-' }} Kč</strong><small>čeká na potvrzení</small></article>
+        <article><span>Potvrzené objednávky</span><strong>{{ overview ? overview.confirmedValue|number_format(2, '.', '') : '-' }} Kč</strong><small>připraveno k dodání</small></article>
+        <article><span>Otevřené nabídky</span><strong>{{ overview.quoteCount|default('-') }}</strong><small>ke schválení zákazníkem</small></article>
+    </section>
+    <section id="orders" class="sales-section">
+        <div class="section-head"><div><span class="eyebrow">NABÍDKY A OBJEDNÁVKY</span><h2>Obchodní dokumenty</h2></div><span class="order-count">{{ overview.orders|default([])|length }} dokumenty</span></div>
+        <div class="sales-table-wrap">
+            <table class="sales-table">
+                <thead><tr><th>Dokument</th><th>Zákazník</th><th>Vystaveno</th><th>Dodání</th><th class="amount-column">Celkem</th><th>Stav / akce</th></tr></thead>
+                <tbody>
+                {% for order in overview.orders|default([]) %}
+                    <tr>
+                        <td data-label="Dokument"><span class="status-chip status-{{ order.status|lower }}">{{ order.status == 'QUOTE' ? 'NABÍDKA' : 'OBJEDNÁVKA' }}</span><strong>{{ order.orderNumber }}</strong></td>
+                        <td data-label="Zákazník">{{ order.customerName }}</td>
+                        <td data-label="Vystaveno">{{ order.orderDate }}</td>
+                        <td data-label="Dodání">{{ order.deliveryDate }}</td>
+                        <td data-label="Celkem" class="amount-column"><strong>{{ order.totalAmount|number_format(2, '.', '') }} Kč</strong></td>
+                        <td data-label="Stav / akce">
+                            <div class="sales-actions">
+                                {% if order.status == 'QUOTE' %}
+                                    <form method="post"><input type="hidden" name="id" value="{{ order.id }}"><input type="hidden" name="action" value="confirm"><button class="secondary" type="submit">Potvrdit objednávku</button></form>
+                                {% else %}<span class="confirmed-label">Potvrzeno k dodání</span>{% endif %}
+                                <details class="sales-edit">
+                                    <summary>Upravit</summary>
+                                    <form method="post">
+                                        <h3 class="sales-dialog-title">Upravit objednávku</h3>
+                                        <input type="hidden" name="action" value="update"><input type="hidden" name="id" value="{{ order.id }}">
+                                        <label>Číslo dokumentu<input name="orderNumber" value="{{ order.orderNumber }}" required maxlength="30"></label>
+                                        <label>Zákazník<input name="customerName" value="{{ order.customerName }}" required maxlength="200"></label>
+                                        <label>Vystaveno<input type="date" name="orderDate" value="{{ order.orderDate }}" required></label>
+                                        <label>Dodání<input type="date" name="deliveryDate" value="{{ order.deliveryDate }}" required></label>
+                                        <label>Celkem<input type="number" name="totalAmount" value="{{ order.totalAmount }}" min="0" step="0.01" required></label>
+                                        <div class="sales-dialog-actions"><button class="dialog-cancel" type="button" onclick="this.closest('details').removeAttribute('open')">Zrušit</button><button class="secondary" type="submit">Uložit změny</button></div>
+                                    </form>
+                                </details>
+                                <form method="post" data-confirm-delete data-confirm-message="Opravdu chcete tento dokument smazat?"><input type="hidden" name="action" value="delete"><input type="hidden" name="id" value="{{ order.id }}"><button class="danger-button" type="submit">Smazat</button></form>
+                            </div>
+                        </td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </section>
+</main>
+{% endblock %}

@@ -1,0 +1,113 @@
+{% extends 'base.html.twig' %}
+
+{% block stylesheets %}
+    <link rel="stylesheet" href="{{ asset('assets/crm.css') }}">
+{% endblock %}
+
+{% block body %}
+<div class="crm-page">
+    <header class="crm-header">
+        <a href="/apps" class="back-link">← Aplikace</a>
+        <div><span class="eyebrow">OBCHOD / CRM</span><h1>CRM pipeline</h1><p>Posouvejte obchodní příležitosti od prvního kontaktu až po uzavřený obchod.</p></div>
+        <a href="#new-lead" class="primary">+ Nová příležitost</a>
+    </header>
+    {% if error %}<p class="crm-message error" role="alert">{{ error }}</p>{% endif %}
+    {% if actionError %}<p class="crm-message error" role="alert">{{ actionError }}</p>{% endif %}
+    {% if message %}<p class="crm-message" role="status">{{ message }}</p>{% endif %}
+    <section class="crm-metrics">
+        <article><span>Hodnota pipeline</span><strong>{{ overview.pipeline ?? '-' }} Kč</strong><small>všechny příležitosti</small></article>
+        <article><span>Vážený forecast</span><strong>{{ overview.forecast ?? '-' }} Kč</strong><small>podle pravděpodobnosti</small></article>
+        <article><span>Otevřené příležitosti</span><strong>{{ overview.openLeadCount ?? '-' }}</strong><small>v aktivní pipeline</small></article>
+    </section>
+    <section id="new-lead" class="new-lead-panel">
+        <div class="section-head"><div><span class="eyebrow">NOVÝ OBCHOD</span><h2>Nová příležitost</h2></div><span class="pipeline-hint">Začne ve fázi Nové</span></div>
+        <form method="post" action="/crm" class="new-lead-form">
+            <label>Název příležitosti<input name="name" required maxlength="200" placeholder="Např. Rozšíření licence"></label>
+            <label>Zákazník<input name="customerName" required maxlength="200" placeholder="Název zákazníka"></label>
+            <label>Hodnota (Kč)<input name="expectedRevenue" required type="number" min="0" step="0.01" placeholder="0.00"></label>
+            <label>Pravděpodobnost<input name="probability" required type="number" min="0" max="100" value="20"></label>
+            <label>Očekávané uzavření<input name="expectedCloseDate" required type="date"></label>
+            <button class="primary" type="submit">Vytvořit příležitost</button>
+        </form>
+    </section>
+    <section id="pipeline" class="pipeline-section">
+        <div class="section-head"><div><span class="eyebrow">OBCHODNÍ PIPELINE</span><h2>Kanban příležitostí</h2></div><span id="pipeline-status" class="pipeline-hint" role="status">Přetáhněte kartu do jiné fáze</span></div>
+        <div class="pipeline-board">
+            {% for stage, label in {'NEW': 'Nové', 'QUALIFIED': 'Kvalifikované', 'PROPOSAL': 'Nabídka', 'WON': 'Vyhráno'} %}
+            <section class="pipeline-column" data-stage="{{ stage }}">
+                <header><div><span class="stage-dot stage-{{ stage|lower }}"></span><h3>{{ label }}</h3></div><span class="column-count">0</span></header>
+                <div class="drop-zone" data-stage="{{ stage }}">
+                    {% for lead in overview.leads ?? [] %}
+                    {% if lead.stage == stage %}
+                    <article class="kanban-card" draggable="true" data-lead-id="{{ lead.id }}" data-stage="{{ lead.stage }}">
+                        <div class="card-top"><span class="stage stage-{{ stage|lower }}">{{ label }}</span><span class="probability">{{ lead.probability }} %</span></div>
+                        <h4>{{ lead.name }}</h4><p>{{ lead.customerName }}</p>
+                        <footer><strong>{{ lead.expectedRevenue }} Kč</strong><span>do {{ lead.expectedCloseDate }}</span></footer>
+                    </article>
+                    {% endif %}
+                    {% endfor %}
+                </div>
+            </section>
+            {% endfor %}
+        </div>
+    </section>
+</div>
+{% endblock %}
+
+{% block javascripts %}
+<script>
+    const cards = document.querySelectorAll('.kanban-card');
+    const zones = document.querySelectorAll('.drop-zone');
+    const status = document.getElementById('pipeline-status');
+    const labels = {NEW: 'Nové', QUALIFIED: 'Kvalifikované', PROPOSAL: 'Nabídka', WON: 'Vyhráno'};
+    let dragged;
+    let saving = false;
+    const updateCounts = () => document.querySelectorAll('.pipeline-column').forEach(column => {
+        column.querySelector('.column-count').textContent = column.querySelectorAll('.kanban-card').length;
+    });
+    const setStage = (card, stage) => {
+        card.dataset.stage = stage;
+        card.querySelector('.stage').textContent = labels[stage];
+        card.querySelector('.stage').className = 'stage stage-' + stage.toLowerCase();
+    };
+    cards.forEach(card => {
+        card.addEventListener('dragstart', event => {
+            if (saving) { event.preventDefault(); return; }
+            dragged = card;
+            card.classList.add('dragging');
+        });
+        card.addEventListener('dragend', () => card.classList.remove('dragging'));
+    });
+    zones.forEach(zone => {
+        zone.addEventListener('dragover', event => { event.preventDefault(); zone.classList.add('drag-target'); });
+        zone.addEventListener('dragleave', () => zone.classList.remove('drag-target'));
+        zone.addEventListener('drop', async event => {
+            event.preventDefault();
+            zone.classList.remove('drag-target');
+            if (saving || !dragged || dragged.dataset.stage === zone.dataset.stage) return;
+            const card = dragged;
+            const previousZone = card.parentElement;
+            const previousStage = card.dataset.stage;
+            saving = true;
+            zone.appendChild(card);
+            setStage(card, zone.dataset.stage);
+            updateCounts();
+            status.textContent = 'Ukládám změnu...';
+            try {
+                const response = await fetch('/crm?id=' + encodeURIComponent(card.dataset.leadId) + '&stage=' + encodeURIComponent(zone.dataset.stage), {method: 'PUT'});
+                if (!response.ok || response.redirected) throw new Error('Změnu se nepodařilo uložit');
+                status.textContent = 'Fáze byla uložena';
+            } catch (error) {
+                previousZone.appendChild(card);
+                setStage(card, previousStage);
+                updateCounts();
+                status.textContent = 'Změnu se nepodařilo uložit';
+            } finally {
+                saving = false;
+                dragged = null;
+            }
+        });
+    });
+    updateCounts();
+</script>
+{% endblock %}

@@ -1,0 +1,4 @@
+<option value="">Bez kategorie</option>
+{% for category in categoryOptions %}
+    <option value="{{ category.id }}" {{ category.id == selected|default('') ? 'selected' : '' }}>{{ category.depth > 0 ? '↳ ' : '' }}{{ category.name }}</option>
+{% endfor %}

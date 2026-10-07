@@ -1,0 +1,30 @@
+{% set suffix = employee.id|default('new') %}
+{% set selectedRole = employee.jobTitle|default('') %}
+{% if not (roleOptions|filter(role => role.name == selectedRole)) %}{% set selectedRole = employee.userRoleName|default('') %}{% endif %}
+<form method="post" class="workforce-form">
+    <input type="hidden" name="action" value="{{ employee ? 'update' : 'create' }}">
+    {% if employee %}<input type="hidden" name="id" value="{{ employee.id }}">{% endif %}
+    <label>Jméno a příjmení<input name="fullName" maxlength="200" value="{{ employee.fullName|default('') }}" required></label>
+    <label>Tým
+        <select name="teamId" id="team-{{ suffix }}" required>
+            {% if not employee %}<option value="" disabled selected>Vyberte tým</option>{% endif %}
+            {% for team in overview.teams|default([]) %}<option value="{{ team.id }}" data-team-name="{{ team.name }}" {{ team.id == employee.teamId|default('') ? 'selected' : '' }}>{{ team.name }}</option>{% endfor %}
+        </select>
+    </label>
+    <label>Pracovní role
+        <select name="jobTitle" id="job-title-{{ suffix }}" required>
+            {% if not employee %}<option value="" disabled selected>Vyberte roli</option>{% endif %}
+            {% for role in roleOptions %}<option value="{{ role.name }}" {{ role.name == selectedRole ? 'selected' : '' }}>{{ role.name }}</option>{% endfor %}
+        </select>
+    </label>
+    <label>Nástup<input type="date" name="employmentStartDate" value="{{ employee.employmentStartDate|default('') }}" required></label>
+    <label>Zástupce
+        <select name="deputyEmployeeId" data-deputy-role-for="job-title-{{ suffix }}" data-deputy-team-for="team-{{ suffix }}" required>
+            <option value="">Vyberte zástupce</option>
+            {% for deputy in overview.employees|default([]) %}{% if deputy.id != employee.id|default('') %}
+                <option value="{{ deputy.id }}" data-user-role="{{ deputy.userRoleName|default('') }}" data-team-id="{{ deputy.teamId }}" data-team-name="{{ deputy.teamName|default('') }}" {{ deputy.id == employee.deputyEmployeeId|default('') ? 'selected' : '' }}>{{ deputy.fullName }}</option>
+            {% endif %}{% endfor %}
+        </select>
+    </label>
+    <button type="submit" class="{{ employee ? 'secondary' : 'primary' }}">{{ employee ? 'Uložit profil' : 'Založit zaměstnance' }}</button>
+</form>

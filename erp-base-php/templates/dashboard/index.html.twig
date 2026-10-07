@@ -1,0 +1,66 @@
+{% extends 'base.html.twig' %}
+
+{% block stylesheets %}
+    <link rel="stylesheet" href="{{ asset('assets/dashboard.css') }}">
+{% endblock %}
+
+{% block body %}
+<div class="dashboard-page">
+    <header class="dashboard-header">
+        <div class="dashboard-title">
+            <a href="/apps" class="back-link">← Aplikace</a>
+            <span class="eyebrow">OVERVIEW / MANAGEMENT</span>
+            <h1>Dashboard</h1>
+            <p>Pracovní přehled financí, obchodních příležitostí a promo aktivit.</p>
+        </div>
+        <div class="dashboard-date"><span>DNEŠNÍ PŘEHLED</span><strong>{{ 'now'|date('d. m. Y') }}</strong></div>
+    </header>
+    {% if error %}<p class="dashboard-message error" role="alert">{{ error }}</p>{% endif %}
+    <section class="dashboard-metrics" aria-label="Klíčové ukazatele">
+        {% for metric in [
+            ['receivables', 'Pohledávky', 'čeká na úhradu', '/accounting', 'Účetnictví'],
+            ['overdue', 'Po splatnosti', 'vyžaduje pozornost', '/accounting', 'Zobrazit faktury'],
+            ['pipeline', 'Hodnota pipeline', 'v otevřených příležitostech', '/crm', 'CRM pipeline'],
+            ['forecast', 'Vážený forecast', 'podle pravděpodobnosti', '/crm', 'Detail forecastu']
+        ] %}
+        <article class="metric-card {{ metric[0] }}">
+            <span>{{ metric[1] }}</span><strong>{{ overview ? attribute(overview, metric[0])|number_format(2, '.', '') : '-' }} Kč</strong>
+            <small>{{ metric[2] }}</small><a href="{{ metric[3] }}">{{ metric[4] }} →</a>
+        </article>
+        {% endfor %}
+        <article class="metric-card campaigns"><span>Aktivní kampaně</span><strong>{{ overview.activeCampaignCount ?? '-' }}</strong><small>právě v běhu</small><a href="/promo">Promo kampaně →</a></article>
+    </section>
+    <section class="dashboard-grid">
+        <section class="dashboard-panel invoice-panel">
+            <div class="panel-head"><div><span class="eyebrow">FINANCE</span><h2>Neuhrazené faktury</h2></div><a href="/accounting">Všechny faktury →</a></div>
+            <div class="panel-list">
+                {% for invoice in overview.invoices ?? [] %}
+                <article class="list-row">
+                    <div><span class="status status-{{ invoice.status|lower }}">{{ invoice.status }}</span><strong>{{ invoice.invoiceNumber }}</strong><small>{{ invoice.partnerName }} · splatnost {{ invoice.dueDate }}</small></div>
+                    <b>{{ invoice.outstandingAmount|number_format(2, '.', '') }} Kč</b>
+                </article>
+                {% endfor %}
+            </div>
+        </section>
+        <section class="dashboard-panel lead-panel">
+            <div class="panel-head"><div><span class="eyebrow">OBCHOD</span><h2>Nejbližší příležitosti</h2></div><a href="/crm">Otevřít CRM →</a></div>
+            <div class="panel-list">
+                {% for lead in overview.leads ?? [] %}
+                <article class="list-row">
+                    <div><span class="status stage-{{ lead.stage|lower }}">{{ lead.stage }}</span><strong>{{ lead.name }}</strong><small>{{ lead.customerName }} · uzavření {{ lead.expectedCloseDate }}</small></div>
+                    <b>{{ lead.expectedRevenue|number_format(2, '.', '') }} Kč <i>{{ lead.probability }} %</i></b>
+                </article>
+                {% endfor %}
+            </div>
+        </section>
+        <section class="dashboard-panel campaign-panel">
+            <div class="panel-head"><div><span class="eyebrow">PROMO</span><h2>Stav kampaní</h2></div><a href="/promo">Správa kampaní →</a></div>
+            <div class="campaign-list">
+                {% for campaign in overview.campaigns ?? [] %}
+                <article class="campaign-row"><span class="status campaign-{{ campaign.status|lower }}">{{ campaign.status }}</span><div><strong>{{ campaign.name }}</strong><small>{{ campaign.startsOn }} až {{ campaign.endsOn }}</small></div></article>
+                {% endfor %}
+            </div>
+        </section>
+    </section>
+</div>
+{% endblock %}

@@ -1,0 +1,124 @@
+.settings-page {
+  min-height: 100vh;
+  background: #f5f3ee;
+  color: #26333b;
+  padding: 44px max(5vw, 24px);
+  font-family: "Space Grotesk", sans-serif;
+}
+.settings-header {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 32px;
+  align-items: start;
+  padding-bottom: 42px;
+  border-bottom: 1px solid #d9d8d2;
+}
+.settings-header h1 {
+  font-size: 42px;
+  letter-spacing: 0;
+  margin: 8px 0;
+}
+.settings-header p {
+  margin: 0;
+  color: #667078;
+}
+.back-link {
+  color: #526979;
+  font: 11px "DM Mono";
+  text-decoration: none;
+  padding-top: 8px;
+}
+.settings-state {
+  font: 10px "DM Mono";
+  color: #4b6477;
+  padding: 8px;
+  border: 1px solid #a7bac2;
+}
+.settings-form {
+  margin-top: 32px;
+  display: grid;
+  gap: 18px;
+}
+.settings-section {
+  display: grid;
+  grid-template-columns: minmax(220px, 0.7fr) 1.3fr;
+  gap: 32px;
+  background: #fffdf9;
+  border: 1px solid #e1dfd8;
+  padding: 26px;
+}
+.section-copy h2 {
+  font-size: 22px;
+  letter-spacing: 0;
+  margin: 8px 0;
+}
+.section-copy p {
+  margin: 0;
+  color: #718078;
+  font-size: 13px;
+  line-height: 1.5;
+}
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+.form-grid label {
+  display: grid;
+  gap: 7px;
+  color: #58656e;
+  font: 10px "DM Mono";
+}
+.form-grid input,
+.form-grid select {
+  box-sizing: border-box;
+  width: 100%;
+  border: 1px solid #cfd5d4;
+  background: #fff;
+  padding: 10px;
+  color: #26333b;
+  font: 14px "Space Grotesk";
+}
+.settings-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 2px 0;
+  color: #77827b;
+  font: 10px "DM Mono";
+}
+.settings-message {
+  background: #dff0e3;
+  color: #285f39;
+  padding: 12px 14px;
+  font-size: 12px;
+}
+.settings-message.error {
+  background: #f8dfdf;
+  color: #963f47;
+}
+@media (max-width: 840px) {
+  .settings-header,
+  .settings-section {
+    grid-template-columns: 1fr;
+  }
+  .settings-state {
+    justify-self: start;
+  }
+  .form-grid {
+    grid-template-columns: 1fr;
+  }
+}
+@media (max-width: 520px) {
+  .settings-page {
+    padding: 28px 18px;
+  }
+  .settings-header h1 {
+    font-size: 36px;
+  }
+  .settings-footer {
+    align-items: flex-start;
+    gap: 16px;
+    flex-direction: column;
+  }
+}

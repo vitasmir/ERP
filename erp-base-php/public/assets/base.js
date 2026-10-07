@@ -1,0 +1,782 @@
+document.getElementById("user-search")?.addEventListener("input", (event) => {
+  const query = event.target.value.toLowerCase();
+  document
+    .querySelectorAll("#user-table tr")
+    .forEach((row) =>
+      row.classList.toggle(
+        "hidden",
+        !row.textContent.toLowerCase().includes(query),
+      ),
+    );
+});
+const ensureColorPicker = (form, id, defaultColor) => {
+  if (!form || document.getElementById(id)) return document.getElementById(id);
+  const label = document.createElement("label");
+  label.className = "color-picker-field";
+  label.textContent = "Barva";
+  const input = document.createElement("input");
+  input.type = "hidden";
+  input.name = "color";
+  input.id = id;
+  input.value = defaultColor;
+  input.defaultValue = defaultColor;
+  const trigger = document.createElement("button");
+  trigger.type = "button";
+  trigger.className = "color-picker-trigger";
+  trigger.dataset.colorTarget = id;
+  trigger.textContent = "Vybrat barvu";
+  trigger.style.setProperty("--picker-color", defaultColor);
+  label.append(trigger, input);
+  form.insertBefore(label, form.querySelector(".dialog-actions"));
+  return input;
+};
+ensureColorPicker(
+  document.getElementById("role-form"),
+  "role-color",
+  "#D9ED62",
+);
+ensureColorPicker(
+  document.getElementById("company-form"),
+  "company-color",
+  "#D9ED62",
+);
+ensureColorPicker(
+  document.getElementById("user-form"),
+  "user-color",
+  "#DCE9D7",
+);
+const pickerPalette = [
+  "#D9ED62",
+  "#8DE6A0",
+  "#64D6E8",
+  "#8CB8EA",
+  "#F5A96B",
+  "#F06A61",
+  "#C978D2",
+  "#CDA98E",
+  "#8B8B92",
+  "#443B59",
+  "#2E9F70",
+  "#C2414A",
+];
+let activeColorInput;
+let pendingColor;
+const colorPickerModal = document.createElement("div");
+colorPickerModal.className = "color-picker-modal";
+colorPickerModal.innerHTML = `<div class="color-picker-backdrop"></div><section class="color-picker-dialog" role="dialog" aria-modal="true" aria-labelledby="color-picker-title"><div class="color-picker-head"><h2 id="color-picker-title">Vyberte barvu</h2><button type="button" class="dialog-close" aria-label="Zavřít">×</button></div><div class="color-picker-palette"></div><div class="color-picker-preview"><span></span><output></output></div><div class="dialog-actions"><button type="button" class="secondary-button" data-color-cancel>Zrušit</button><button type="button" class="primary" data-color-accept>Vybrat</button></div></section>`;
+document.body.appendChild(colorPickerModal);
+const colorPickerPalette = colorPickerModal.querySelector(
+  ".color-picker-palette",
+);
+const colorPickerPreview = colorPickerModal.querySelector(
+  ".color-picker-preview",
+);
+pickerPalette.forEach((color) => {
+  const swatch = document.createElement("button");
+  swatch.type = "button";
+  swatch.className = "color-swatch";
+  swatch.dataset.color = color;
+  swatch.style.backgroundColor = color;
+  swatch.setAttribute("aria-label", color);
+  colorPickerPalette.appendChild(swatch);
+});
+const updateColorPickerPreview = () => {
+  colorPickerPreview.style.setProperty("--picker-color", pendingColor);
+  colorPickerPreview.querySelector("output").textContent = pendingColor;
+  colorPickerModal.querySelectorAll(".color-swatch").forEach((swatch) => {
+    swatch.classList.toggle("selected", swatch.dataset.color === pendingColor);
+  });
+};
+const syncColorPickerTrigger = (input) => {
+  const trigger = document.querySelector(
+    `.color-picker-trigger[data-color-target="${input.id}"]`,
+  );
+  trigger?.style.setProperty("--picker-color", input.value);
+};
+const closeColorPicker = () => {
+  colorPickerModal.classList.remove("open");
+  activeColorInput = undefined;
+};
+document.addEventListener("click", (event) => {
+  const trigger = event.target.closest(".color-picker-trigger");
+  if (trigger) {
+    activeColorInput = document.getElementById(trigger.dataset.colorTarget);
+    pendingColor = activeColorInput.value;
+    updateColorPickerPreview();
+    colorPickerModal.classList.add("open");
+    colorPickerModal.querySelector(".color-picker-dialog").focus();
+  }
+  const swatch = event.target.closest(".color-swatch");
+  if (swatch) {
+    pendingColor = swatch.dataset.color;
+    updateColorPickerPreview();
+  }
+  if (event.target.closest("[data-color-cancel], .color-picker-backdrop")) {
+    closeColorPicker();
+  }
+  if (event.target.closest("[data-color-accept]") && activeColorInput) {
+    activeColorInput.value = pendingColor;
+    syncColorPickerTrigger(activeColorInput);
+    closeColorPicker();
+  }
+});
+document.addEventListener("keydown", (event) => {
+  if (event.key === "Escape" && colorPickerModal.classList.contains("open")) {
+    closeColorPicker();
+  }
+});
+const czechMonths = [
+  "Leden",
+  "Únor",
+  "Březen",
+  "Duben",
+  "Květen",
+  "Červen",
+  "Červenec",
+  "Srpen",
+  "Září",
+  "Říjen",
+  "Listopad",
+  "Prosinec",
+];
+const czechWeekdays = ["Po", "Út", "St", "Čt", "Pá", "So", "Ne"];
+const datePickerModal = document.createElement("div");
+datePickerModal.className = "date-picker-modal";
+datePickerModal.innerHTML = `<div class="date-picker-backdrop"></div><section class="date-picker-dialog" role="dialog" aria-modal="true" aria-labelledby="date-picker-title"><div class="date-picker-head"><h2 id="date-picker-title">Vyberte datum</h2><button type="button" class="dialog-close" aria-label="Zavřít">×</button></div><div class="date-picker-navigation"><button type="button" data-date-prev aria-label="Předchozí měsíc">‹</button><strong data-date-month></strong><button type="button" data-date-next aria-label="Další měsíc">›</button></div><div class="date-picker-weekdays"></div><div class="date-picker-days"></div><label class="date-picker-time" hidden>Čas<input type="time" data-date-time></label><div class="dialog-actions"><button type="button" class="secondary-button" data-date-cancel>Zrušit</button><button type="button" class="primary" data-date-accept>Vybrat</button></div></section>`;
+document.body.appendChild(datePickerModal);
+const datePickerWeekdays = datePickerModal.querySelector(".date-picker-weekdays");
+czechWeekdays.forEach((day) => {
+  const label = document.createElement("span");
+  label.textContent = day;
+  datePickerWeekdays.appendChild(label);
+});
+let activeDateInput;
+let pendingDate;
+let pendingTime = "00:00";
+const padDatePart = (value) => String(value).padStart(2, "0");
+const toDateInputValue = (date) =>
+  `${date.getFullYear()}-${padDatePart(date.getMonth() + 1)}-${padDatePart(date.getDate())}`;
+const toDisplayDate = (date, withTime = false) =>
+  `${padDatePart(date.getDate())}.${padDatePart(date.getMonth() + 1)}.${date.getFullYear()}${withTime ? ` ${pendingTime}` : ""}`;
+const parseDateInput = (value) => {
+  const match = value?.match(/^(\d{4})-(\d{2})-(\d{2})(?:T(\d{2}:\d{2}))?/);
+  if (!match) return null;
+  const date = new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]));
+  return Number.isNaN(date.getTime()) ? null : { date, time: match[4] || "00:00" };
+};
+const datePickerDays = datePickerModal.querySelector(".date-picker-days");
+const renderDatePicker = () => {
+  const monthLabel = datePickerModal.querySelector("[data-date-month]");
+  monthLabel.textContent = `${czechMonths[pendingDate.getMonth()]} ${pendingDate.getFullYear()}`;
+  datePickerDays.replaceChildren();
+  const firstDay = new Date(pendingDate.getFullYear(), pendingDate.getMonth(), 1);
+  const startOffset = (firstDay.getDay() + 6) % 7;
+  const daysInMonth = new Date(
+    pendingDate.getFullYear(),
+    pendingDate.getMonth() + 1,
+    0,
+  ).getDate();
+  for (let index = 0; index < startOffset + daysInMonth; index += 1) {
+    const dayNumber = index - startOffset + 1;
+    const day = document.createElement("button");
+    day.type = "button";
+    if (dayNumber < 1 || dayNumber > daysInMonth) {
+      day.disabled = true;
+      day.className = "empty";
+    } else {
+      day.textContent = dayNumber;
+      day.dataset.day = dayNumber;
+      day.className =
+        dayNumber === pendingDate.getDate() ? "selected" : "";
+    }
+    datePickerDays.appendChild(day);
+  }
+  datePickerModal.querySelector("[data-date-time]").value = pendingTime;
+};
+const closeDatePicker = () => {
+  datePickerModal.classList.remove("open");
+  activeDateInput = undefined;
+};
+const openDatePicker = (input) => {
+  activeDateInput = input;
+  const parsed = parseDateInput(input.value);
+  pendingDate = parsed?.date || new Date();
+  pendingTime = parsed?.time || "00:00";
+  const timeField = datePickerModal.querySelector(".date-picker-time");
+  const isDateTime = input.dataset.dateType === "datetime-local";
+  timeField.hidden = !isDateTime;
+  timeField.style.display = isDateTime ? "grid" : "none";
+  renderDatePicker();
+  datePickerModal.classList.add("open");
+};
+datePickerModal.addEventListener("click", (event) => {
+  const day = event.target.closest("[data-day]");
+  if (day) {
+    pendingDate.setDate(Number(day.dataset.day));
+    renderDatePicker();
+  }
+  if (event.target.closest("[data-date-prev]")) {
+    pendingDate.setMonth(pendingDate.getMonth() - 1);
+    renderDatePicker();
+  }
+  if (event.target.closest("[data-date-next]")) {
+    pendingDate.setMonth(pendingDate.getMonth() + 1);
+    renderDatePicker();
+  }
+  if (event.target.closest("[data-date-cancel], .date-picker-backdrop, .date-picker-dialog .dialog-close")) {
+    closeDatePicker();
+  }
+  if (event.target.closest("[data-date-accept]") && activeDateInput) {
+    const dateValue = toDateInputValue(pendingDate);
+    activeDateInput.value =
+      activeDateInput.dataset.dateType === "datetime-local"
+        ? `${dateValue}T${pendingTime}`
+        : dateValue;
+    activeDateInput.previousElementSibling.value = toDisplayDate(
+      pendingDate,
+      activeDateInput.dataset.dateType === "datetime-local",
+    );
+    closeDatePicker();
+  }
+});
+datePickerModal.querySelector("[data-date-time]").addEventListener("input", (event) => {
+  pendingTime = event.target.value;
+});
+document.addEventListener("keydown", (event) => {
+  if (event.key === "Escape" && datePickerModal.classList.contains("open")) {
+    closeDatePicker();
+  }
+});
+document.querySelectorAll('input[type="date"]:not([data-native-date-picker]), input[type="datetime-local"]:not([data-native-date-picker])').forEach((input) => {
+  const nativeType = input.type;
+  const wrapper = document.createElement("span");
+  const display = document.createElement("input");
+  wrapper.className = "date-field";
+  display.type = "text";
+  display.className = "localized-date-input";
+  display.placeholder = nativeType === "date" ? "dd.mm.rrrr" : "dd.mm.rrrr hh:mm";
+  display.readOnly = true;
+  display.required = input.required;
+  input.required = false;
+  input.dataset.dateType = nativeType;
+  input.type = "hidden";
+  const parsed = parseDateInput(input.value);
+  if (parsed) {
+    pendingTime = parsed.time;
+    display.value = toDisplayDate(parsed.date, nativeType === "datetime-local");
+  }
+  const inputParent = input.parentNode;
+  inputParent.insertBefore(wrapper, input);
+  wrapper.append(display, input);
+  display.addEventListener("click", () => openDatePicker(input));
+  input.form?.addEventListener("reset", () => {
+    window.setTimeout(() => {
+      const resetDate = parseDateInput(input.value);
+      display.value = resetDate
+        ? toDisplayDate(resetDate.date, nativeType === "datetime-local")
+        : "";
+    });
+  });
+});
+const companyModal = document.getElementById("company-modal");
+const companyForm = document.getElementById("company-form");
+const companyCards = () => [
+  ...document.querySelectorAll(".company-grid article"),
+];
+const ensureCompanySelector = () => {
+  let selector = document.getElementById("company-edit-field");
+  if (selector) return selector.querySelector("select");
+  const label = document.createElement("label");
+  label.id = "company-edit-field";
+  label.textContent = "Společnost k úpravě";
+  const select = document.createElement("select");
+  select.id = "company-edit-select";
+  select.required = true;
+  label.appendChild(select);
+  companyForm?.prepend(label);
+  return select;
+};
+const openCompanyDialog = (edit = false) => {
+  document.getElementById("company-edit-field")?.remove();
+  companyForm?.reset();
+  document.getElementById("company-action").value = edit ? "update" : "create";
+  document.getElementById("company-id").value = "";
+  if (edit) {
+    const selector = ensureCompanySelector();
+    companyCards().forEach((card, index) => {
+      const option = document.createElement("option");
+      option.value = index;
+      option.textContent = card.dataset.name;
+      selector.appendChild(option);
+    });
+    const fillCompany = (card) => {
+      document.getElementById("company-id").value = card.dataset.companyId;
+      document.getElementById("company-name").value = card.dataset.name;
+      document.getElementById("company-type").value = card.dataset.type;
+      document.getElementById("company-currency").value = card.dataset.currency;
+      document.getElementById("company-status").value = card.dataset.status;
+      document.getElementById("company-color").value =
+        card.dataset.color || "#D9ED62";
+      syncColorPickerTrigger(document.getElementById("company-color"));
+    };
+    selector.addEventListener("change", () =>
+      fillCompany(companyCards()[Number(selector.value)]),
+    );
+    fillCompany(companyCards()[0]);
+    document.getElementById("company-dialog-title").textContent =
+      "Upravit společnost";
+    document.getElementById("company-dialog-description").textContent =
+      "Upravte údaje organizační jednotky.";
+    document.getElementById("save-company").textContent = "Uložit změny";
+  } else {
+    document.getElementById("company-dialog-title").textContent =
+      "Nová společnost";
+    document.getElementById("company-dialog-description").textContent =
+      "Přidejte organizační jednotku do ERP.";
+    document.getElementById("company-color").value = "#D9ED62";
+    syncColorPickerTrigger(document.getElementById("company-color"));
+    document.getElementById("save-company").textContent = "Vytvořit společnost";
+  }
+  companyModal?.classList.add("open");
+  companyModal?.setAttribute("aria-hidden", "false");
+  document.getElementById("company-name")?.focus();
+};
+const closeCompanyDialog = () => {
+  companyModal?.classList.remove("open");
+  companyModal?.setAttribute("aria-hidden", "true");
+  companyForm?.reset();
+  document.getElementById("company-edit-field")?.remove();
+};
+document
+  .getElementById("add-company")
+  ?.addEventListener("click", () => openCompanyDialog());
+document
+  .getElementById("edit-company")
+  ?.addEventListener("click", () => openCompanyDialog(true));
+document
+  .getElementById("close-company-dialog")
+  ?.addEventListener("click", closeCompanyDialog);
+document
+  .getElementById("cancel-company-dialog")
+  ?.addEventListener("click", closeCompanyDialog);
+companyModal
+  ?.querySelector(".company-modal-backdrop")
+  ?.addEventListener("click", closeCompanyDialog);
+const userModal = document.getElementById("user-modal");
+const userForm = document.getElementById("user-form");
+const companyNameField = document.getElementById("user-company-name");
+const companyOptionsSource = document.getElementById("company-options-source");
+const selectOrAddOption = (select, value, label = value) => {
+  if (!select || !value) return;
+  let option = Array.from(select.options).find((item) => item.value === value);
+  if (!option) {
+    option = new Option(label, value);
+    select.add(option);
+  }
+  select.value = value;
+};
+if (companyNameField?.tagName === "INPUT" && companyOptionsSource) {
+  const companySelect = document.createElement("select");
+  companySelect.id = companyNameField.id;
+  companySelect.name = companyNameField.name;
+  companySelect.required = companyNameField.required;
+  companySelect.innerHTML = companyOptionsSource.innerHTML;
+  companyNameField.replaceWith(companySelect);
+}
+if (userForm && !document.getElementById("user-color")) {
+  const colorLabel = document.createElement("label");
+  colorLabel.textContent = "Barva";
+  const colorInput = document.createElement("input");
+  colorInput.name = "color";
+  colorInput.id = "user-color";
+  colorInput.type = "color";
+  colorInput.value = "#DCE9D7";
+  colorLabel.appendChild(colorInput);
+  userForm.querySelector(".dialog-actions")?.before(colorLabel);
+}
+const openUserDialog = (user) => {
+  document.getElementById("user-action").value = user ? "update" : "create";
+  document.getElementById("user-id").value = user?.dataset.userId || "";
+  const employeeSelect = document.getElementById("user-employee-id");
+  if (employeeSelect) {
+    selectOrAddOption(
+      employeeSelect,
+      user?.dataset.employeeId || "",
+      user?.dataset.fullName || "",
+    );
+    employeeSelect
+      .querySelectorAll('option[data-has-account="true"]')
+      .forEach((option) => {
+        option.disabled = option.value !== user?.dataset.employeeId;
+      });
+  }
+  document.getElementById("user-full-name").value =
+    user?.dataset.fullName || "";
+  const usernameInput = document.getElementById("user-username");
+  usernameInput.value = user?.dataset.username || "";
+  usernameInput.readOnly = Boolean(user);
+  usernameInput.required = !user;
+  const passwordInput = document.getElementById("user-password");
+  passwordInput.value = "";
+  passwordInput.required = !user;
+  const roleInput = document.getElementById("user-role-name");
+  roleInput.disabled = true;
+    const syncUserRole = () => {
+      roleInput.value = user?.dataset.roleName || window.employeeRoles?.[employeeSelect?.value] || "";
+    };
+    syncUserRole();
+    employeeSelect?.addEventListener("change", syncUserRole);
+  selectOrAddOption(
+    document.getElementById("user-company-name"),
+    user?.dataset.companyName || "",
+  );
+  const colorInput = document.getElementById("user-color");
+  if (colorInput) {
+    colorInput.value = user?.dataset.color || "#DCE9D7";
+    colorInput.name = user && !user.dataset.color ? "" : "color";
+    syncColorPickerTrigger(colorInput);
+  }
+  document.getElementById("user-status").value =
+    user?.dataset.status || "ACTIVE";
+  document.getElementById("user-dialog-title").textContent = user
+    ? "Upravit uživatele"
+    : "Nový uživatel";
+  document.getElementById("save-user").textContent = user
+    ? "Uložit změny"
+    : "Přidat uživatele";
+  userModal?.classList.add("open");
+  userModal?.setAttribute("aria-hidden", "false");
+  document.getElementById("user-full-name")?.focus();
+};
+const closeUserDialog = () => {
+  userModal?.classList.remove("open");
+  userModal?.setAttribute("aria-hidden", "true");
+  const colorInput = document.getElementById("user-color");
+  colorInput?.removeAttribute("name");
+  userForm?.reset();
+  if (colorInput) {
+    colorInput.value = "#DCE9D7";
+    colorInput.name = "color";
+  }
+};
+document
+  .getElementById("add-user")
+  ?.addEventListener("click", () => openUserDialog());
+document
+  .getElementById("close-user-dialog")
+  ?.addEventListener("click", closeUserDialog);
+document
+  .getElementById("cancel-user-dialog")
+  ?.addEventListener("click", closeUserDialog);
+userModal
+  ?.querySelector(".user-modal-backdrop")
+  ?.addEventListener("click", closeUserDialog);
+document
+  .querySelectorAll(".edit-user")
+  .forEach((button) =>
+    button.addEventListener("click", () =>
+      openUserDialog(button.closest("tr")),
+    ),
+  );
+const requestedEmployeeId = userModal?.dataset.requestedEmployeeId;
+if (requestedEmployeeId) {
+  openUserDialog();
+  const employeeSelect = document.getElementById("user-employee-id");
+  employeeSelect.value = requestedEmployeeId;
+  const employeeOption = employeeSelect.options[employeeSelect.selectedIndex];
+  if (employeeOption)
+    document.getElementById("user-full-name").value =
+      employeeOption.textContent.split(" · ")[0];
+}
+const deleteConfirmModal = document.createElement("div");
+deleteConfirmModal.className = "delete-confirm-modal";
+deleteConfirmModal.innerHTML = `<div class="delete-confirm-backdrop"></div><section class="delete-confirm-dialog" role="dialog" aria-modal="true" aria-labelledby="delete-confirm-title"><h2 id="delete-confirm-title">Potvrzení smazání</h2><p data-delete-confirm-message></p><div class="dialog-actions"><button type="button" class="secondary-button" data-delete-confirm-cancel>ZRUŠIT</button><button type="button" class="danger-button" data-delete-confirm-accept>SMAZAT</button></div></section>`;
+document.body.appendChild(deleteConfirmModal);
+let deleteConfirmForm;
+const closeDeleteConfirm = () => {
+  deleteConfirmModal.classList.remove("open");
+  deleteConfirmForm = undefined;
+};
+const openDeleteConfirm = (form) => {
+  deleteConfirmForm = form;
+  const action = form.querySelector('input[name="action"]')?.value;
+  const defaultMessage = action === "deleteCategory"
+    ? "Opravdu smazat kategorii?"
+    : action === "deleteProduct"
+      ? "Opravdu smazat produkt?"
+      : "Opravdu chcete tento záznam smazat?";
+  deleteConfirmModal.querySelector("[data-delete-confirm-message]").textContent =
+    form.dataset.confirmMessage || defaultMessage;
+  deleteConfirmModal.classList.add("open");
+};
+deleteConfirmModal.addEventListener("click", (event) => {
+  if (event.target.closest("[data-delete-confirm-cancel], .delete-confirm-backdrop")) {
+    closeDeleteConfirm();
+  }
+  if (event.target.closest("[data-delete-confirm-accept]") && deleteConfirmForm) {
+    const form = deleteConfirmForm;
+    closeDeleteConfirm();
+    form.submit();
+  }
+});
+document.addEventListener("keydown", (event) => {
+  if (event.key === "Escape" && deleteConfirmModal.classList.contains("open"))
+    closeDeleteConfirm();
+});
+document.addEventListener("submit", (event) => {
+  const form = event.target.closest('form[data-confirm-delete], form[onsubmit*="confirm("]');
+  if (!form) return;
+  event.preventDefault();
+  event.stopPropagation();
+  openDeleteConfirm(form);
+}, true);
+
+const roleModal = document.getElementById("role-modal");
+const roleForm = document.getElementById("role-form");
+let roleBeingEdited;
+const roleCards = () => [...document.querySelectorAll(".role-card")];
+const updateRoleForm = (card) => {
+  roleBeingEdited = card;
+  document.getElementById("role-id").value = card?.dataset.roleId || "";
+  document.getElementById("role-name").value =
+    card?.querySelector("h3")?.textContent || "";
+  document.getElementById("role-initial").value =
+    card?.querySelector(".role-mark")?.textContent.trim() || "";
+  document.getElementById("role-description").value =
+    card?.querySelector("p")?.textContent || "";
+  document.getElementById("role-color").value =
+    card?.dataset.color || "#D9ED62";
+  syncColorPickerTrigger(document.getElementById("role-color"));
+  document.getElementById("permission-read").checked =
+    card?.dataset.canRead === "true";
+  document.getElementById("permission-insert").checked =
+    card?.dataset.canInsert === "true";
+  document.getElementById("permission-edit").checked =
+    card?.dataset.canEdit === "true";
+  document.getElementById("permission-delete").checked =
+    card?.dataset.canDelete === "true";
+  document.getElementById("permission-manage").checked =
+    card?.dataset.canManage === "true";
+};
+const ensureRoleSelector = () => {
+  let selector = document.getElementById("role-edit-select");
+  if (selector) return selector;
+  const label = document.createElement("label");
+  label.id = "role-edit-field";
+  label.textContent = "Role k úpravě";
+  selector = document.createElement("select");
+  selector.id = "role-edit-select";
+  selector.required = true;
+  label.appendChild(selector);
+  roleForm?.prepend(label);
+  selector.addEventListener("change", () =>
+    updateRoleForm(roleCards()[Number(selector.value)]),
+  );
+  return selector;
+};
+const openRoleDialog = (edit = false) => {
+  const selector = document.getElementById("role-edit-field");
+  selector?.remove();
+  roleBeingEdited = undefined;
+  if (edit) {
+    document.getElementById("role-action").value = "update";
+    const editSelector = ensureRoleSelector();
+    roleCards().forEach((card, index) => {
+      const option = document.createElement("option");
+      option.value = index;
+      option.textContent = card.querySelector("h3")?.textContent || "Role";
+      editSelector.appendChild(option);
+    });
+    updateRoleForm(roleCards()[0]);
+    document.getElementById("role-dialog-title").textContent = "Upravit roli";
+    roleForm.querySelector('button[type="submit"]').textContent =
+      "Uložit změny";
+  } else {
+    document.getElementById("role-dialog-title").textContent = "Nová role";
+    document.getElementById("role-action").value = "create";
+    document.getElementById("role-id").value = "";
+    document.getElementById("role-color").value = "#D9ED62";
+    syncColorPickerTrigger(document.getElementById("role-color"));
+    document.getElementById("permission-read").checked = true;
+    document.getElementById("permission-insert").checked = false;
+    document.getElementById("permission-edit").checked = false;
+    document.getElementById("permission-delete").checked = false;
+    document.getElementById("permission-manage").checked = false;
+    roleForm.querySelector('button[type="submit"]').textContent =
+      "Vytvořit roli";
+  }
+  roleModal?.classList.add("open");
+  roleModal?.setAttribute("aria-hidden", "false");
+  document.getElementById("role-name")?.focus();
+};
+const closeRoleDialog = () => {
+  roleModal?.classList.remove("open");
+  roleModal?.setAttribute("aria-hidden", "true");
+  roleForm?.reset();
+  roleBeingEdited = undefined;
+};
+document
+  .getElementById("add-role")
+  ?.addEventListener("click", () => openRoleDialog());
+document
+  .getElementById("edit-role")
+  ?.addEventListener("click", () => openRoleDialog(true));
+document
+  .getElementById("close-role-dialog")
+  ?.addEventListener("click", closeRoleDialog);
+document
+  .getElementById("cancel-role-dialog")
+  ?.addEventListener("click", closeRoleDialog);
+roleModal
+  ?.querySelector(".role-modal-backdrop")
+  ?.addEventListener("click", closeRoleDialog);
+roleForm?.addEventListener("submit", (event) => {
+  event.preventDefault();
+  const submit = roleForm.querySelector('button[type="submit"]');
+  submit.disabled = true;
+  fetch("roles", {
+    method: "POST",
+    body: new URLSearchParams(new FormData(roleForm)),
+  })
+    .then((response) => {
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      window.location.reload();
+    })
+    .catch(() => {
+      submit.disabled = false;
+      window.alert(
+        "Role se nepodařilo uložit. Zkontrolujte dostupnost backendu.",
+      );
+    });
+});
+
+const modulePermissionsForm = document.getElementById(
+  "module-permissions-form",
+);
+modulePermissionsForm?.addEventListener("submit", (event) => {
+  event.preventDefault();
+  const submit = document.getElementById("save-module-permissions");
+  submit.disabled = true;
+  fetch("roles", {
+    method: "POST",
+    body: new URLSearchParams(new FormData(modulePermissionsForm)),
+  })
+    .then((response) => {
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      window.location.reload();
+    })
+    .catch(() => {
+      submit.disabled = false;
+      window.alert("Oprávnění se nepodařilo uložit.");
+    });
+});
+
+const drawer = document.getElementById("module-drawer");
+const backdrop = document.createElement("div");
+backdrop.className = "drawer-backdrop";
+document.body.appendChild(backdrop);
+const moduleTiles = document.querySelectorAll(".module-tile");
+const openModule = (tile) => {
+  drawer.querySelector(".drawer-icon").className =
+    `drawer-icon module-icon ${tile.querySelector(".module-icon").className.split(" ").slice(1).join(" ")}`;
+  document.getElementById("drawer-title").textContent = tile.dataset.title;
+  document.getElementById("drawer-subtitle").textContent =
+    tile.dataset.subtitle;
+  document.getElementById("drawer-description").textContent =
+    tile.dataset.description;
+  drawer.dataset.module = tile.dataset.module;
+  drawer.classList.add("open");
+  backdrop.classList.add("visible");
+  drawer.setAttribute("aria-hidden", "false");
+};
+const closeModule = () => {
+  drawer?.classList.remove("open");
+  backdrop.classList.remove("visible");
+  drawer?.setAttribute("aria-hidden", "true");
+  document.activeElement?.blur();
+};
+moduleTiles.forEach((tile) =>
+  tile.addEventListener("click", () => openModule(tile)),
+);
+document.getElementById("drawer-close")?.addEventListener("click", closeModule);
+backdrop.addEventListener("click", closeModule);
+document.addEventListener("keydown", (event) => {
+  if (event.key === "Escape") closeModule();
+});
+document.getElementById("drawer-action")?.addEventListener("click", () => {
+  const module = drawer.dataset.module;
+  if (module === "base") {
+    window.location.assign("users");
+  } else if (module === "settings") {
+    window.location.assign("settings");
+  } else if (module === "crm") {
+    window.location.assign("crm");
+  } else if (module === "sales") {
+    window.location.assign("sales");
+  } else if (module === "purchase") {
+    window.location.assign("purchase");
+  } else if (module === "inventory") {
+    window.location.assign("inventory");
+  } else if (module === "manufacturing") {
+    window.location.assign("manufacturing");
+  } else if (module === "pos") {
+    window.location.assign("pos");
+  } else if (module === "hr") {
+    window.location.assign("hr");
+  } else if (module === "documents") {
+    window.location.assign("documents");
+  } else if (module === "project") {
+    window.location.assign("projects");
+  } else if (module === "helpdesk") {
+    window.location.assign("helpdesk");
+  } else if (module === "website") {
+    window.location.assign("website");
+  } else if (module === "ecommerce") {
+    window.location.assign("ecommerce");
+  } else if (module === "marketing") {
+    window.location.assign("marketing");
+  } else if (module === "planning") {
+    window.location.assign("planning");
+  } else if (module === "settings") {
+    window.location.assign("settings");
+  } else if (module === "accounting") {
+    window.location.assign("accounting");
+  } else if (module === "promotions") {
+    window.location.assign("promo");
+  } else if (module === "dashboard") {
+    window.location.assign("dashboard");
+  } else {
+    window.alert(
+      `Modul ${document.getElementById("drawer-title").textContent} bude napojen v další iteraci.`,
+    );
+  }
+});
+const moduleSearch = document.getElementById("module-search");
+const moduleFilters = document.querySelectorAll(".module-filter");
+const filterModules = () => {
+  const query = moduleSearch.value.toLowerCase().trim();
+  const filter = document.querySelector(".module-filter.active").dataset.filter;
+  let visible = 0;
+  moduleTiles.forEach((tile) => {
+    const matchesQuery =
+      `${tile.dataset.title} ${tile.dataset.subtitle} ${tile.dataset.description}`
+        .toLowerCase()
+        .includes(query);
+    const matchesFilter = filter === "all" || tile.dataset.category === filter;
+    const isVisible = matchesQuery && matchesFilter;
+    tile.hidden = !isVisible;
+    if (isVisible) visible += 1;
+  });
+  document.getElementById("module-empty").style.display = visible
+    ? "none"
+    : "block";
+};
+moduleSearch?.addEventListener("input", filterModules);
+moduleFilters.forEach((filter) =>
+  filter.addEventListener("click", () => {
+    moduleFilters.forEach((item) =>
+      item.classList.toggle("active", item === filter),
+    );
+    filterModules();
+  }),
+);

@@ -1,0 +1,46 @@
+{% extends 'base.html.twig' %}
+{% set pageTitle = 'Pokladna' %}
+{% block stylesheets %}
+    <link rel="stylesheet" href="{{ asset('assets/pos.css') }}">
+    <link rel="stylesheet" href="{{ asset('assets/pos-table.css') }}">
+{% endblock %}
+{% block body %}
+<main class="pos-page">
+    <header class="pos-header"><a href="/apps" class="back-link">← Aplikace</a><div><span class="eyebrow">PRODEJ / POKLADNA</span><h1>Pokladna</h1><p>Uzavírejte účtenky na prodejně a sledujte aktuální tržbu podle plateb.</p></div><a href="#receipts" class="primary">Otevřené účtenky</a></header>
+    {% for text in [error, actionError] %}{% if text %}<p class="pos-message error" role="alert">{{ text }}</p>{% endif %}{% endfor %}
+    {% if message %}<p class="pos-message" role="status">{{ message }}</p>{% endif %}
+    <section class="pos-metrics">
+        <article><span>Dnešní tržba</span><strong>{{ overview ? overview.paidToday|number_format(2, '.', '') : '-' }} Kč</strong><small>uhrazené účtenky</small></article>
+        <article><span>Otevřené účtenky</span><strong>{{ overview.openTransactionCount|default('-') }}</strong><small>čekají na platbu</small></article>
+        <article><span>Položky v obsluze</span><strong>{{ overview.itemCount|default('-') }}</strong><small>napříč zobrazenými účtenkami</small></article>
+    </section>
+    <section id="receipts" class="pos-section">
+        <div class="section-head"><div><span class="eyebrow">AKTUÁLNÍ ÚČTENKY</span><h2>Obsluha prodejen</h2></div><span class="receipt-count">{{ overview.transactions|default([])|length }} účtenky</span></div>
+        <div class="receipt-table-wrap">
+            <table class="receipt-table">
+                <thead><tr><th>Účtenka</th><th>Prodejna a čas</th><th>Položky</th><th>Celkem</th><th>Platba</th><th>Obsluha</th></tr></thead>
+                <tbody>
+                {% for transaction in overview.transactions|default([]) %}
+                    <tr>
+                        <td data-label="Účtenka"><strong>{{ transaction.receiptNumber }}</strong><span class="status-chip status-{{ transaction.status|lower }}">{{ transaction.status == 'OPEN' ? 'OTEVŘENO' : 'UHRAZENO' }}</span></td>
+                        <td data-label="Prodejna a čas"><strong>{{ transaction.storeName }}</strong><span>{{ transaction.openedAt|replace({'T': ' '}) }}</span></td>
+                        <td data-label="Položky">{{ transaction.itemCount }}</td>
+                        <td data-label="Celkem"><strong>{{ transaction.totalAmount|number_format(2, '.', '') }} Kč</strong></td>
+                        <td data-label="Platba">{{ transaction.paymentMethod|default('-') }}</td>
+                        <td data-label="Obsluha">
+                            {% if transaction.status == 'OPEN' %}
+                                <form method="post" class="payment-form">
+                                    <input type="hidden" name="id" value="{{ transaction.id }}">
+                                    <label>Platba<select name="method"><option value="CARD">Karta</option><option value="CASH">Hotovost</option><option value="VOUCHER">Poukázka</option></select></label>
+                                    <button class="secondary" type="submit">Přijmout platbu</button>
+                                </form>
+                            {% else %}<span class="paid-label">Platba přijata</span>{% endif %}
+                        </td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </section>
+</main>
+{% endblock %}

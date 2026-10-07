@@ -6,12 +6,15 @@ cd "$repo_dir"
 
 snapshot() {
   {
-    find erp-base-frontend/src -type f -printf '%p:%T@\n'
+    find erp-base-php/src erp-base-php/templates erp-base-php/config erp-base-php/public \
+      -type f -printf '%p:%T@\n'
+    stat -c '%n:%Y' erp-base-php/composer.json erp-base-php/composer.lock \
+      erp-base-php/Dockerfile erp-base-php/.dockerignore erp-base-php/.env.dist
     stat -c '%n:%Y' docker-compose.yml
   } | sort
 }
 
-echo "Spouštím ERP a sleduji změny v erp-base-frontend/src..."
+echo "Spouštím ERP a sleduji změny v erp-base-php..."
 docker compose up --build -d
 last_snapshot="$(snapshot)"
 

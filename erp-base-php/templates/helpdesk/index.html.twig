@@ -1,0 +1,49 @@
+{% extends 'base.html.twig' %}
+
+{% block stylesheets %}
+    <link rel="stylesheet" href="{{ asset('assets/helpdesk.css') }}">
+{% endblock %}
+
+{% block body %}
+<div class="helpdesk-page">
+    <header class="helpdesk-header">
+        <a href="/apps" class="back-link">← Aplikace</a>
+        <div><span class="eyebrow">PROVOZ / HELPDESK</span><h1>Helpdesk</h1><p>Řiďte servisní požadavky, SLA termíny a práci podpůrných týmů.</p></div>
+        <a href="#tickets" class="primary">Otevřené požadavky</a>
+    </header>
+    {% if error %}<p class="helpdesk-message error" role="alert">{{ error }}</p>{% endif %}
+    {% if actionError %}<p class="helpdesk-message error" role="alert">{{ actionError }}</p>{% endif %}
+    {% if message %}<p class="helpdesk-message" role="status">{{ message }}</p>{% endif %}
+    <section class="helpdesk-metrics">
+        <article><span>Otevřené požadavky</span><strong>{{ overview.openTicketCount ?? '-' }}</strong><small>čekají na vyřešení</small></article>
+        <article><span>Vysoká priorita</span><strong>{{ overview.highPriorityCount ?? '-' }}</strong><small>vyžaduje okamžitou pozornost</small></article>
+        <article><span>SLA do 8 hodin</span><strong>{{ overview.dueSoonCount ?? '-' }}</strong><small>blíží se termín řešení</small></article>
+    </section>
+    <section id="tickets" class="helpdesk-section">
+        <div class="section-head"><div><span class="eyebrow">SERVISNÍ POŽADAVKY</span><h2>Fronta podpory</h2></div><span class="ticket-count">{{ (overview.tickets ?? [])|length }} požadavky</span></div>
+        <div class="ticket-table-wrap">
+            <table class="ticket-table">
+                <thead><tr><th>POŽADAVEK</th><th>TÝM</th><th>SLA TERMÍN</th><th>STAV</th><th><span class="sr-only">AKCE</span></th></tr></thead>
+                <tbody>
+                    {% for ticket in overview.tickets ?? [] %}
+                    <tr>
+                        <td data-label="Požadavek">
+                            <span class="priority priority-{{ ticket.priority|lower }}">{{ ticket.priority == 'HIGH' ? 'VYSOKÁ' : (ticket.priority == 'MEDIUM' ? 'STŘEDNÍ' : 'NÍZKÁ') }}</span>
+                            <span class="status-chip status-{{ ticket.status|lower }}">{{ ticket.status == 'IN_PROGRESS' ? 'ŘEŠÍ SE' : (ticket.status == 'RESOLVED' ? 'VYŘEŠENO' : 'OTEVŘENO') }}</span>
+                            <strong>{{ ticket.subject }}</strong><span>{{ ticket.ticketNumber }} · {{ ticket.requesterName }}</span>
+                        </td>
+                        <td data-label="Tým">{{ ticket.assignedTeam }}</td><td data-label="SLA termín">{{ ticket.dueAt|date('d.m.Y H:i') }}</td>
+                        <td data-label="Stav">{{ ticket.status == 'RESOLVED' ? 'Požadavek uzavřen' : 'Čeká na vyřešení' }}</td>
+                        <td class="ticket-actions">
+                            {% if ticket.status != 'RESOLVED' %}
+                            <form method="post" action="/helpdesk?v=20261001-2"><input type="hidden" name="id" value="{{ ticket.id }}"><button class="secondary" type="submit">Označit jako vyřešené</button></form>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </section>
+</div>
+{% endblock %}

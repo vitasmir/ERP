@@ -1,0 +1,177 @@
+{% extends 'base.html.twig' %}
+{% set pageTitle = 'eCommerce' %}
+{% block stylesheets %}
+    <link rel="stylesheet" href="{{ asset('assets/ecommerce.css') }}">
+    <style>
+        .product-card-actions { display: flex; flex-direction: row; align-items: center; gap: 7px; flex-wrap: wrap; }
+        .danger-button { background: #a8463d !important; border-color: #a8463d !important; color: #fff !important; }
+        .danger-button:hover { background: #8d342d !important; border-color: #8d342d !important; }
+        @media (min-width: 1200px) {
+            .product-list { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+            .product-card { padding: 14px; }
+            .product-top { display: block; }
+            .product-card-actions { align-items: flex-start !important; margin-top: 12px; flex-direction: row !important; }
+            .active-state { text-align: left; }
+            .delivery-form { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 7px; }
+            .delivery-form button { grid-column: 1 / -1; }
+            .product-edit-form { grid-template-columns: 1fr; }
+            .product-edit-form .secondary { grid-column: 1; }
+        }
+    </style>
+{% endblock %}
+{% block body %}
+<main class="commerce-page" data-default-vat="{{ eshopDefaultVatRate }}">
+    <header class="commerce-header"><a href="/apps" class="back-link">← Aplikace</a><div><span class="eyebrow">OBCHOD / ECOMMERCE</span><h1>Obchod</h1><p>Navrhněte úvod, spravujte katalog a ověřte dostupnost zboží v každé lokalitě.</p></div><a href="#catalog" class="primary">Katalog produktů</a></header>
+    {% for text in [error, actionError] %}{% if text %}<p class="commerce-message error" role="alert">{{ text }}</p>{% endif %}{% endfor %}
+    {% if message %}<p class="commerce-message" role="status">{{ message }}</p>{% endif %}
+    {% if ecommerce %}
+        <section class="commerce-grid">
+            <article class="panel homepage-panel">
+                <div class="panel-heading"><div><span class="eyebrow">ÚVODNÍ STRÁNKA</span><h2>Vzhled a sdělení</h2></div><span class="panel-note">Klikněte do náhledu nebo použijte šipky</span></div>
+                <form method="post" id="homepage-form">
+                    <input type="hidden" name="action" value="homepage">
+                    <input type="hidden" name="textX" id="text-x" value="{{ ecommerce.homepage.textX }}"><input type="hidden" name="textY" id="text-y" value="{{ ecommerce.homepage.textY }}">
+                    <div class="design-stage design-{{ ecommerce.homepage.design|lower }}" id="design-stage" tabindex="0" aria-label="Náhled úvodní stránky">
+                        <div class="stage-copy" id="stage-copy" data-x="{{ ecommerce.homepage.textX }}" data-y="{{ ecommerce.homepage.textY }}"><span>Doručení ještě dnes</span><h3>{{ ecommerce.homepage.headline }}</h3><p>{{ ecommerce.homepage.subheadline }}</p></div>
+                    </div>
+                    <div class="editor-fields">
+                        <label>Design<select name="design" id="design-select">{% for value, label in {'BOTANICAL': 'Botanická sklizeň', 'MARKET': 'Městský trh', 'MINIMAL': 'Čistý minimalismus'} %}<option value="{{ value }}" {{ value == ecommerce.homepage.design ? 'selected' : '' }}>{{ label }}</option>{% endfor %}</select></label>
+                        <label>Nadpis<input name="headline" value="{{ ecommerce.homepage.headline }}" maxlength="200"></label>
+                        <label>Podnadpis<input name="subheadline" value="{{ ecommerce.homepage.subheadline }}" maxlength="500"></label>
+                    </div>
+                    <button class="primary" type="submit">Uložit úvodní stránku</button>
+                </form>
+            </article>
+            <article class="panel category-panel">
+                <div class="panel-heading"><div><span class="eyebrow">KATALOG</span><h2>Strom kategorií</h2></div><span class="panel-note">{{ ecommerce.categories|length }} kořenů</span></div>
+                <ul class="category-tree">{% include 'ecommerce/_categories.html.twig' with {categories: ecommerce.categories} %}</ul>
+                <form method="post" class="compact-form">
+                    <input type="hidden" name="action" value="category">
+                    <label>Nová kategorie<input name="name" placeholder="Např. Nápoje" required></label><label>Slug<input name="slug" placeholder="napoje" required></label>
+                    <label>Nadřazená<select name="parentId"><option value="">Kořen</option>{% for category in categoryOptions %}<option value="{{ category.id }}">{{ category.name }}</option>{% endfor %}</select></label>
+                    <button class="secondary" type="submit">Přidat kategorii</button>
+                </form>
+            </article>
+        </section>
+        <section class="product-admin panel">
+            <div class="section-heading"><div><span class="eyebrow">SPRÁVA PRODUKTŮ</span><h2>Přidat výrobek do stromu e-shopu</h2></div><span class="panel-note">Katalog, cena, dostupnost a obrázek</span></div>
+            <form method="post" class="product-form">
+                <input type="hidden" name="action" value="product">
+                <label>SKU<input name="sku" placeholder="NAP-001" required></label><label>Název<input name="name" placeholder="Název produktu" required></label><label>Jednotka<input name="unit" value="ks" required></label>
+                <label>Nákupní cena bez DPH<input name="purchasePrice" type="number" min="0" step="0.01" placeholder="0.00" required></label>
+                <label>DPH (%)<input name="vatRate" type="number" min="0" max="100" step="0.01" placeholder="21" required></label>
+                <label>Kategorie<select name="categoryId">{% include 'ecommerce/_category_options.html.twig' with {selected: null} %}</select></label>
+                <label>Obrázek produktu<input name="imageUrl" type="url" placeholder="https://.../produkt.jpg" data-image-input></label>
+                <label class="check-field"><input type="checkbox" name="active" checked> Aktivní v e-shopu</label>
+                <label class="wide-field">Popis<textarea name="description" rows="2" placeholder="Krátký popis produktu"></textarea></label>
+                <div class="image-preview" data-image-preview>Sem zadejte URL obrázku produktu</div>
+                <button class="primary" type="submit">Přidat produkt do e-shopu</button>
+            </form>
+        </section>
+        <section class="catalog-section" id="catalog">
+            <div class="section-heading"><div><span class="eyebrow">PRODUKTY A DOSTUPNOST</span><h2>Katalog napojený na inventory</h2></div><div class="catalog-filter-meta">{% if selectedCategoryId %}<a href="/ecommerce#catalog" class="clear-filter">Zobrazit všechny produkty</a>{% endif %}<span class="panel-note">{{ ecommerce.products|length }} produktů</span></div></div>
+            <div class="product-list">
+                {% for product in ecommerce.products %}
+                    <article class="product-card" id="product-{{ product.id }}">
+                        <div class="product-top">
+                            <div>{% if product.imageUrl %}<img class="product-image" src="{{ product.imageUrl }}" alt="{{ product.name }}">{% endif %}<span class="sku">{{ product.sku }}</span><h3>{{ product.name }}</h3><p>{{ product.description }}</p></div>
+                            <div><strong class="price">{{ product.price }} Kč / {{ product.unit }}</strong><span class="active-state {{ product.active ? 'is-active' : 'is-inactive' }}">{{ product.active ? 'AKTIVNÍ' : 'SKRYTÝ' }}</span></div>
+                        </div>
+                        <div class="availability">
+                            {% for stock in product.availability %}<div class="stock-row"><span>{{ stock.locationName }}</span><span class="stock-{{ stock.stockStatus|lower }}">{{ stock.quantity }} {{ product.unit }} · {{ stock.stockStatus == 'AVAILABLE' ? 'Dostupné' : (stock.stockStatus == 'LOW' ? 'Nízká zásoba' : 'Vyprodáno') }}</span></div>{% endfor %}
+                        </div>
+                        <details class="delivery-options">
+                            <summary>Dostupnost a doručení</summary>
+                            <form method="post" class="delivery-form">
+                                <input type="hidden" name="action" value="estimate"><input type="hidden" name="productId" value="{{ product.id }}">
+                                <label>Množství<input type="number" name="quantity" value="1" min="1"></label><label>PSČ<input name="postalCode" placeholder="60200" pattern="[0-9]{5}" required></label>
+                                <label>Způsob<select name="method"><option value="HOME">Domů</option><option value="BOX">Box</option></select></label>
+                                <button class="secondary" type="submit">Zjistit doručení</button>
+                            </form>
+                        </details>
+                        <details class="product-edit">
+                            <summary>Upravit produkt</summary>
+                            <form method="post" class="product-edit-form">
+                                <input type="hidden" name="action" value="product"><input type="hidden" name="productId" value="{{ product.id }}">
+                                <label>SKU<input name="sku" value="{{ product.sku }}" required></label><label>Název<input name="name" value="{{ product.name }}" required></label>
+                                <label>Cena<input name="price" type="number" min="0" step="0.01" value="{{ product.price }}" required></label>
+                                <label>Kategorie<select name="categoryId">{% include 'ecommerce/_category_options.html.twig' with {selected: product.categoryId} %}</select></label>
+                                <label>Obrázek<input name="imageUrl" type="url" value="{{ product.imageUrl|default('') }}"></label>
+                                <label class="check-field"><input type="checkbox" name="active" {{ product.active ? 'checked' : '' }}> Aktivní v e-shopu</label>
+                                <input type="hidden" name="unit" value="{{ product.unit }}"><input type="hidden" name="description" value="{{ product.description }}">
+                                <button class="secondary" type="submit">Uložit změny</button>
+                            </form>
+                        </details>
+                    </article>
+                {% endfor %}
+            </div>
+        </section>
+        <section class="category-status-panel panel">
+            <div class="section-heading"><div><span class="eyebrow">VIDITELNOST KATEGORIE</span><h2>Aktivní produkty</h2></div><span class="panel-note">Přepínač určuje, zda se produkt zobrazí v e-shopu</span></div>
+            <div class="catalog-product-actions">
+                {% for product in ecommerce.products %}
+                    <form method="post" class="product-status-row">
+                        <input type="hidden" name="action" value="toggleProduct"><input type="hidden" name="productId" value="{{ product.id }}"><input type="hidden" name="active" value="{{ product.active ? '' : 'on' }}">
+                        <strong>{{ product.name }}</strong><span class="active-state {{ product.active ? 'is-active' : 'is-inactive' }}">{{ product.active ? 'AKTIVNÍ' : 'NEAKTIVNÍ' }}</span><button class="secondary" type="submit">{{ product.active ? 'Nastavit neaktivní' : 'Nastavit aktivní' }}</button>
+                    </form>
+                {% endfor %}
+            </div>
+        </section>
+        <section class="pricing-panel panel">
+            <div class="section-heading"><div><span class="eyebrow">CENOTVORBA</span><h2>Nákupní ceny a DPH</h2></div><span class="panel-note">Globální marže: {{ eshopMarginPercent is not null ? eshopMarginPercent|number_format(2, '.', '') : '-' }} %</span></div>
+            <div class="catalog-product-actions">
+                {% for product in ecommerce.products %}
+                    <form method="post" class="product-pricing-form">
+                        <input type="hidden" name="action" value="product"><input type="hidden" name="productId" value="{{ product.id }}">
+                        {% for field in ['sku', 'name', 'unit', 'description', 'categoryId', 'imageUrl'] %}<input type="hidden" name="{{ field }}" value="{{ attribute(product, field)|default('') }}">{% endfor %}
+                        <input type="hidden" name="active" value="{{ product.active ? 'on' : '' }}">
+                        <strong>{{ product.name }}</strong>
+                        <label>Nákupní cena bez DPH<input name="purchasePrice" type="number" min="0" step="0.01" value="{{ product.purchasePrice|default('') }}" required></label>
+                        <label>Marže (%)<input name="eshopMarginPercent" type="number" min="0" max="99.98" step="0.01" value="{{ (product.eshopMarginPercent ?? eshopMarginPercent)|number_format(2, '.', '') }}" required></label>
+                        <label>DPH (%)<input name="vatRate" type="number" min="0" max="100" step="0.01" value="{{ product.vatRate ?? '21' }}" required></label>
+                        <span>Prodejní cena bez DPH: <strong>{{ product.price is not null ? (product.price / (1 + (product.vatRate ?? 0) / 100))|number_format(2, '.', '') : '-' }} Kč</strong></span>
+                        <span>Cena s DPH: <strong>{{ product.price is not null ? product.price|number_format(2, '.', '') : '-' }} Kč</strong></span>
+                        <button class="secondary" type="submit">Přepočítat cenu</button>
+                    </form>
+                {% endfor %}
+            </div>
+        </section>
+        <section class="catalog-actions-panel panel">
+            <div class="section-heading"><div><span class="eyebrow">GALERIE OBRÁZKŮ</span><h2>Obrázky produktů</h2></div><span class="panel-note">Jeden obrázek je aktivní pro nové faktury</span></div>
+            <div class="catalog-product-actions">
+                {% for product in ecommerce.products %}
+                    <div>
+                        <strong>{{ product.name }}</strong>
+                        <div>
+                            {% for image in product.images|default([]) %}
+                                <span>
+                                    <img class="product-image" src="{{ image.imageUrl }}" alt="{{ product.name }}" width="72">
+                                    <form method="post" style="display:inline"><input type="hidden" name="action" value="activateImage"><input type="hidden" name="productId" value="{{ product.id }}"><input type="hidden" name="imageId" value="{{ image.id }}"><button class="secondary" type="submit">{{ image.active ? 'Aktivní' : 'Nastavit jako aktivní' }}</button></form>
+                                    <form method="post" style="display:inline"><input type="hidden" name="action" value="deleteImage"><input type="hidden" name="productId" value="{{ product.id }}"><input type="hidden" name="imageId" value="{{ image.id }}"><button class="danger-button" type="submit">Odstranit</button></form>
+                                </span>
+                            {% endfor %}
+                        </div>
+                        <form method="post"><input type="hidden" name="action" value="addImage"><input type="hidden" name="productId" value="{{ product.id }}"><input name="imageUrl" type="url" placeholder="https://.../produkt.jpg" required><label><input type="checkbox" name="active"> Aktivní</label><button class="secondary" type="submit">Přidat obrázek</button></form>
+                    </div>
+                {% endfor %}
+            </div>
+        </section>
+        <section class="catalog-actions-panel panel">
+            <div class="section-heading"><div><span class="eyebrow">SPRÁVA KATALOGU</span><h2>Přejmenovat nebo smazat výrobek</h2></div></div>
+            <div class="catalog-product-actions">
+                {% for product in ecommerce.products %}
+                    <div><span>{{ product.name }} <small>({{ product.sku }})</small></span><form method="post" onsubmit="return confirm('Opravdu smazat produkt?');"><input type="hidden" name="action" value="deleteProduct"><input type="hidden" name="productId" value="{{ product.id }}"><button class="danger-button" type="submit">Smazat</button></form></div>
+                {% endfor %}
+            </div>
+        </section>
+        <section class="import-section">
+            <div><span class="eyebrow">IMPORT PRODUKTŮ</span><h2>Import katalogu</h2></div>
+            <form method="post"><input type="hidden" name="action" value="import"><textarea name="products" rows="8">[]</textarea><button class="primary" type="submit">Importovat produkty</button></form>
+        </section>
+    {% endif %}
+</main>
+{% endblock %}
+{% block javascripts %}
+    <script>document.body.dataset.defaultVat = document.querySelector('[data-default-vat]').dataset.defaultVat;</script>
+    <script src="{{ asset('assets/ecommerce.js') }}" defer></script>
+{% endblock %}

@@ -1,0 +1,248 @@
+{% extends 'base.html.twig' %}
+
+{% block stylesheets %}
+    <link rel="stylesheet" href="{{ asset('assets/inventory.css') }}?v=20260928-154028">
+    <link rel="stylesheet" href="{{ asset('assets/inventory-views.css') }}?v=20261004-3">
+    <style>
+        .inventory-image-modal {
+            position: fixed;
+            inset: 0;
+            z-index: 1000;
+            display: grid;
+            place-items: center;
+            padding: 24px;
+            background: rgba(15, 29, 24, .82);
+            cursor: zoom-out;
+        }
+
+        .inventory-image-modal-content {
+            position: relative;
+            display: grid;
+            place-items: center;
+            max-width: calc(100vw - 48px);
+            max-height: calc(100vh - 48px);
+        }
+
+        .inventory-image-modal img {
+            display: block;
+            max-width: calc(100vw - 48px);
+            max-height: calc(100vh - 48px);
+            width: auto;
+            height: auto;
+            object-fit: contain;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, .35);
+            cursor: default;
+        }
+
+        .inventory-image-modal-close {
+            position: absolute;
+            z-index: 1;
+            top: -18px;
+            right: -18px;
+            width: 36px;
+            height: 36px;
+            border: 0;
+            border-radius: 50%;
+            background: #fffdf8;
+            color: #17362b;
+            font-size: 26px;
+            line-height: 1;
+            cursor: pointer;
+            box-shadow: 0 4px 14px rgba(0, 0, 0, .25);
+        }
+
+        @media (max-width: 520px) {
+            .inventory-image-modal {
+                padding: 12px;
+            }
+
+            .inventory-image-modal img {
+                max-width: calc(100vw - 24px);
+                max-height: calc(100vh - 24px);
+            }
+        }
+
+        .product-image-popup {
+            position: fixed;
+            z-index: 1000;
+            width: min(420px, calc(100vw - 32px));
+            height: min(420px, calc(100vh - 32px));
+            display: grid;
+            place-items: center;
+            padding: 10px;
+            background: #fffdf9;
+            border: 1px solid #d8d5ce;
+            box-shadow: 0 18px 50px rgba(20, 29, 38, .3);
+            pointer-events: none;
+        }
+
+        .product-image-popup img {
+            display: block;
+            max-width: 100%;
+            max-height: 100%;
+            width: auto;
+            height: auto;
+            object-fit: contain;
+        }
+    </style>
+{% endblock %}
+
+{% block body %}
+    <div class="inventory-page">
+        <header class="inventory-header">
+            <a href="{{ path('app_home') }}" class="back-link">← Aplikace</a>
+            <div><span class="eyebrow">PROVOZ / SKLAD</span><h1>Sklad</h1><p>Zásoby podle lokace, příjem, výdej a dohledatelná historie pohybů.</p></div>
+            <div class="view-switch" role="tablist" aria-label="Pohled skladu">
+                {% for tab, label in {'stock': 'Sklad', 'products': 'Produkty', 'history': 'Historie'} %}
+                    <button id="tab-{{ tab }}" class="view-tab {{ tab == selectedView ? 'active' : '' }}"
+                        type="button" role="tab" aria-selected="{{ tab == selectedView ? 'true' : 'false' }}" aria-controls="{{ tab }}"
+                        tabindex="{{ tab == selectedView ? '0' : '-1' }}" data-inventory-view="{{ tab }}">{{ label }}</button>
+                {% endfor %}
+            </div>
+        </header>
+        {% if loadError %}<p class="inventory-message error" role="alert">{{ loadError }}</p>{% endif %}
+        {% if actionError %}<p class="inventory-message error" role="alert">{{ actionError }}</p>{% endif %}
+        {% if message %}<p class="inventory-message" role="status">{{ message }}</p>{% endif %}
+        <section class="inventory-metrics">
+            <article><span>Zásoba celkem</span><strong>{{ overview is null ? '-' : overview.totalQuantity }} jednotek</strong><small>součet evidovaných kusů a měrných jednotek</small></article>
+            <article><span>Hodnota zásob</span><strong>{{ overview is null ? '-' : overview.stockValue|number_format(2, '.', '') }} Kč</strong><small>v pořizovacích cenách</small></article>
+            <article><span>Pod minimem</span><strong>{{ overview is null ? '-' : overview.lowStockCount }}</strong><small>lokace vyžadují doplnění</small></article>
+        </section>
+        <div class="inventory-filters" {{ selectedView == 'history' ? 'hidden' : '' }}>
+            <label for="inventory-search">Hledat produkt, SKU nebo lokaci
+                <input id="inventory-search" type="search" placeholder="Název nebo SKU">
+            </label>
+            <label class="inventory-filter-check"><input id="inventory-low-stock" type="checkbox"> Jen pod minimem</label>
+            <span id="inventory-filter-count" role="status" aria-live="polite"></span>
+        </div>
+
+        <section id="stock" class="inventory-section inventory-view-panel" role="tabpanel" aria-labelledby="tab-stock"
+            {{ selectedView == 'stock' ? '' : 'hidden' }}>
+            <div class="section-head">
+                <div><span class="eyebrow">SKLADOVÉ POLOŽKY</span><h2>Stav zásob podle lokace</h2></div>
+                <span class="item-count">{{ itemCount }} lokace</span>
+            </div>
+            <div class="category-tree">
+                {% for group in groups %}
+                    <details class="category-branch" open>
+                        <summary><span>Kategorie</span> <strong>{{ group.path }}</strong></summary>
+                        <div class="stock-table-wrap">
+                            <table class="stock-table">
+                                <thead>
+                                    <tr><th>Lokace</th><th>Položka</th><th>Obrázek</th><th>Skladem</th><th>Minimum</th><th>Jednotková cena</th><th>Pohyb zásob</th></tr>
+                                </thead>
+                                <tbody>
+                                    {% for item in group.items %}
+                                        <tr class="{{ item.lowStock ? 'low-stock' : '' }}" data-stock-row data-low-stock="{{ item.lowStock ? 'true' : 'false' }}"
+                                            data-search="{{ item.productName ~ ' ' ~ item.sku ~ ' ' ~ item.locationName }}">
+                                            <td data-label="Lokace"><span class="status-chip {{ item.lowStock ? 'status-low' : 'status-ok' }}">{{ item.lowStock ? 'DOPLNIT' : 'V POŘÁDKU' }}</span><strong>{{ item.locationName }}</strong></td>
+                                            <td data-label="Položka"><strong>{{ item.productName }}</strong><span>{{ item.sku }}</span></td>
+                                            <td data-label="Obrázek">
+                                                <div class="stock-item-image">
+                                                    {% if item.imageUrl is not empty %}<img src="{{ item.imageUrl }}" alt="{{ item.productName }}">{% else %}<span>FM</span>{% endif %}
+                                                </div>
+                                            </td>
+                                            <td data-label="Skladem"><strong>{{ item.quantity }} {{ item.unit }}</strong></td>
+                                            <td data-label="Minimum">
+                                                {% if canEdit %}
+                                                    <input form="receive-form-{{ item.id }}" type="number" name="reorderLevel" min="0" max="2147483647"
+                                                        step="1" value="{{ item.reorderLevel }}" aria-label="Minimum {{ item.productName }}" required>
+                                                {% else %}{{ item.reorderLevel }}{% endif %} {{ item.unit }}
+                                            </td>
+                                            <td data-label="Jednotková cena">
+                                                {% if canEdit %}
+                                                    <input form="receive-form-{{ item.id }}" type="number" name="unitCost" min="0" max="9999999999.99"
+                                                        step="0.01" value="{{ item.unitCost|number_format(2, '.', '') }}" aria-label="Jednotková cena {{ item.productName }}" required>
+                                                {% else %}{{ item.unitCost|number_format(2, '.', '') }}{% endif %} Kč
+                                            </td>
+                                            <td data-label="Pohyb zásob">
+                                                {% if canEdit %}
+                                                    <form id="receive-form-{{ item.id }}" method="post" class="stock-movement-form">
+                                                        <input type="hidden" name="id" value="{{ item.id }}">
+                                                        <label>Typ<select name="action" data-stock-action><option value="receive">Příjem</option><option value="dispatch">Výdej</option></select></label>
+                                                        <label>Množství ({{ item.unit }})
+                                                            <input type="number" name="quantity" min="1" max="2147483647" step="1" value="1"
+                                                                data-available="{{ item.quantity }}" required>
+                                                        </label>
+                                                        <label>Doklad / reference<input name="reference" maxlength="120" placeholder="Číslo dokladu" required></label>
+                                                        <details><summary>Poznámka</summary><textarea name="note" rows="2" maxlength="500" aria-label="Poznámka k pohybu"></textarea></details>
+                                                        <button class="secondary" type="submit">Zaúčtovat příjem</button>
+                                                    </form>
+                                                {% else %}<span>Pouze pro čtení</span>{% endif %}
+                                                <a class="inventory-history-link" href="{{ path('app_inventory') }}?view=history&amp;itemId={{ item.id }}">Historie položky</a>
+                                            </td>
+                                        </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </details>
+                {% endfor %}
+            </div>
+        </section>
+
+        <section id="products" class="inventory-section inventory-view-panel" role="tabpanel" aria-labelledby="tab-products"
+            {{ selectedView == 'products' ? '' : 'hidden' }}>
+            <div class="section-head">
+                <div><span class="eyebrow">PRODUKTY VE SKLADU</span><h2>Produkty a dostupnost</h2></div>
+                <div class="warehouse-picker">
+                    <label for="warehouse-select">Vybraný sklad</label>
+                    <select id="warehouse-select">
+                        {% for warehouse in warehouseOptions %}
+                            <option value="{{ warehouse.locationName }}" {{ warehouse.locationName == selectedWarehouse ? 'selected' : '' }}>{{ warehouse.locationName }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <span class="item-count">{{ products|length }} produktů</span>
+            </div>
+            <div class="warehouse-product-grid">
+                {% for product in products %}
+                    <article class="warehouse-product-card" data-product-card data-low-stock="{{ product.lowStock ? 'true' : 'false' }}"
+                        data-search="{{ product.productName ~ ' ' ~ product.sku }}">
+                        <div class="warehouse-product-media">{% if product.imageUrl is not empty %}<img src="{{ product.imageUrl }}" alt="{{ product.productName }}">{% else %}<span>Bez obrázku</span>{% endif %}</div>
+                        <div class="warehouse-product-body">
+                            <span class="product-sku">{{ product.sku }}</span>
+                            <h3>{{ product.productName }}</h3>
+                            <p>{{ product.description is empty ? 'Bez popisu' : product.description }}</p>
+                            <small>{{ product.categoryPath }} · {{ product.locationCount }} lokace</small>
+                        </div>
+                        <div class="warehouse-product-stock">
+                            <div><dt>Celkem na skladech</dt><dd>{{ product.warehouseQuantity }} {{ product.unit }}</dd></div>
+                            <div><dt>Z hlavního skladu k dispozici</dt><dd>{{ product.centralQuantity }} {{ product.unit }}</dd></div>
+                        </div>
+                        <div class="warehouse-location-list">
+                            {% for warehouse in product.warehouses %}
+                                <div class="warehouse-location-row" data-warehouse="{{ warehouse.locationName }}">
+                                    <dl>
+                                        <div><dt>Na vybraném skladu</dt><dd>{{ warehouse.quantity }} {{ product.unit }}</dd></div>
+                                        <div>
+                                            <dt>Objednat z hlavního skladu</dt>
+                                            <dd>
+                                                {% if canEdit %}
+                                                    <form method="post" class="order-form">
+                                                        <input type="hidden" name="action" value="order">
+                                                        <input type="hidden" name="productId" value="{{ product.productId }}">
+                                                        <input type="hidden" name="locationName" value="{{ warehouse.locationName }}">
+                                                        <input type="number" name="quantity" min="0" max="2147483647" step="1" value="{{ warehouse.orderedFromCentral }}"
+                                                            aria-label="Objednat {{ product.productName }}" required>
+                                                        <span>{{ product.unit }}</span><button class="secondary" type="submit">Uložit</button>
+                                                    </form>
+                                                {% else %}{{ warehouse.orderedFromCentral }} {{ product.unit }}{% endif %}
+                                            </dd>
+                                        </div>
+                                    </dl>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    </article>
+                {% endfor %}
+            </div>
+        </section>
+
+        {% include 'inventory/_history.html.twig' %}
+    </div>
+{% endblock %}
+
+{% block javascripts %}
+    <script src="{{ asset('assets/inventory.js') }}?v=20261004-1"></script>
+{% endblock %}

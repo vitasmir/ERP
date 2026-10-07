@@ -12,7 +12,7 @@ flowchart TB
 
     subgraph compose["Docker Compose / projects-network"]
         subgraph edge["Web tier"]
-            frontend["erp-base-frontend<br/>JSP WAR on Tomcat 10.1<br/>:4201"]
+            frontend["erp-base-php<br/>Symfony 7.4 / PHP 8.4<br/>:4201"]
         end
 
         subgraph application["Application tier"]
@@ -33,7 +33,7 @@ flowchart TB
         warehouse["remote-warehouse-mock<br/>Spring Boot / Java 21<br/>in-memory REST API :8091"]
     end
 
-    user -->|"HTTP / JSP pages"| frontend
+    user -->|"HTTP / server-rendered Twig pages"| frontend
     shopper -->|"HTTP / public shop"| frontend
     frontend -->|"HTTP/JSON<br/>Authorization: Bearer token"| backend
 
@@ -58,16 +58,16 @@ flowchart TB
 
 | Component | Responsibility | Data ownership |
 | --- | --- | --- |
-| `erp-base-frontend` | Server-rendered JSP pages, session handling, module navigation, and backend HTTP client | Browser session and short-lived backend token |
+| `erp-base-php` | Server-rendered Twig pages, session handling, module navigation, and backend HTTP client | Browser session and short-lived backend token |
 | `erp-backend` | REST API, validation, authorization, business workflows, PDF invoice generation, and persistence | All ERP business data |
 | PostgreSQL | Transactional relational store | Durable system of record |
-| Flyway | Versioned schema evolution | 48 migrations currently in the repository |
+| Flyway | Versioned schema evolution | 49 migrations currently in the repository |
 | `remote-warehouse-mock` | Local integration-test stand-in for product and stock availability | Static in-memory dataset; resets on restart |
 
 ## Main request flow
 
 1. A user or shopper connects to the frontend on port `4201`.
-2. The JSP application calls the backend over the internal Compose network at
+2. The Symfony application calls the backend over the internal Compose network at
    `http://backend:8080`.
 3. Login is handled by the backend under `/api/v1/auth`; the frontend keeps the
    returned bearer token in the server-side HTTP session and forwards it on
@@ -100,7 +100,7 @@ flowchart LR
 
 Published ports:
 
-- `4201 -> frontend:8080`
+- `4201 -> frontend:80`
 - `8080 -> backend:8080`
 - `5434 -> postgres:5432`
 - `8091 -> remote-warehouse-mock:8080`

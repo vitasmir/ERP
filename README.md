@@ -5,7 +5,7 @@ MVP životního cyklu letákové akce pro retailový řetězec.
 ## Stack
 
 - `erp-backend`: Spring Boot 4.1.1, Java 21, JPA, Flyway
-- `erp-frontend`: JSP
+- `erp-base-php`: Symfony 7.4, PHP 8.4
 - PostgreSQL 18
 - Docker Compose
 
@@ -16,6 +16,7 @@ docker compose up --build
 ```
 
 Aplikace bude na `http://localhost:4201`, API na `http://localhost:8080`.
+Při nasazení nastavte vlastní náhodný `APP_SECRET`; výchozí hodnota je pouze pro lokální vývoj.
 
 ## Automatický rebuild UI
 
@@ -25,13 +26,13 @@ Pro automatické sestavení po změně zdrojů frontendového UI spusťte:
 ./watch-ui.sh
 ```
 
-Watcher spustí Compose na pozadí, sleduje `erp-base-frontend/src` a při změně automaticky provede `docker compose up --build -d`.
+Watcher spustí Compose na pozadí, sleduje `erp-base-php` a při změně automaticky provede `docker compose up --build -d`.
 
 ## Lokální vývoj
 
 ```bash
-cd erp-backend && mvn test
-cd erp-frontend && npm install && npm run build
+(cd erp-backend && mvn test)
+(cd erp-base-php && composer install)
 ```
 
 Backend nabízí `GET /api/v1/promo-campaigns` a `GET /api/v1/dashboard/summary`.

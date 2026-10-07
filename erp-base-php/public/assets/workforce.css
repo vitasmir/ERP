@@ -1,0 +1,241 @@
+.employee-table tbody tr:hover th,
+.employee-table tbody tr:hover td {
+  background: #eef5d9;
+}
+.team-list {
+  display: grid;
+  gap: 8px;
+  max-width: 1100px;
+}
+.team-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.team-row form:first-child {
+  display: flex;
+  flex: 1;
+  gap: 8px;
+}
+.team-row input {
+  min-width: 0;
+  flex: 1;
+}
+.team-member-count {
+  display: inline-flex;
+  align-items: center;
+  margin-left: 0;
+  color: #d84a3a;
+  font: 11px "DM Mono";
+  text-align: right;
+  white-space: nowrap;
+}
+.team-filter-button {
+  white-space: nowrap;
+}
+.team-row form:last-child {
+  margin: 0;
+}
+.workforce-section {
+  margin: 28px 0;
+  padding: 24px 0;
+  border-top: 1px solid #cbd7d1;
+}
+.workforce-section h2 {
+  font-size: 23px;
+  margin: 0 0 20px;
+  letter-spacing: 0;
+}
+.workforce-form {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 180px), 1fr));
+  gap: 16px;
+  align-items: end;
+  margin: 18px 0;
+}
+.workforce-form label {
+  display: grid;
+  gap: 7px;
+  font-size: 13px;
+  min-width: 0;
+}
+.workforce-form input,
+.workforce-form select {
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  min-height: 42px;
+  padding: 9px;
+  border: 1px solid #8b9e94;
+  border-radius: 3px;
+  color: #253b35;
+  background: #fff;
+  font: inherit;
+}
+.workforce-form button {
+  min-height: 42px;
+  white-space: normal;
+}
+.workforce-form input:focus,
+.workforce-form select:focus,
+summary:focus-visible {
+  outline: 2px solid #28716a;
+  outline-offset: 3px;
+}
+.workforce-actions {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  align-items: center;
+  min-width: 0;
+}
+.workforce-actions a {
+  color: #285b53;
+  font-size: 13px;
+}
+.workforce-actions button {
+  white-space: normal;
+}
+.workforce-edit {
+  grid-column: 1 / -1;
+  padding-top: 6px;
+  border-top: 1px solid #dce4de;
+  min-width: 0;
+}
+.workforce-edit summary,
+.workforce-section summary {
+  cursor: pointer;
+  font-size: 14px;
+  padding: 8px 0;
+}
+.workforce-event {
+  padding: 16px 0;
+  border-bottom: 1px solid #d5ddd7;
+  overflow-wrap: anywhere;
+  font-size: 13px;
+  line-height: 1.7;
+}
+.workforce-event time {
+  color: #53665c;
+  font-size: 12px;
+}
+.hr-page .employee-card {
+  min-width: 0;
+}
+.hr-page .employee-card > * {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.planning-page .planning-message,
+.hr-page .hr-message {
+  overflow-wrap: anywhere;
+}
+@media (max-width: 760px) {
+  .planning-page,
+  .hr-page {
+    padding: 24px 16px;
+  }
+  .planning-page .planning-header,
+  .hr-page .hr-header {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+  .planning-page .planning-metrics,
+  .hr-page .hr-metrics {
+    grid-template-columns: 1fr;
+    gap: 10px;
+    margin: 20px 0;
+  }
+  .hr-page .employee-card {
+    grid-template-columns: minmax(0, 1fr);
+    padding: 18px;
+  }
+  .workforce-form {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .planning-page .section-head,
+  .hr-page .section-head {
+    align-items: start;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+}
+
+.employee-table-wrap {
+  background: #fffdf8;
+  border: 1px solid #e0e2da;
+  max-height: calc(100vh - 300px);
+  min-height: 240px;
+  overflow: auto;
+}
+.employee-table {
+  width: 100%;
+  min-width: 1180px;
+  border-collapse: collapse;
+}
+.employee-table th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  padding: 13px 16px;
+  text-align: left;
+  border-bottom: 1px solid #dce4de;
+  background: #fffdf8;
+  color: #88958c;
+  font: 9px "DM Mono";
+  font-weight: 700 !important;
+  letter-spacing: 0.04em;
+}
+.employee-table td {
+  padding: 16px;
+  border-bottom: 1px solid #e8ebe5;
+  vertical-align: middle;
+  color: #304b40;
+  font-size: 13px;
+}
+.employee-table tbody tr:last-child td {
+  border-bottom: 0;
+}
+.employee-main strong,
+.employee-main small {
+  display: block;
+}
+.employee-main strong {
+  font-size: 15px;
+}
+.employee-main small {
+  margin-top: 4px;
+  color: #748278;
+  font: 11px "DM Mono";
+}
+.employee-role-mark {
+  display: inline-grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  margin-right: 8px;
+  background: var(--role-color, #d9ed62);
+  color: #173b30;
+  font-weight: 800;
+  vertical-align: middle;
+}
+.employee-edit-row td {
+  padding: 0 16px;
+}
+.employee-action-cell {
+  white-space: normal;
+}
+.employee-action-cell a {
+  display: inline-block;
+  min-width: 120px;
+}
+.employee-action-cell form {
+  margin: 0;
+}
+
+@media (max-width: 760px) {
+  .employee-table {
+    min-width: 1180px;
+  }
+}

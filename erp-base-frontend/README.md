@@ -1,6 +1,8 @@
-# ERP Base frontend
+# ERP Base frontend (legacy)
 
-První Odoo-like modul `base` implementovaný jako JSP WAR aplikace nasazená v Tomcat 10.1.
+Původní JSP WAR implementace `erp-base-frontend`, ponechaná jako migrační reference.
+Aktivní frontend spouštěný přes kořenový Docker Compose je nová aplikace
+[`erp-base-php`](../erp-base-php) postavená na Symfony 7.4.
 
 Obsahuje základní navigaci ERP, přehled uživatelů, role a rychlé akce. Spouští se jako služba `frontend` v kořenovém `docker-compose.yml`.
 

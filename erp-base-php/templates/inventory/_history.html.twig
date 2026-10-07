@@ -1,0 +1,62 @@
+<section id="history" class="inventory-section inventory-view-panel" role="tabpanel" aria-labelledby="tab-history"
+    {{ selectedView == 'history' ? '' : 'hidden' }}>
+    <div class="section-head">
+        <div><span class="eyebrow">AUDIT ZÁSOB</span><h2>Historie příjmů a výdejů</h2></div>
+    </div>
+    <p class="inventory-help">Pohyby nelze upravovat ani mazat. Opravu evidujte jako opačný pohyb s odkazem na původní doklad.
+        Počáteční stav zachycuje zásoby při zavedení evidence. Časy jsou v pásmu Europe/Prague.</p>
+    <form method="get" class="inventory-history-filter">
+        <input type="hidden" name="view" value="history">
+        <label for="history-item">Skladová položka</label>
+        <select id="history-item" name="itemId">
+            <option value="">Všechny položky</option>
+            {% for item in allItems %}
+                <option value="{{ item.id }}" {{ item.id|lower == selectedItemId ? 'selected' : '' }}>{{ item.productName ~ ' / ' ~ item.locationName }}</option>
+            {% endfor %}
+        </select>
+        <button class="secondary" type="submit">Zobrazit</button>
+    </form>
+    {% if historyError %}
+        <p class="inventory-message error" role="alert">{{ historyError }}</p>
+    {% endif %}
+    {% if movements is not null %}
+        <div class="stock-table-wrap">
+            <table class="stock-table movement-table">
+                <caption class="inventory-help">Příjmy, výdeje a stav po každém pohybu</caption>
+                <thead>
+                    <tr><th scope="col">Datum / ID</th><th scope="col">Produkt / lokace</th><th scope="col">Typ</th>
+                        <th scope="col">Množství</th><th scope="col">Stav po pohybu</th><th scope="col">Doklad / poznámka</th><th scope="col">Uživatel</th></tr>
+                </thead>
+                <tbody>
+                    {% for movement in movements.items %}
+                        <tr>
+                            <td data-label="Datum / ID"><time>{{ movement.createdAtFormatted }}</time><br>#{{ movement.id }}</td>
+                            <td data-label="Produkt / lokace"><strong>{{ movement.productName }}</strong><span>{{ movement.sku }}</span><span>{{ movement.locationName }}</span></td>
+                            <td data-label="Typ"><span class="status-chip {{ movement.type == 'ISSUE' ? 'status-low' : 'status-ok' }}">
+                                {{ movement.type == 'ISSUE' ? 'VÝDEJ' : (movement.type == 'RECEIPT' ? 'PŘÍJEM' : 'POČÁTEČNÍ STAV') }}
+                            </span></td>
+                            <td data-label="Množství">{{ movement.type == 'ISSUE' ? '−' : '+' }}{{ movement.quantity }} {{ movement.unit }}</td>
+                            <td data-label="Stav po pohybu">{{ movement.balanceAfter }} {{ movement.unit }}</td>
+                            <td data-label="Doklad / poznámka"><strong>{{ movement.reference }}</strong><span class="movement-note">{{ movement.note }}</span></td>
+                            <td data-label="Uživatel">{{ movement.actorName }}</td>
+                        </tr>
+                    {% else %}
+                        <tr><td colspan="7">Pro tento výběr nejsou evidovány žádné pohyby.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% set historyFilter = selectedItemId ? '&amp;itemId=' ~ selectedItemId : '' %}
+        <nav class="inventory-pagination" aria-label="Stránkování historie">
+            <span>Celkem {{ movements.totalElements }} pohybů · Strana {{ movements.totalPages == 0 ? 0 : movements.page + 1 }} / {{ movements.totalPages }}</span>
+            <div>
+                {% if movements.page > 0 %}
+                    <a class="secondary" href="{{ path('app_inventory') }}?view=history&amp;page={{ movements.page - 1 }}{{ historyFilter|raw }}">Předchozí</a>
+                {% endif %}
+                {% if movements.page + 1 < movements.totalPages %}
+                    <a class="secondary" href="{{ path('app_inventory') }}?view=history&amp;page={{ movements.page + 1 }}{{ historyFilter|raw }}">Další</a>
+                {% endif %}
+            </div>
+        </nav>
+    {% endif %}
+</section>

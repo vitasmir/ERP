@@ -1,0 +1,65 @@
+{% extends 'base.html.twig' %}
+
+{% block stylesheets %}
+    <link rel="stylesheet" href="{{ asset('assets/website.css') }}">
+{% endblock %}
+
+{% block body %}
+{% set editing = editingPage is not null %}
+<div class="website-page">
+    <header class="website-header">
+        <a href="/apps" class="back-link">← Aplikace</a>
+        <div><span class="eyebrow">OBCHOD / WEB</span><h1>Web</h1><p>Spravujte obsah webu, produktový katalog a zákaznické formuláře propojené s ERP.</p></div>
+        <a href="#pages" class="primary">Obsah webu</a>
+    </header>
+    {% if error %}<p class="website-message error" role="alert">{{ error }}</p>{% endif %}
+    {% if actionError %}<p class="website-message error" role="alert">{{ actionError }}</p>{% endif %}
+    {% if message %}<p class="website-message" role="status">{{ message }}</p>{% endif %}
+    <section class="website-metrics">
+        <article><span>Publikované stránky</span><strong>{{ overview.publishedPageCount ?? '-' }}</strong><small>viditelné návštěvníkům</small></article>
+        <article><span>Koncepty k publikaci</span><strong>{{ overview.draftPageCount ?? '-' }}</strong><small>čekají na schválení</small></article>
+        <article><span>Návštěvy za měsíc</span><strong>{{ overview ? overview.monthlyVisits|number_format(0, '.', ' ') : '-' }}</strong><small>{{ overview.formPageCount ?? '-' }} stránek s formulářem</small></article>
+    </section>
+    <section class="workflow-form" id="new-page">
+        <h2>{{ editing ? 'Upravit stránku' : 'Nová stránka' }}</h2>
+        <form method="post" action="/website">
+            <input type="hidden" name="action" value="{{ editing ? 'edit' : 'create' }}">
+            {% if editing %}<input type="hidden" name="id" value="{{ editingPage.id }}">{% endif %}
+            <input name="title" placeholder="Název stránky" value="{{ editingPage.title ?? '' }}" required>
+            <input name="slug" placeholder="/url-slug" value="{{ editingPage.slug ?? '' }}" required>
+            <select name="contentType">
+                {% for value, label in {'CONTENT': 'Obsah', 'LANDING': 'Úvod', 'CATALOG': 'Katalog', 'CAMPAIGN': 'Kampaň'} %}
+                <option value="{{ value }}"{{ (editingPage.contentType ?? 'CONTENT') == value ? ' selected' : '' }}>{{ label }}</option>
+                {% endfor %}
+            </select>
+            <input name="ownerName" placeholder="Správce" value="{{ editingPage.ownerName ?? '' }}" required>
+            <textarea name="content" placeholder="Obsah stránky">{{ editingPage.content ?? '' }}</textarea>
+            <button class="primary" type="submit">{{ editing ? 'Uložit změny' : 'Uložit koncept' }}</button>
+            {% if editing %}<a class="secondary" href="/website#new-page">Zrušit úpravu</a>{% endif %}
+        </form>
+    </section>
+    <section id="pages" class="website-section">
+        <div class="section-head"><div><span class="eyebrow">OBSAH A KATALOG</span><h2>Stránky webu</h2></div><span class="page-count">{{ (overview.pages ?? [])|length }} položky</span></div>
+        <div class="page-list">
+            {% for item in overview.pages ?? [] %}
+            <article class="web-card">
+                <div class="web-main">
+                    <span class="content-type">{{ item.contentType == 'LANDING' ? 'ÚVOD' : (item.contentType == 'CATALOG' ? 'KATALOG' : (item.contentType == 'CAMPAIGN' ? 'KAMPAŇ' : 'OBSAH')) }}</span>
+                    <span class="status-chip status-{{ item.status|lower }}">{{ item.status == 'PUBLISHED' ? 'PUBLIKOVÁNO' : 'KONCEPT' }}</span>
+                    <h3>{{ item.title }}</h3>
+                    <p>{% if item.status == 'PUBLISHED' and item.slug starts with '/' and not (item.slug starts with '//') %}<a href="{{ item.slug }}">{{ item.slug }}</a>{% else %}{{ item.slug }}{% endif %} · správce: {{ item.ownerName }}</p>
+                </div>
+                <dl><div><dt>Návštěvy / měsíc</dt><dd>{{ item.monthlyVisits|number_format(0, '.', ' ') }}</dd></div><div><dt>Formulář</dt><dd>{{ item.hasContactForm ? 'Aktivní' : 'Bez formuláře' }}</dd></div></dl>
+                <div class="web-actions">
+                    {% if item.status == 'DRAFT' %}
+                    <form method="post" action="/website"><input type="hidden" name="action" value="publish"><input type="hidden" name="id" value="{{ item.id }}"><button class="secondary" type="submit">Publikovat</button></form>
+                    {% else %}<span class="published-label">Stránka je online</span>{% endif %}
+                    <a class="secondary" href="/website?edit={{ item.id|url_encode }}#new-page">Upravit</a>
+                    <form method="post" action="/website" onsubmit="return confirm('Opravdu smazat stránku?');"><input type="hidden" name="action" value="delete"><input type="hidden" name="id" value="{{ item.id }}"><button class="danger-button" type="submit">Smazat</button></form>
+                </div>
+            </article>
+            {% endfor %}
+        </div>
+    </section>
+</div>
+{% endblock %}

@@ -1,0 +1,78 @@
+{% extends 'base.html.twig' %}
+
+{% block stylesheets %}
+    <link rel="stylesheet" href="{{ asset('assets/users.css') }}">
+    <style>
+        .topbar .breadcrumb { display: none !important; }
+        .table-avatar { background: var(--card-color, #dce9d7); }
+        .user-dialog input[type="color"] { height: 42px; padding: 4px; cursor: pointer; }
+    </style>
+{% endblock %}
+
+{% block body %}
+    <section class="section-head">
+        <div><span class="eyebrow">BASE / USERS</span><h2>Uživatelé</h2><p>Účty a přístupy do ERP systému.</p></div>
+        <button class="primary" id="add-user" type="button">+ Nový uživatel</button>
+    </section>
+    {% if message %}<div class="page-alert success-alert">{{ message }}</div>{% endif %}
+    {% if error %}<div class="page-alert error-alert">{{ error }}</div>{% endif %}
+    <section class="panel table-panel">
+        <div class="table-tools"><input id="user-search" placeholder="Hledat uživatele..." aria-label="Hledat uživatele"><span id="user-count">{{ users|length }} uživatelů</span></div>
+        <div class="table-scroll">
+            <table>
+                <thead><tr><th>UŽIVATEL</th><th>ROLE</th><th>SPOLEČNOST</th><th>STAV</th><th>POSLEDNÍ PŘÍSTUP</th><th><span class="sr-only">AKCE</span></th></tr></thead>
+                <tbody id="user-table">
+                {% for user in users %}
+                    <tr data-user-id="{{ user.id }}" data-employee-id="{{ user.employeeId|default('') }}" data-full-name="{{ user.fullName }}" data-role-name="{{ user.roleName }}" data-company-name="{{ user.companyName }}" data-username="{{ user.username }}" data-status="{{ user.status }}" data-color="{{ user.color|default('#DCE9D7') }}">
+                        <td><span class="table-avatar" style="--card-color:{{ user.color|default('#DCE9D7') }}">{{ user.initials }}</span>{{ user.fullName }}</td>
+                        <td>{{ user.roleName }}</td><td>{{ user.companyName }}</td>
+                        <td><span class="status status-{{ user.status|lower }}">{{ user.statusLabel }}</span></td>
+                        <td>{{ user.lastAccessLabel }}</td>
+                        <td class="table-actions">
+                            <button class="table-action edit-user" type="button" title="Upravit uživatele">Upravit</button>
+                            <form method="post" action="/users" class="delete-user-form" data-confirm-delete data-confirm-message="Opravdu chcete tohoto uživatele smazat?">
+                                <input type="hidden" name="action" value="delete"><input type="hidden" name="id" value="{{ user.id }}">
+                                <button class="table-action danger-action" type="submit" title="Smazat uživatele">Smazat</button>
+                            </form>
+                        </td>
+                    </tr>
+                {% else %}
+                    {% if not error %}<tr><td colspan="6">Zatím nejsou evidováni žádní uživatelé.</td></tr>{% endif %}
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </section>
+    <div class="user-modal{{ requestedEmployeeId ? ' open' : '' }}" id="user-modal" data-requested-employee-id="{{ requestedEmployeeId }}" aria-hidden="{{ requestedEmployeeId ? 'false' : 'true' }}">
+        <div class="user-modal-backdrop"></div>
+        <section class="user-dialog" role="dialog" aria-modal="true" aria-labelledby="user-dialog-title">
+            <button class="dialog-close" id="close-user-dialog" type="button" aria-label="Zavřít">×</button>
+            <span class="eyebrow">BASE / USERS</span><h2 id="user-dialog-title">Nový uživatel</h2>
+            <p>Účet bude propojený se zaměstnancem v modulu Lidé.</p>
+            <form method="post" action="/users" id="user-form">
+                <input type="hidden" name="action" id="user-action" value="create"><input type="hidden" name="id" id="user-id">
+                <label>Zaměstnanec<select name="employeeId" id="user-employee-id" required><option value="" disabled {{ not requestedEmployeeId ? 'selected' : '' }}>Vyberte zaměstnance</option>
+                    {% for employee in employees %}
+                        <option value="{{ employee.id }}" data-has-account="{{ employee.hasAccount ? 'true' : 'false' }}" {{ employee.id == requestedEmployeeId ? 'selected' : '' }}>{{ employee.fullName }} · {{ employee.teamName }}{{ employee.hasAccount ? ' · účet již existuje' : '' }}</option>
+                    {% endfor %}
+                </select></label>
+                <label>Jméno a příjmení<input name="fullName" id="user-full-name" value="{{ requestedEmployeeName|default('') }}" required maxlength="200"></label>
+                <label>Uživatelské jméno<input name="username" id="user-username" required maxlength="64" pattern="[A-Za-z0-9._\-]{3,64}"></label>
+                <label>Heslo<input name="password" id="user-password" type="password" minlength="10" required autocomplete="new-password"></label>
+                <label>Role<select name="roleName" id="user-role-name" required><option value="" disabled selected>Vyberte roli</option>{% for role in roles %}<option value="{{ role.name }}">{{ role.name }}</option>{% endfor %}</select></label>
+                <label>Společnost<input name="companyName" id="user-company-name" required maxlength="200"></label>
+                <label>Stav<select name="status" id="user-status"><option value="ACTIVE">Aktivní</option><option value="INVITED">Pozvánka čeká</option><option value="SUSPENDED">Pozastavený</option></select></label>
+                <div class="dialog-actions">
+                    <button class="secondary-button" id="cancel-user-dialog" type="button">Zrušit</button>
+                    <button class="primary" type="submit" id="save-user">Přidat uživatele</button>
+                </div>
+            </form>
+        </section>
+    </div>
+    <script>
+        window.employeeRoles = {
+            {% for employee in employees %}"{{ employee.id }}": {{ employee.jobTitle|default('')|json_encode|raw }}{{ not loop.last ? ',' : '' }}{% endfor %}
+        };
+    </script>
+    <template id="company-options-source"><option value="" disabled>Vyberte společnost</option>{% for company in companies %}<option value="{{ company.name }}">{{ company.name }}</option>{% endfor %}</template>
+{% endblock %}

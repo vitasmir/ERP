@@ -1184,6 +1184,9 @@ td {
   font-weight: 700;
   font-size: 20px;
 }
+.company-logo {
+  background: var(--card-color, #d8ed57);
+}
 .role-mark.buyer {
   background: #f2d4c7;
   color: #a44e3d;

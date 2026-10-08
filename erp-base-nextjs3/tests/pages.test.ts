@@ -74,3 +74,13 @@ test("user avatars pass the saved color through to their background", () => {
   }, "/users", session);
   assert.match(html, /class="table-avatar" style="--card-color:#12ABCD"/);
 });
+
+test("company cards pass the saved color through to their logo", () => {
+  const html = renderPage({
+    view: "admin/companies",
+    data: { companies: [{ id: "company-id", name: "Firma", type: "RETAIL", currency: "CZK",
+      status: "ACTIVE", color: "#12ABCD" }] },
+    status: 200,
+  }, "/companies", session);
+  assert.match(html, /class="company-logo" style="--card-color:#12ABCD"/);
+});

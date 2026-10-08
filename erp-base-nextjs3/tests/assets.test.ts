@@ -47,3 +47,8 @@ test("user avatars use each user's saved color", async () => {
   const styles = await readFile("public/assets/base.css", "utf8");
   assert.match(styles, /\.table-avatar\s*\{\s*display:\s*inline-grid;[\s\S]*?background:\s*var\(--card-color,\s*#dce9c7\);/);
 });
+
+test("company logos use each company's saved color", async () => {
+  const styles = await readFile("public/assets/base.css", "utf8");
+  assert.match(styles, /\.company-logo\s*\{\s*background:\s*var\(--card-color,\s*#d8ed57\);/);
+});

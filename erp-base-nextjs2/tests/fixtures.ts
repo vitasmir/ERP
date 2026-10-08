@@ -77,6 +77,19 @@ export async function startFixtureBackend() {
       case `catalog/products/${fixtureId}/availability`: json([{ warehouseId: fixtureId, warehouseName: "Sklad", quantity: 8 }]); return;
       case "catalog/homepage": json({ design: "CLASSIC", headline: "All Market", subheadline: "Lokální obchod", textX: 20, textY: 30 }); return;
       case "purchase/warehouses": json([{ id: fixtureId, name: "Sklad", ownerType: "COMPANY" }]); return;
+      case "purchase/overview":
+        json({
+          requestedValue: 216400, orderedValue: 48700, requestedCount: 1,
+          orders: ["REQUESTED", "ORDERED", "RECEIVED"].map((status, index) => ({
+            id: fixtureId, orderNumber: `PO-2026-${index + 1}`, status,
+            supplierName: "Testovací dodavatel s delším názvem",
+            sourceWarehouseId: fixtureId, destinationWarehouseId: fixtureId,
+            requestedOn: "2026-10-08", expectedDeliveryDate: "2026-10-28",
+            quantity: 10, receivedQuantity: status === "RECEIVED" ? 10 : 0,
+            totalAmount: index === 0 ? 216400 : 48700,
+            lines: [{ productId: fixtureId, quantity: 10, unitPrice: 4870 }],
+          })),
+        }); return;
       case "planning/employees": json([employee]); return;
       case "planning/roles": json(["Administrátor", "Skladník"]); return;
       case "planning/workplaces": json([{ id: fixtureId, name: "Prodejna" }]); return;

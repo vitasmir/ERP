@@ -57,7 +57,7 @@ test("launcher retains the original sidebar, tiles, drawer, assets and selected 
   assert.match(html, /id="module-search"/);
   assert.match(html, /<b>Jan Test<\/b>/);
   assert.match(html, /src="\/assets\/base\.js\?v=20261008-2"/);
-  assert.match(html, /href="\/compatibility\.css\?v=2"/);
+  assert.match(html, /href="\/compatibility\.css\?v=4"/);
 });
 
 test("PHP assets remain byte-identical except for the shared calendar dialog fix", async () => {
@@ -77,6 +77,27 @@ test("the shared calendar uses the native modal layer with a viewport-sized tran
   assert.match(script, /datePickerModal\.addEventListener\("cancel", \(event\) => \{\s*event\.preventDefault\(\);\s*closeDatePicker\(\);/);
   assert.match(script, /event\.key === "Escape" && datePickerModal\.open\) \{\s*event\.preventDefault\(\);\s*closeDatePicker\(\);/);
   assert.match(styles, /dialog\.date-picker-modal \{[^}]*width: 100%;[^}]*height: 100%;[^}]*margin: 0;[^}]*padding: 0;[^}]*border: 0;[^}]*background: transparent;/);
+});
+
+test("workspace styling fills the available width without double module padding or sidebar changes", async () => {
+  const styles = await readFile("public/compatibility.css", "utf8");
+  assert.match(styles, /\.app-shell > \.main \{[^}]*flex: 1;[^}]*min-width: 0;[^}]*width: auto;[^}]*padding-inline: 24px;/);
+  assert.match(styles, /\.app-shell > \.main > :is\(main, div\)\[class\*="-page"\] \{\s*padding-inline: 0;/);
+  assert.match(styles, /@media \(max-width: 620px\) \{\s*\.app-shell > \.main \{\s*padding-inline: 15px;/);
+  assert.ok(!styles.includes(".sidebar"));
+});
+
+test("purchase table adapts to narrower workspaces without hiding data or action buttons", async () => {
+  const styles = await readFile("public/compatibility.css", "utf8");
+  assert.match(styles, /\.purchase-page \.order-table \{\s*min-width: 880px;/);
+  assert.match(styles, /\.purchase-page \.order-table th,\s*\.purchase-page \.order-table td \{\s*padding-inline: 10px;/);
+  assert.match(styles, /\.purchase-page \.order-table \.secondary \{\s*max-width: 100%;\s*white-space: normal;/);
+  assert.match(styles, /\.purchase-page \.order-table \.order-detail-line \{\s*grid-template-columns: repeat\(auto-fit, minmax\(76px, 1fr\)\);/);
+  for (const [column, width] of [[2, 16], [3, 18], [7, 16]]) {
+    assert.match(styles, new RegExp(`\\.purchase-page \\.order-table th:nth-child\\(${column}\\) \\{\\s*width: ${width}%;`));
+  }
+  assert.match(styles, /\.purchase-page \.order-table th:nth-child\(4\),\s*\.purchase-page \.order-table th:nth-child\(5\) \{\s*width: 10%;/);
+  assert.ok(!styles.includes("overflow-x: hidden"));
 });
 
 test("public content is escaped and script JSON cannot close its script element", async () => {

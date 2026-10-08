@@ -33,6 +33,12 @@ hidden payment labels visible. The shared calendar uses a native modal dialog
 so it appears above other native dialogs, such as the purchase order form;
 the compatibility stylesheet preserves its original appearance. Other original
 asset files remain byte-identical. Page markup is otherwise unchanged.
+The workspace fills the remaining viewport width beside the unchanged sidebar,
+using 24px horizontal gutters (15px on mobile). Module pages do not add a second
+layer of horizontal padding; dialogs and the public storefront retain their sizing.
+The purchase table uses tighter cell gutters and rebalanced columns so ordinary
+laptop workspaces fit without horizontal scrolling. Narrower displays retain
+horizontal scrolling rather than hiding columns or order actions.
 Script JSON escapes HTML delimiters. The
 storefront reads `/api/v1/settings/public` for the delivery fee rather than
 requesting administrative settings anonymously.

@@ -41,6 +41,12 @@ class PlanningTests {
     }
 
     @Test
+    void planningRolesComeFromTheCompleteRoleCatalog() {
+        when(records.roles()).thenReturn(List.of("Buyer", "Driver", "Planner"));
+        assertEquals(List.of("Buyer", "Driver", "Planner"), controller.roles());
+    }
+
+    @Test
     void overlappingShiftIsRejectedWithoutWriting() {
         PlanningShift existing = shift(start, start.plusHours(8));
         when(shifts.findAllByOrderByStartAtAsc()).thenReturn(List.of(existing));

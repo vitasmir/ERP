@@ -76,6 +76,7 @@ final class OperationsController extends ModuleControllerSupport
                 foreach (['employees', 'workplaces', 'notifications'] as $collection) {
                     $data[$collection] = $backend->json('GET', '/api/v1/planning/'.$collection);
                 }
+                $data['roleOptions'] = $backend->json('GET', '/api/v1/planning/roles');
                 if ($request->query->has('audit')) {
                     $data['events'] = $backend->json('GET', '/api/v1/planning/shifts/'.$this->uuid($request->query->get('audit')).'/events');
                 }

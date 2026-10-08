@@ -22,6 +22,11 @@ public class WorkforceRecords {
                 (row, index) -> new Workplace(row.getString("name"), row.getInt("capacity")));
     }
 
+    public List<String> roles() {
+        return jdbc.queryForList("SELECT DISTINCT TRIM(name) AS name FROM role_definitions WHERE TRIM(name) <> '' ORDER BY name",
+                String.class);
+    }
+
     public void saveWorkplace(String name, int capacity) {
         jdbc.update("INSERT INTO planning_workplaces (name, capacity) VALUES (?, ?) ON CONFLICT (name) DO UPDATE SET capacity = EXCLUDED.capacity",
                 name, capacity);

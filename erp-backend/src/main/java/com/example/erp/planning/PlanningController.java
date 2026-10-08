@@ -151,6 +151,9 @@ public class PlanningController {
     @GetMapping("/workplaces")
     public List<WorkforceRecords.Workplace> workplaces() { return records.workplaces(); }
 
+    @GetMapping("/roles")
+    public List<String> roles() { return records.roles(); }
+
     @PostMapping("/workplaces")
     public void saveWorkplace(@Valid @RequestBody WorkplaceRequest request) {
         if (!access.managesAll()) throw new ResponseStatusException(HttpStatus.FORBIDDEN);

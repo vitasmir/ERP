@@ -42,4 +42,7 @@ Regresní test uložení oprávnění modulů (bez změn v běžící databázi)
 php erp-base-php/tests/Controller/RoleModulesSmokeTest.php
 ```
 
+Plánování načítá všechny definované role bez duplicitních názvů přes
+`GET /api/v1/planning/roles`; seznam je společný pro vytvoření i úpravu směny.
+
 Backend nabízí `GET /api/v1/promo-campaigns` a `GET /api/v1/dashboard/summary`.

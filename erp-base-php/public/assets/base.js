@@ -650,27 +650,6 @@ roleForm?.addEventListener("submit", (event) => {
     });
 });
 
-const modulePermissionsForm = document.getElementById(
-  "module-permissions-form",
-);
-modulePermissionsForm?.addEventListener("submit", (event) => {
-  event.preventDefault();
-  const submit = document.getElementById("save-module-permissions");
-  submit.disabled = true;
-  fetch("roles", {
-    method: "POST",
-    body: new URLSearchParams(new FormData(modulePermissionsForm)),
-  })
-    .then((response) => {
-      if (!response.ok) throw new Error(`HTTP ${response.status}`);
-      window.location.reload();
-    })
-    .catch(() => {
-      submit.disabled = false;
-      window.alert("Oprávnění se nepodařilo uložit.");
-    });
-});
-
 const drawer = document.getElementById("module-drawer");
 const backdrop = document.createElement("div");
 backdrop.className = "drawer-backdrop";

@@ -70,9 +70,15 @@ final class FrontendRequestSubscriber implements EventSubscriberInterface
         $request = $event->getRequest();
         $path = $request->getPathInfo();
         $session = $request->getSession();
+        $now = time();
         $expiresAt = $session->get('expiresAt');
-        if (is_int($expiresAt) && $expiresAt < time()) {
+        $lastActivityAt = $session->get('lastActivityAt');
+        if ((is_int($expiresAt) && $expiresAt <= $now)
+            || (is_int($lastActivityAt) && $now - $lastActivityAt >= 1800)) {
             $session->invalidate();
+        }
+        if ($session->has('backendToken')) {
+            $session->set('lastActivityAt', $now);
         }
 
         if (!in_array($request->getMethod(), ['GET', 'HEAD', 'OPTIONS'], true) && !$this->isSameOrigin($request)) {

@@ -69,7 +69,7 @@ final class AuthController extends AbstractController
         $session->set('userName', (string) ($user['fullName'] ?? 'Uživatel'));
         $session->set('roleName', (string) ($user['roleName'] ?? 'Bez role'));
         $session->set('expiresAt', time() + 8 * 60 * 60);
-        $session->setMaxInactiveInterval(1800);
+        $session->set('lastActivityAt', time());
 
         return $this->redirectToRoute('app_home');
     }

@@ -38,9 +38,8 @@ services:
     restart: unless-stopped
     environment:
       BACKEND_URL: http://backend:8080
-      APP_SECRET: ${APP_SECRET:-local-development-only-change-before-deploy}
     ports:
-      - "4201:80"
+      - "4201:8080"
     depends_on:
       - backend
     networks:

@@ -56,6 +56,60 @@ flowchart TB
   backend token nevidí. Negativní backend statusy se mapují na původní
   formulářový feedback/redirect nebo dokumentovou odpověď.
 
+## Propojený model frontend + backend
+
+Diagram ukazuje původní route/controller/template cestu Next.js 2 a její
+napojení do vrstev Spring API. Doménová mapa backendu je rozepsaná v
+[samostatném dokumentu backendu](./erp-backend.md).
+
+```mermaid
+flowchart LR
+    Browser["Browser<br/>HTML form + PHP CSS/JS"]
+
+    subgraph Frontend["erp-base-nextjs2 · Next.js / Node.js"]
+        Route["Catch-all App Router<br/>GET / HEAD / POST"]
+        Dispatch["server.ts dispatch<br/>Origin + auth + module checks"]
+        Session[("Session files<br/>Bearer token + profile + cart")]
+        Cookie["Opaque HttpOnly cookie"]
+        Controllers["TypeScript controllers<br/>admin / auth / operations / shop"]
+        Context["Context + Backend client<br/>FormData / API calls"]
+        Twig["Twig.js template renderer"]
+        Views["templates/**/*.twig<br/>base + module views"]
+        Assets["public/assets<br/>CSS + JavaScript"]
+    end
+
+    subgraph Backend["erp-backend · Spring Boot REST /api/v1"]
+        AuthApi["AuthController<br/>login / me / logout"]
+        Access["ApiAccess<br/>Bearer + role/module checks"]
+        ApiControllers["Domain REST controllers<br/>companies / catalog / sales /<br/>purchase / inventory / CRM / ..."]
+        Services["Domain services<br/>rules + transactions"]
+        Repositories["Spring Data JPA repositories"]
+        Model["JPA entities / domain model"]
+        UserRepo["UserRepository"]
+        Flyway["Flyway migrations"]
+        DB[("PostgreSQL 18<br/>ERP data")]
+    end
+
+    Browser -->|"GET page / POST form"| Route --> Dispatch
+    Dispatch --> Session
+    Session --> Cookie
+    Cookie -->|"opaque ID on requests"| Dispatch
+    Dispatch --> Controllers --> Context
+    Controllers -->|"Page(view, data)"| Twig --> Views
+    Views -->|"server-rendered HTML"| Browser
+    Assets -.-> Browser
+    Context -->|"POST /api/v1/auth/login"| AuthApi
+    AuthApi --> UserRepo --> DB
+    AuthApi -->|"token kept in session"| Session
+    Context -->|"server-side Bearer + /api/v1/*"| Access
+    Access --> ApiControllers
+    ApiControllers --> Services
+    ApiControllers -.->|"simple read/write"| Repositories
+    Services --> Repositories
+    Repositories --> Model --> DB
+    Flyway -->|"schema/data versions"| DB
+```
+
 ```mermaid
 sequenceDiagram
     actor User as Prohlížeč

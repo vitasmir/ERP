@@ -77,6 +77,62 @@ flowchart TB
   anonymní košík a údaje doručení na serveru a volají backend jen pro potřebná
   data nebo vytvoření objednávky.
 
+## Propojený model frontend + backend
+
+Tento diagram spojuje konkrétní BFF a React UI této varianty s interními
+vrstvami Spring backendu. Detail backendových modulů a odpovědností je také
+v [samostatném dokumentu backendu](./erp-backend.md).
+
+```mermaid
+flowchart LR
+    Browser["Browser<br/>React UI"]
+
+    subgraph Frontend["erp-base-nextjs · Next.js / Node.js"]
+        AppRouter["App Router<br/>login / apps / module / shop"]
+        Components["React components<br/>shell + ERP modules"]
+        ClientApi["client-api.ts<br/>same-origin fetch"]
+        AuthRoute["/api/auth/login<br/>/api/auth/logout"]
+        Proxy["/api/backend/[...path]<br/>path + Origin + body guard"]
+        ShopRoutes["/api/cart<br/>/api/shop/checkout"]
+        Session[("Session files<br/>token + profile + cart")]
+        Cookie["Opaque HttpOnly cookie"]
+        Renderer["Next.js React rendering"]
+    end
+
+    subgraph Backend["erp-backend · Spring Boot REST /api/v1"]
+        AuthApi["AuthController<br/>/auth/login, /auth/me, /auth/logout"]
+        Access["ApiAccess<br/>Bearer validation<br/>role/module permission"]
+        ApiControllers["Domain REST controllers<br/>companies, users, catalog,<br/>sales, purchase, inventory,<br/>accounting, CRM, HR, ..."]
+        Services["Domain services<br/>transactions + business rules"]
+        Repositories["Spring Data JPA repositories"]
+        Model["JPA entities / domain model"]
+        UserRepo["UserRepository<br/>credential lookup"]
+        Flyway["Flyway SQL migrations"]
+        DB[("PostgreSQL 18<br/>ERP data")]
+    end
+
+    Browser -->|"page navigation"| AppRouter
+    AppRouter --> Components
+    Components -->|"client actions"| ClientApi
+    ClientApi -->|"same-origin requests"| Proxy
+    Browser -->|"login form"| AuthRoute
+    AuthRoute -->|"POST /api/v1/auth/login"| AuthApi
+    AuthApi --> UserRepo --> DB
+    AuthApi -->|"access token"| Session
+    Session --> Cookie
+    Cookie -->|"sent on later requests"| Proxy
+    ShopRoutes --> Session
+    Proxy -->|"server-side Bearer + /api/v1/*"| Access
+    ShopRoutes -->|"allowed public/authorized API calls"| Access
+    Access --> ApiControllers
+    ApiControllers --> Services
+    ApiControllers -.->|"simple read/write"| Repositories
+    Services --> Repositories
+    Repositories --> Model --> DB
+    Flyway -->|"schema/data versions"| DB
+    Components --> Renderer --> Browser
+```
+
 ```mermaid
 sequenceDiagram
     actor User as Prohlížeč

@@ -62,6 +62,64 @@ flowchart TB
 5. Prohlížeč používá tradiční GET/POST formuláře a originální JavaScript.
    React komponenty se po načtení nehydratují.
 
+## Propojený model frontend + backend
+
+Tento diagram propojuje React/TSX renderer a route controllery této varianty
+s interním API/domain/persistence modelem backendu. Podrobný popis backendu je
+v [samostatném dokumentu backendu](./erp-backend.md).
+
+```mermaid
+flowchart LR
+    Browser["Browser<br/>server-rendered HTML + forms"]
+
+    subgraph Frontend["erp-base-nextjs3 · Next.js / Node.js"]
+        Route["Catch-all App Router<br/>GET / HEAD / POST"]
+        Dispatch["server.ts<br/>Origin + session + access"]
+        Session[("Session files<br/>token + role + cart")]
+        Cookie["Opaque HttpOnly cookie"]
+        Controllers["TypeScript controllers<br/>admin / auth / operations / shop"]
+        Context["Backend + FormData context"]
+        Registry["React view registry"]
+        Components["TSX pages + shared AppDocument"]
+        Inline["InlinePageScript markers"]
+        Assets["Original PHP assets<br/>CSS/JS + compatibility.css"]
+    end
+
+    subgraph Backend["erp-backend · Spring Boot REST /api/v1"]
+        AuthApi["AuthController<br/>login / me / logout"]
+        Access["ApiAccess<br/>Bearer + role/module checks"]
+        ApiControllers["Domain REST controllers<br/>companies / catalog / sales /<br/>purchase / inventory / CRM / ..."]
+        Services["Domain services<br/>rules + transactions"]
+        Repositories["Spring Data JPA repositories"]
+        Model["JPA entities / domain model"]
+        UserRepo["UserRepository"]
+        Flyway["Flyway migrations"]
+        DB[("PostgreSQL 18<br/>ERP data")]
+    end
+
+    Browser --> Route --> Dispatch
+    Dispatch --> Session
+    Session --> Cookie
+    Cookie -->|"opaque ID on requests"| Dispatch
+    Dispatch --> Controllers --> Context
+    Controllers -->|"Page(view, data)"| Registry
+    Registry --> Components
+    Components --> Inline
+    Components -->|"React SSR document"| Browser
+    Inline --> Browser
+    Assets -.-> Browser
+    Context -->|"POST /api/v1/auth/login"| AuthApi
+    AuthApi --> UserRepo --> DB
+    AuthApi -->|"token kept in session"| Session
+    Context -->|"server-side Bearer + /api/v1/*"| Access
+    Access --> ApiControllers
+    ApiControllers --> Services
+    ApiControllers -.->|"simple read/write"| Repositories
+    Services --> Repositories
+    Repositories --> Model --> DB
+    Flyway -->|"schema/data versions"| DB
+```
+
 ```mermaid
 sequenceDiagram
     actor User as Prohlížeč

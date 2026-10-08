@@ -57,6 +57,63 @@ flowchart TB
 5. Response subscriber nastaví no-cache a bezpečnostní hlavičky pro dynamické
    stránky; statické `/assets/` obsluhuje přímo Apache.
 
+## Propojený model frontend + backend
+
+Kombinovaný diagram ukazuje, jak Symfony request a `BackendApiClient` vstupují
+do stejného REST/auth/domain/persistence toku. Backendové vrstvy a moduly jsou
+detailně popsány v [dokumentu backendu](./erp-backend.md).
+
+```mermaid
+flowchart LR
+    Browser["Browser<br/>HTML forms + Twig UI"]
+
+    subgraph Frontend["erp-base-php · Apache / PHP / Symfony"]
+        Apache["Apache<br/>document root public/"]
+        Kernel["Symfony Runtime + Kernel"]
+        Subscriber["FrontendRequestSubscriber<br/>Origin + login + access"]
+        Session[("Symfony session<br/>token + profile")]
+        Cookie["Symfony HttpOnly cookie"]
+        Controllers["Route controllers<br/>auth / admin / modules / shop"]
+        Support["ModuleControllerSupport<br/>validation + form mapping"]
+        ApiClient["BackendApiClient<br/>Symfony HttpClient"]
+        Twig["Twig renderer<br/>base + module templates"]
+        Assets["public/assets"]
+    end
+
+    subgraph Backend["erp-backend · Spring Boot REST /api/v1"]
+        AuthApi["AuthController<br/>login / me / logout"]
+        Access["ApiAccess<br/>Bearer + role/module checks"]
+        ApiControllers["Domain REST controllers<br/>companies / catalog / sales /<br/>purchase / inventory / CRM / ..."]
+        Services["Domain services<br/>rules + transactions"]
+        Repositories["Spring Data JPA repositories"]
+        Model["JPA entities / domain model"]
+        UserRepo["UserRepository"]
+        Flyway["Flyway migrations"]
+        DB[("PostgreSQL 18<br/>ERP data")]
+    end
+
+    Browser -->|"HTTP request/form"| Apache --> Kernel
+    Kernel --> Subscriber
+    Subscriber --> Session
+    Session --> Cookie
+    Cookie -->|"session id on requests"| Subscriber
+    Subscriber --> Controllers --> Support
+    Controllers -->|"POST /api/v1/auth/login"| AuthApi
+    AuthApi --> UserRepo --> DB
+    AuthApi -->|"token kept in Symfony session"| Session
+    Controllers --> ApiClient
+    ApiClient -->|"server-side Bearer + /api/v1/*"| Access
+    Access --> ApiControllers
+    ApiControllers --> Services
+    ApiControllers -.->|"simple read/write"| Repositories
+    Services --> Repositories
+    Repositories --> Model --> DB
+    Flyway -->|"schema/data versions"| DB
+    Controllers -->|"view model"| Twig
+    Twig -->|"HTML response"| Browser
+    Assets -.-> Browser
+```
+
 ```mermaid
 sequenceDiagram
     actor User as Prohlížeč

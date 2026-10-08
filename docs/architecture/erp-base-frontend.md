@@ -56,6 +56,58 @@ flowchart TB
    formuláře. POST servlet validuje/mapuje a zapíše přes backend, poté obvykle
    vrací redirect s feedbackem.
 
+## Propojený model frontend + backend
+
+Zde je servletový request flow propojený s autentizací, oprávněními a
+persistence `erp-backend`. Detail vrstev backendu je v
+[samostatném dokumentu backendu](./erp-backend.md).
+
+```mermaid
+flowchart LR
+    Browser["Browser<br/>HTML form + JSP page"]
+
+    subgraph Frontend["erp-base-frontend · WAR / Tomcat 10.1"]
+        Tomcat["Tomcat HTTP server"]
+        Filter["SessionFilter<br/>Origin + route guard<br/>module read-check"]
+        Login["LoginServlet"]
+        Servlet["Module HttpServlets<br/>users / inventory / purchase / ..."]
+        Session[("Servlet HttpSession<br/>backend token + user")]
+        Requests["BackendRequests<br/>Bearer propagation"]
+        Client["Java HttpClient"]
+        JSP["JSP views<br/>WEB-INF/views"]
+    end
+
+    subgraph Backend["erp-backend · Spring Boot REST /api/v1"]
+        AuthApi["AuthController<br/>login / me / logout"]
+        Access["ApiAccess<br/>token + role/module checks"]
+        ApiControllers["Domain REST controllers<br/>users / catalog / inventory /<br/>purchase / sales / HR / ..."]
+        Services["Domain services<br/>business rules + transactions"]
+        Repositories["Spring Data JPA repositories"]
+        Model["JPA entities / domain model"]
+        UserRepo["UserRepository"]
+        Flyway["Flyway migrations"]
+        DB[("PostgreSQL 18<br/>ERP data")]
+    end
+
+    Browser -->|"HTTP GET/POST"| Tomcat --> Filter
+    Filter -->|"login route"| Login
+    Login -->|"POST /api/v1/auth/login"| AuthApi
+    AuthApi --> UserRepo --> DB
+    AuthApi -->|"token stored server-side"| Session
+    Filter -->|"authenticated request"| Servlet
+    Session --> Requests --> Client
+    Servlet --> Client
+    Client -->|"Bearer + /api/v1/*"| Access
+    Access --> ApiControllers
+    ApiControllers --> Services
+    ApiControllers -.->|"direct repository operations"| Repositories
+    Services --> Repositories
+    Repositories --> Model --> DB
+    Flyway -->|"schema/data versions"| DB
+    Servlet -->|"forward request attributes"| JSP
+    JSP -->|"server-rendered HTML"| Browser
+```
+
 ## Balíčky a provozní model
 
 - `base`: session/access filter, login/logout a launcher.

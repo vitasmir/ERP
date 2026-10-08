@@ -1143,7 +1143,7 @@ td {
   display: inline-grid;
   vertical-align: middle;
   margin-right: 8px;
-  background: #dce9c7;
+  background: var(--card-color, #dce9c7);
   width: 27px;
   height: 27px;
 }

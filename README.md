@@ -6,6 +6,7 @@ MVP životního cyklu letákové akce pro retailový řetězec.
 
 - `erp-backend`: Spring Boot 4.1.1, Java 21, JPA, Flyway
 - `erp-base-nextjs2`: Next.js 16.3.8, TypeScript, Twig.js, Node.js 22; původní PHP vzhled, CSS a JavaScript
+- `erp-base-nextjs3`: Next.js 16.3.8, React/TSX, Node.js 22; komponentová alternativa bez Twig
 - `erp-base-nextjs`: zachovaný první React frontend
 - PostgreSQL 18
 - Docker Compose
@@ -35,6 +36,9 @@ nespouštějte současně. Původní JSP frontend zůstává jako reference.
 Samostatná konfigurace nové varianty je také v `docker-compose-NEXTJS2.yml`
 s vlastním objemem `erp-nextjs2-sessions`. Podrobnosti o věrném přepisu PHP
 šablon a funkčnosti jsou v [erp-base-nextjs2/README.md](erp-base-nextjs2/README.md).
+React komponentovou alternativu lze spustit přes `docker-compose-NEXTJS3.yml`;
+ta používá samostatný objem `erp-nextjs3-sessions`. Přehled je v
+[erp-base-nextjs3/README.md](erp-base-nextjs3/README.md).
 
 ## Automatický rebuild UI
 

@@ -158,3 +158,7 @@ Set `COOKIE_SECURE=true` when deploying behind HTTPS. The PHP/Symfony project
 as references and are not the frontend selected by the main Compose file.
 `docker-compose-NEXTJS2.yml` also provides a dedicated deployment of the new
 frontend with the separate `erp-nextjs2-sessions` volume.
+`docker-compose-NEXTJS3.yml` provides the separate React/TSX component rewrite
+without Twig templates and persists its sessions in `erp-nextjs3-sessions`.
+The active Compose configuration remains `erp-base-nextjs2`; switch variants
+explicitly and do not run them together because they share backend ports.

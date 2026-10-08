@@ -69,7 +69,8 @@ function fixture(): array
         'pages' => [[
             'id' => $id, 'title' => 'Page', 'slug' => '/test-page', 'contentType' => 'CONTENT',
             'ownerName' => 'Owner', 'monthlyVisits' => 1234, 'hasContactForm' => false,
-            'status' => 'DRAFT', 'updatedAt' => '2026-10-01T12:30:00', 'content' => '<script>content</script>',
+            'status' => 'DRAFT', 'updatedAt' => '2026-10-01T12:30:00',
+            'content' => '<style>.dnd-drop { color: red; }</style><div class="dnd-drop">Dropped content</div><script>window.dndReady = true;</script>',
         ]],
     ];
 }
@@ -245,7 +246,9 @@ $request = Request::create('/test-page');
     ['POST', '/api/v1/website/pages/visit?slug=%2Ftest-page', 204, '', null],
 ]);
 $response = $handler->publicPage($request, 'test-page');
-check(str_contains($response->getContent(), '&lt;script&gt;content&lt;/script&gt;'), 'Public content not escaped');
+check(str_contains($response->getContent(), '<style>.dnd-drop { color: red; }</style>'), 'Public CSS not rendered');
+check(str_contains($response->getContent(), '<div class="dnd-drop">Dropped content</div>'), 'Public HTML not rendered');
+check(str_contains($response->getContent(), '<script>window.dndReady = true;</script>'), 'Public JavaScript not rendered');
 $verify();
 
 foreach ([404, 500, 0] as $status) {
@@ -260,7 +263,7 @@ $request = Request::create('/website?edit='.$id);
 [$handler, $verify] = controller($request, [['GET', '/api/v1/website/overview', 200, json_encode($data), null]]);
 $response = $handler->website($request);
 check(str_contains($response->getContent(), 'name="action" value="edit"'), 'Website edit form missing');
-check(str_contains($response->getContent(), '&lt;script&gt;content&lt;/script&gt;'), 'Website edit content not escaped');
+check(str_contains($response->getContent(), '&lt;style&gt;.dnd-drop'), 'Website edit content not escaped');
 $verify();
 
 $request = Request::create('/helpdesk?error=Failure');

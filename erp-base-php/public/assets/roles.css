@@ -183,7 +183,7 @@
   accent-color: #245543;
 }
 .role-mark.custom {
-  background: #d9ed62;
+  background: var(--card-color, #d9ed62);
   color: #173b30;
 }
 .dialog-actions {

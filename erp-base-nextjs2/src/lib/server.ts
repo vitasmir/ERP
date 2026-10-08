@@ -46,10 +46,10 @@ function secureResponse(response: Response): Response {
 }
 
 export async function dispatch(request: Request): Promise<Response> {
-  if (!["GET", "HEAD", "POST"].includes(request.method)) {
-    return secureResponse(new Response("Method not allowed.", { status: 405, headers: { Allow: "GET, HEAD, POST" } }));
+  if (!["GET", "HEAD", "POST", "PUT"].includes(request.method)) {
+    return secureResponse(new Response("Method not allowed.", { status: 405, headers: { Allow: "GET, HEAD, POST, PUT" } }));
   }
-  if (request.method === "POST" && !sameOrigin(request)) {
+  if (["POST", "PUT"].includes(request.method) && !sameOrigin(request)) {
     return secureResponse(new Response("Request origin could not be verified.", { status: 403 }));
   }
   const incomingId = sessionId(request);

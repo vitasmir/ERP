@@ -16,6 +16,8 @@ original pages. This preserves the DOM expected by the PHP frontend's scripts.
   administration, dashboard, accounting/PDF, CRM, documents, projects, helpdesk,
   marketing, website/public pages, HR, planning, sales, purchase, manufacturing,
   POS, inventory/history, promotions, eCommerce and the public storefront.
+- Published website page content renders authored HTML, CSS and JavaScript;
+  only trusted editors should be allowed to publish page content.
 - Authentication tokens, guest carts and delivery details stay server-side.
   Login rotates the opaque HttpOnly session cookie and expires after 30 idle
   minutes or eight hours. The new cookie is independent of PHP and Next.js v1;

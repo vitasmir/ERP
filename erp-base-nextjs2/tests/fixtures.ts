@@ -50,7 +50,10 @@ export async function startFixtureBackend() {
     if (pathname === "auth/logout" || pathname === "website/pages/visit") { json({}); return; }
     if (pathname === "website/pages/public") {
       if (url.searchParams.get("slug") !== "/public-test") { json({}, 404); return; }
-      json({ title: "Public fixture", content: "<script>unsafe</script>" }); return;
+      json({
+        title: "Public fixture",
+        content: '<style>.dnd-drop { color: red; }</style><div class="dnd-drop">Dropped content</div><script>window.dndReady = true;</script>',
+      }); return;
     }
     if (pathname === `accounting/invoices/${fixtureId}/pdf`) {
       response.setHeader("Content-Type", "application/pdf");

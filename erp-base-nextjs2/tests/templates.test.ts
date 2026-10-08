@@ -16,7 +16,10 @@ const employee = { id, fullName: "Jan Test", teamId: id, teamName: "Tým", jobTi
   employmentStartDate: "2026-01-01", status: "ACTIVE", hasUserAccount: false, deputyEmployeeId: null };
 const warehouse = { id, name: "Sklad", ownerType: "COMPANY", locations: [] };
 const data = {
-  error: null, actionError: null, message: null, page: { title: "Veřejná stránka", content: "<script>unsafe</script>" },
+  error: null, actionError: null, message: null, page: {
+    title: "Veřejná stránka",
+    content: '<style>.dnd-drop { color: red; }</style><div class="dnd-drop">Dropped content</div><script>window.dndReady = true;</script>',
+  },
   allowedModules: appCatalog.map((app) => app.id), moduleCatalog: Object.fromEntries(appCatalog.map((app) => [app.id, app])),
   companies: [], users: [], employees: [employee], roles: [role], roleOptions: [role], products: [product],
   warehouses: [warehouse], locations: [], workplaceOptions: [], workplaces: [], settings: {}, edit: true, admin: true,
@@ -100,9 +103,15 @@ test("purchase table adapts to narrower workspaces without hiding data or action
   assert.ok(!styles.includes("overflow-x: hidden"));
 });
 
-test("public content is escaped and script JSON cannot close its script element", async () => {
+test("public page content renders markup while script JSON cannot close its script element", async () => {
   const html = await renderPage({ template: "website/public.html.twig", data, status: 200 }, context("/public-test"));
-  assert.ok(!html.includes("<script>unsafe</script>"));
+  assert.match(html, /<style>\.dnd-drop \{ color: red; \}<\/style>/);
+  assert.match(html, /<div class="dnd-drop">Dropped content<\/div>/);
+  assert.match(html, /<script>window\.dndReady = true;<\/script>/);
+  const editor = await renderPage({
+    template: "website/index.html.twig", data: { ...data, editingPage: { ...data.page, id } }, status: 200,
+  }, context("/website"));
+  assert.match(editor, /&lt;style&gt;\.dnd-drop/);
   const users = await renderPage({
     template: "admin/users.html.twig", status: 200,
     data: { ...data, employees: [{ ...employee, jobTitle: "</script><script>unsafe</script>" }] },

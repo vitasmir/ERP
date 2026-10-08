@@ -1,0 +1,55 @@
+[hidden] {
+  display: none !important;
+}
+
+.app-shell > .main {
+  flex: 1;
+  min-width: 0;
+  width: auto;
+  padding-inline: 24px;
+}
+
+.app-shell > .main > :is(main, div)[class*="-page"] {
+  padding-inline: 0;
+}
+
+@media (max-width: 620px) {
+  .app-shell > .main {
+    padding-inline: 15px;
+  }
+}
+
+.purchase-page .order-table {
+  min-width: 880px;
+}
+
+.purchase-page .order-table th,
+.purchase-page .order-table td {
+  padding-inline: 10px;
+}
+
+.purchase-page .order-table th:nth-child(2) {
+  width: 16%;
+}
+
+.purchase-page .order-table th:nth-child(3) {
+  width: 18%;
+}
+
+.purchase-page .order-table th:nth-child(4),
+.purchase-page .order-table th:nth-child(5) {
+  width: 10%;
+}
+
+.purchase-page .order-table th:nth-child(7) {
+  width: 16%;
+}
+
+.purchase-page .order-table .secondary {
+  max-width: 100%;
+  white-space: normal;
+}
+
+.purchase-page .order-table .order-detail-line {
+  grid-template-columns: repeat(auto-fit, minmax(76px, 1fr));
+}

@@ -1,0 +1,60 @@
+* { box-sizing: border-box; }
+body { margin: 0; color: #1a2923; background: #f3f1eb; font-family: "Space Grotesk", sans-serif; }
+a { color: inherit; }
+button, input, select, textarea { font: inherit; }
+button, summary { cursor: pointer; }
+button { border: 1px solid #dddcd2; border-radius: 5px; padding: 9px 14px; background: #faf9f5; color: #526c5a; }
+button:disabled { cursor: wait; opacity: .6; }
+button:hover:not(:disabled) { background: #dce9d7; color: #17362b; }
+button.primary { border-color: #17362b; background: #17362b; color: #fff; }
+input, select, textarea { width: 100%; min-height: 40px; padding: 9px; border: 1px solid #c9d1c9; border-radius: 4px; background: #fffdf8; color: #1a2923; }
+input[type="checkbox"], input[type="radio"] { width: auto; min-height: auto; }
+input:focus-visible, select:focus-visible, textarea:focus-visible, button:focus-visible, a:focus-visible, summary:focus-visible { outline: 2px solid #76936c; outline-offset: 3px; }
+label { display: flex; flex-direction: column; gap: 7px; color: #52645a; font-size: 12px; }
+.main { min-width: 0; }
+.brand { text-decoration: none; }
+.top-actions small { display: block; font-weight: normal; }
+.module-page { padding: 32px; max-width: 1600px; margin: auto; }
+.module-header { margin-bottom: 24px; border-bottom: 1px solid #d9ddd4; }
+.module-header > a { color: #456a56; font: 11px "DM Mono"; text-decoration: none; }
+.module-header h1 { margin: 8px 0 22px; color: #17362b; font-size: 34px; letter-spacing: -.05em; }
+.notice { padding: 14px; border-radius: 4px; white-space: pre-wrap; }
+.notice.error { background: #f8dfdf; color: #963f47; border: 1px solid #e0b2ad; }
+.notice.success { background: #dce9c7; color: #305827; }
+.metrics { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 15px; margin: 24px 0; }
+.metrics article { padding: 20px; background: #fffdf8; border: 1px solid #e4e2d8; border-top: 3px solid #426f57; }
+.metrics strong { display: block; margin-top: 10px; font-size: 26px; }
+.erp-form { margin: 20px 0; padding: 20px; background: #fffdf8; border: 1px solid #e0e2da; border-radius: 5px; }
+.form-fields { display: grid; grid-template-columns: repeat(auto-fit, minmax(185px, 1fr)); align-items: end; gap: 16px; margin-bottom: 18px; }
+.table-scroll { overflow: auto; margin: 20px 0; }
+table { width: 100%; border-collapse: collapse; background: #fffdf8; }
+th, td { padding: 14px; text-align: left; border-bottom: 1px solid #e8e9e3; vertical-align: top; }
+th { background: #f3f1eb; color: #718078; font: 10px "DM Mono"; font-weight: 400; text-transform: uppercase; }
+.actions { min-width: 140px; }
+.actions button { margin: 3px; }
+.editor { margin: 12px 0; padding: 10px; border: 1px solid #e0e2da; background: #fffdf8; }
+.editor summary { font-weight: 600; padding: 5px; }
+.login-page { max-width: 480px; padding: 30px; margin: 8vh auto; color: #17362b; }
+.login-page h1 { font-size: 34px; letter-spacing: -.05em; }
+.public-page, .shop-page { padding: 30px; max-width: 1300px; margin: auto; }
+.page-content { white-space: pre-wrap; }
+.shop-layout { display: grid; grid-template-columns: 1fr 330px; gap: 28px; }
+.product-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 16px; }
+.product-card { padding: 18px; background: #fffdf8; border: 1px solid #e0e2da; border-radius: 5px; }
+.product-card img { width: 100%; height: 170px; object-fit: contain; }
+.cart-panel { padding: 20px; border: 1px solid #e0e2da; background: #fffdf8; align-self: start; position: sticky; top: 20px; }
+.cart-line { padding: 12px 0; border-bottom: 1px solid #e0e2da; }
+.cart-line button { margin: 4px; }
+.line-items { grid-column: 1 / -1; }
+footer { display: flex; justify-content: space-between; gap: 12px; }
+@media (max-width: 800px) {
+  .app-shell { display: block; }
+  .sidebar { position: static; width: 100%; min-height: auto; padding: 16px; }
+  .sidebar nav { display: flex; flex-wrap: wrap; }
+  .sidebar-bottom, .workspace-label { display: none; }
+  .main { margin: 0; width: 100%; }
+  .topbar { padding: 12px; }
+  .module-page { padding: 16px; }
+  .shop-layout { grid-template-columns: 1fr; }
+  .cart-panel { position: static; }
+}

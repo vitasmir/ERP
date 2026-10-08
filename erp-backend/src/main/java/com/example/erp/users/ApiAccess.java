@@ -75,6 +75,7 @@ public class ApiAccess implements HandlerInterceptor {
         if ("POST".equals(method) && "/api/v1/sales/orders/checkout".equals(path)) return true;
         if ("POST".equals(method) && "/api/v1/website/pages/visit".equals(path)) return true;
         if (!"GET".equals(method)) return false;
+        if ("/api/v1/settings/public".equals(path)) return true;
         if ("/api/v1/website/pages/public".equals(path)) return true;
         return "/api/v1/catalog/categories/tree".equals(path)
                 || "/api/v1/catalog/products".equals(path)

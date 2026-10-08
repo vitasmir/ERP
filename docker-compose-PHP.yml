@@ -34,16 +34,12 @@ services:
         condition: service_healthy
 
   frontend:
-    build: ./erp-base-nextjs
+    build: ./erp-base-php
     restart: unless-stopped
     environment:
       BACKEND_URL: http://backend:8080
-      COOKIE_SECURE: ${COOKIE_SECURE:-false}
-      SESSION_DIR: /app/var/sessions
     ports:
-      - "3000:3000"
-    volumes:
-      - erp-nextjs-sessions:/app/var/sessions
+      - "4201:80"
     depends_on:
       - backend
     networks:
@@ -59,7 +55,6 @@ services:
 
 volumes:
   erp-postgres-data:
-  erp-nextjs-sessions:
 
 networks:
   projects-network:

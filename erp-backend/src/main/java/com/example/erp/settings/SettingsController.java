@@ -23,6 +23,11 @@ public class SettingsController {
     @GetMapping
     public SettingsResponse get() { return SettingsResponse.from(load()); }
 
+    @GetMapping("/public")
+    public PublicSettingsResponse publicSettings() {
+        return new PublicSettingsResponse(load().getDeliveryFee());
+    }
+
     @PatchMapping
     public SettingsResponse update(@RequestBody UpdateSettingsRequest request) {
         if (request.companyName().isBlank() || request.companyEmail().isBlank() || request.currencyCode().isBlank()
@@ -55,6 +60,8 @@ public class SettingsController {
     public record UpdateSettingsRequest(String companyName, String companyEmail, String currencyCode, String timezone,
             int fiscalYearStartMonth, int defaultPaymentTermsDays, BigDecimal deliveryFee,
             BigDecimal eshopMarginPercent, BigDecimal eshopRoundingUnit, BigDecimal eshopDefaultVatRate) { }
+
+    public record PublicSettingsResponse(BigDecimal deliveryFee) { }
 
     public record SettingsResponse(String companyName, String companyEmail, String currencyCode, String timezone,
             int fiscalYearStartMonth, int defaultPaymentTermsDays, BigDecimal deliveryFee,

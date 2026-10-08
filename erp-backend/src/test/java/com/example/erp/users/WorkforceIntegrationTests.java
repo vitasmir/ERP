@@ -55,12 +55,14 @@ class WorkforceIntegrationTests extends AbstractPostgresIntegrationTest {
     private String createAccount(String role) {
         UUID personId = UUID.randomUUID();
         UUID userId = UUID.randomUUID();
+        UUID deputyId = employeeIds.isEmpty() ? UUID.fromString("d0000000-0000-0000-0000-000000000001") : employeeIds.getFirst();
         employeeIds.add(personId);
         userIds.add(userId);
-        jdbc.update("INSERT INTO employees (id, full_name, team_name, job_title, employment_start_date, status) VALUES (?, ?, ?, 'Cashier', ?, 'ACTIVE')",
-                personId, "Test employee " + personId, workplace, LocalDate.now());
-        jdbc.update("INSERT INTO system_users (id, employee_id, full_name, role_name, company_name, status, username, password_hash, color) VALUES (?, ?, 'Test user', ?, 'Test company', 'ACTIVE', ?, ?, '#ffffff')",
-                userId, personId, role, "test-" + userId, PasswordHasher.hash("test-password"));
+        jdbc.update("INSERT INTO employees (id, full_name, team_name, team_id, deputy_employee_id, job_title, employment_start_date, status) "
+                        + "VALUES (?, ?, ?, (SELECT id FROM hr_teams WHERE name = 'Nákup'), ?, ?, ?, 'ACTIVE')",
+                personId, "Test employee " + personId, workplace, deputyId, role, LocalDate.now());
+        jdbc.update("INSERT INTO system_users (id, employee_id, full_name, company_name, status, username, password_hash, color) VALUES (?, ?, 'Test user', 'Test company', 'ACTIVE', ?, ?, '#ffffff')",
+                userId, personId, "test-" + userId, PasswordHasher.hash("test-password"));
         return access.issueToken(userId);
     }
 
@@ -73,7 +75,7 @@ class WorkforceIntegrationTests extends AbstractPostgresIntegrationTest {
             jdbc.update("DELETE FROM api_sessions WHERE user_id = ?", userId);
             jdbc.update("DELETE FROM system_users WHERE id = ?", userId);
         }
-        for (UUID personId : employeeIds) {
+        for (UUID personId : employeeIds.reversed()) {
             jdbc.update("DELETE FROM employee_absences WHERE employee_id = ?", personId);
             jdbc.update("DELETE FROM employee_qualifications WHERE employee_id = ?", personId);
             jdbc.update("DELETE FROM employees WHERE id = ?", personId);
@@ -134,7 +136,7 @@ class WorkforceIntegrationTests extends AbstractPostgresIntegrationTest {
     }
 
     private Map<String, Object> shiftBody(LocalDateTime from, LocalDateTime to) {
-        return Map.of("employeeId", employeeId.toString(), "roleName", "Cashier", "department", workplace,
+        return Map.of("employeeId", employeeId.toString(), "roleName", employeeRole, "department", workplace,
                 "startAt", from.toString(), "endAt", to.toString());
     }
 

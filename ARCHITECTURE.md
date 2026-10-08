@@ -13,7 +13,7 @@ flowchart TB
     browser["Web browser"]
 
     subgraph compose["Docker Compose / external projects-network"]
-        frontend["frontend<br/>Symfony 7.4 / PHP 8.4 / Apache<br/>:80"]
+        frontend["frontend<br/>Next.js 16 / React 19 / TypeScript<br/>Node.js 22 :3000"]
         backend["backend<br/>Spring Boot 4.1.1 / Java 21<br/>REST API :8080"]
         db[("postgres<br/>PostgreSQL 18<br/>database: erp")]
         warehouse["remote-warehouse-mock<br/>Spring Boot / Java 21<br/>in-memory REST API :8080"]
@@ -28,8 +28,9 @@ flowchart TB
     warehouse -.->|"Standalone mock API :8091<br/>not called by ERP backend"| browser
 ```
 
-The browser-facing application renders ERP pages on the server. The Symfony
-frontend calls the Spring API over the Compose network; the browser can also
+The browser-facing application uses Next.js App Router with React module pages.
+React calls same-origin Next.js route handlers, which forward API requests to
+Spring over the Compose network; the browser can also
 reach the published backend API directly. The warehouse mock is a separate
 service and is not currently integrated into backend request flows.
 
@@ -37,7 +38,7 @@ service and is not currently integrated into backend request flows.
 
 | Component | Runtime responsibility | Data ownership |
 | --- | --- | --- |
-| `frontend` (`erp-base-php`) | Apache serves the Symfony application; Twig renders module pages, Symfony sessions hold login state, and the backend HTTP client forwards API requests. | Browser session and short-lived backend bearer token. |
+| `frontend` (`erp-base-nextjs`) | Next.js serves React pages and TypeScript route handlers; the backend proxy forwards authenticated requests. | Server-side login sessions, guest carts and backend bearer tokens. |
 | `backend` (`erp-backend`) | Spring REST API, authentication and authorization, validation, business workflows, PDF generation, and persistence. | ERP business data and rules. |
 | `postgres` | PostgreSQL database used by the backend. | Durable system of record in the `erp` database. |
 | `remote-warehouse-mock` | Standalone mock API for warehouse/product/stock availability. | Static in-memory fixtures; data resets when the service restarts. |
@@ -53,7 +54,9 @@ are separate Compose services, not separate business-domain microservices.
    are also served by the frontend.
 2. On login, the frontend sends credentials to the backend's `/api/v1/auth`
    API. The frontend stores the returned bearer token in its server-side
-   session; it does not keep that token in the browser.
+   session file; it does not keep that token in the browser. An opaque HttpOnly
+   cookie identifies the session. Login rotates the identifier; sessions expire
+   after 30 idle minutes or eight hours in total.
 3. For authenticated actions and page data, the frontend's backend client
    sends HTTP/JSON requests to `http://backend:8080` and adds the session token
    as a bearer authorization header.
@@ -77,8 +80,11 @@ the frontend on the internal Compose network.
 | Customer and content | `crm`, `documents`, `helpdesk`, `website` | CRM, documents, helpdesk, website and public pages |
 | Cross-module views | `dashboard` | Dashboard |
 
-The backend API is versioned under `/api/v1/`. The Symfony application maps
-browser routes to these APIs and renders the results as Twig templates.
+The backend API is versioned under `/api/v1/`. Next.js module pages call
+`/api/backend/*`; the server proxy adds authorization and forwards to these APIs.
+Mutating requests must pass same-origin checks. Public shop/catalog/website
+routes use an explicit anonymous allowlist. `/api/v1/settings/public` exposes
+only the delivery fee for the storefront, not internal settings.
 
 ## Deployment topology
 
@@ -95,7 +101,7 @@ flowchart LR
     end
 
     subgraph network["External Docker network: projects-network"]
-        frontend["frontend :80"]
+        frontend["frontend :3000"]
         backend["backend :8080"]
         postgres[("postgres :5432")]
         warehouse["remote-warehouse-mock :8080"]
@@ -116,21 +122,24 @@ Compose publishes these host ports:
 
 | Host port | Container endpoint | Purpose |
 | --- | --- | --- |
-| `4201` | `frontend:80` | Symfony ERP UI and public pages |
+| `4201` | `frontend:3000` | Next.js ERP UI and public pages |
 | `8080` | `backend:8080` | Spring REST API |
 | `5434` | `postgres:5432` | PostgreSQL development access |
 | `8091` | `remote-warehouse-mock:8080` | Optional mock API access |
 
 The Compose network is declared external as `projects-network` and must already
 exist before starting the stack. PostgreSQL data is persisted in the
-`erp-postgres-data` named volume.
+`erp-postgres-data` named volume. Login sessions and guest carts are persisted in
+`erp-nextjs-sessions`. The filesystem session store is intended for one frontend
+replica; scaling requires a shared session-store design.
 
 ## Container builds and configuration
 
-- `frontend` is built from `erp-base-php`. Its multi-stage Dockerfile installs
-  Composer dependencies, then runs Apache with PHP 8.4 and serves the Symfony
-  `public/` directory on port 80. Compose sets `BACKEND_URL` to
-  `http://backend:8080` and supplies `APP_SECRET`.
+- `frontend` is built from `erp-base-nextjs`. Its multi-stage Dockerfile installs
+  locked npm dependencies, builds Next.js standalone output, and runs it as a
+  non-root Node.js 22 process on port 3000. Compose sets `BACKEND_URL` to
+  `http://backend:8080`, `SESSION_DIR` to `/app/var/sessions`, and persists that
+  directory in a named volume.
 - `backend` is built from `erp-backend` as a Java 21 Spring Boot executable
   and listens on port 8080. Compose configures its PostgreSQL connection using
   the `postgres` service name and waits for the database health check.
@@ -139,5 +148,6 @@ exist before starting the stack. PostgreSQL data is persisted in the
 - `remote-warehouse-mock` is built from `erp-remote-warehouse` as a Java 21
   service and listens on port 8080 inside its container.
 
-Set a unique, unpredictable `APP_SECRET` in the environment for deployments;
-the Compose default is only suitable for local development.
+Set `COOKIE_SECURE=true` when deploying behind HTTPS. The PHP/Symfony project
+`erp-base-php` and the JSP frontend `erp-base-frontend` remain in the repository
+as references and are not the frontend selected by the main Compose file.

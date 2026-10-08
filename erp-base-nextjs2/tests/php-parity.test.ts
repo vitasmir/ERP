@@ -37,7 +37,8 @@ const common = {
 };
 
 function normalizeHtml(html: string): string {
-  return html.replace(/<link rel="stylesheet" href="\/compatibility\.css\?v=1">\s*/g, "")
+  return html.replace(/<link rel="stylesheet" href="\/compatibility\.css\?v=\d+">\s*/g, "")
+    .replace(/\/assets\/base\.js\?v=20261008-2/g, "/assets/base.js?v=20261008-1")
     .replace(/&#0?39;|&#x27;/g, "'").replace(/&quot;/g, '"').replace(/&amp;/g, "&")
     .replace(/>\s+</g, "><").replace(/\s+/g, " ").trim();
 }

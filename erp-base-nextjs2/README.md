@@ -8,7 +8,8 @@ original pages. This preserves the DOM expected by the PHP frontend's scripts.
 
 ## Preserved UI and workflows
 
-- Every CSS and JavaScript file in `public/assets` is copied unchanged from PHP.
+- CSS and JavaScript files in `public/assets` are copied from PHP. All remain
+  unchanged except for the shared calendar's native modal dialog fix.
 - The sidebar, navigation, launcher tiles, search, filters, detail drawer,
   dialogs, date/color pickers and module forms use the original markup/scripts.
 - GET/POST URLs, form names, backend API calls and feedback are retained for
@@ -28,8 +29,11 @@ The copied HR and purchase templates need syntax adaptation: Twig.js does
 not support PHP Twig arrow-function filters, so equivalent `where` filters are
 used. A small compatibility stylesheet restores standard `[hidden]` behavior:
 original module CSS otherwise overrides it, leaving searched-out tiles and
-hidden payment labels visible. Original asset files remain byte-identical.
-Page markup is otherwise unchanged. Script JSON escapes HTML delimiters. The
+hidden payment labels visible. The shared calendar uses a native modal dialog
+so it appears above other native dialogs, such as the purchase order form;
+the compatibility stylesheet preserves its original appearance. Other original
+asset files remain byte-identical. Page markup is otherwise unchanged.
+Script JSON escapes HTML delimiters. The
 storefront reads `/api/v1/settings/public` for the delivery fee rather than
 requesting administrative settings anonymously.
 

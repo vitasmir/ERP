@@ -56,15 +56,27 @@ test("launcher retains the original sidebar, tiles, drawer, assets and selected 
   assert.match(html, /id="module-drawer"/);
   assert.match(html, /id="module-search"/);
   assert.match(html, /<b>Jan Test<\/b>/);
-  assert.match(html, /src="\/assets\/base\.js\?v=20261008-1"/);
-  assert.match(html, /href="\/compatibility\.css\?v=1"/);
+  assert.match(html, /src="\/assets\/base\.js\?v=20261008-2"/);
+  assert.match(html, /href="\/compatibility\.css\?v=2"/);
 });
 
-test("all CSS and JavaScript assets are byte-identical to the PHP version", async () => {
+test("PHP assets remain byte-identical except for the shared calendar dialog fix", async () => {
   const source = path.resolve("../erp-base-php/public/assets");
   for (const filename of await readdir(source)) {
+    if (filename === "base.js") continue;
     assert.deepEqual(await readFile(path.join("public/assets", filename)), await readFile(path.join(source, filename)), filename);
   }
+});
+
+test("the shared calendar uses the native modal layer with a viewport-sized transparent shell", async () => {
+  const script = await readFile("public/assets/base.js", "utf8");
+  const styles = await readFile("public/compatibility.css", "utf8");
+  assert.match(script, /const datePickerModal = document\.createElement\("dialog"\)/);
+  assert.match(script, /datePickerModal\.showModal\(\)/);
+  assert.match(script, /datePickerModal\.close\(\)/);
+  assert.match(script, /datePickerModal\.addEventListener\("cancel", \(event\) => \{\s*event\.preventDefault\(\);\s*closeDatePicker\(\);/);
+  assert.match(script, /event\.key === "Escape" && datePickerModal\.open\) \{\s*event\.preventDefault\(\);\s*closeDatePicker\(\);/);
+  assert.match(styles, /dialog\.date-picker-modal \{[^}]*width: 100%;[^}]*height: 100%;[^}]*margin: 0;[^}]*padding: 0;[^}]*border: 0;[^}]*background: transparent;/);
 });
 
 test("public content is escaped and script JSON cannot close its script element", async () => {

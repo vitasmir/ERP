@@ -140,9 +140,10 @@ const czechMonths = [
   "Prosinec",
 ];
 const czechWeekdays = ["Po", "Út", "St", "Čt", "Pá", "So", "Ne"];
-const datePickerModal = document.createElement("div");
+const datePickerModal = document.createElement("dialog");
 datePickerModal.className = "date-picker-modal";
-datePickerModal.innerHTML = `<div class="date-picker-backdrop"></div><section class="date-picker-dialog" role="dialog" aria-modal="true" aria-labelledby="date-picker-title"><div class="date-picker-head"><h2 id="date-picker-title">Vyberte datum</h2><button type="button" class="dialog-close" aria-label="Zavřít">×</button></div><div class="date-picker-navigation"><button type="button" data-date-prev aria-label="Předchozí měsíc">‹</button><strong data-date-month></strong><button type="button" data-date-next aria-label="Další měsíc">›</button></div><div class="date-picker-weekdays"></div><div class="date-picker-days"></div><label class="date-picker-time" hidden>Čas<input type="time" data-date-time></label><div class="dialog-actions"><button type="button" class="secondary-button" data-date-cancel>Zrušit</button><button type="button" class="primary" data-date-accept>Vybrat</button></div></section>`;
+datePickerModal.setAttribute("aria-labelledby", "date-picker-title");
+datePickerModal.innerHTML = `<div class="date-picker-backdrop"></div><section class="date-picker-dialog"><div class="date-picker-head"><h2 id="date-picker-title">Vyberte datum</h2><button type="button" class="dialog-close" aria-label="Zavřít">×</button></div><div class="date-picker-navigation"><button type="button" data-date-prev aria-label="Předchozí měsíc">‹</button><strong data-date-month></strong><button type="button" data-date-next aria-label="Další měsíc">›</button></div><div class="date-picker-weekdays"></div><div class="date-picker-days"></div><label class="date-picker-time" hidden>Čas<input type="time" data-date-time></label><div class="dialog-actions"><button type="button" class="secondary-button" data-date-cancel>Zrušit</button><button type="button" class="primary" data-date-accept>Vybrat</button></div></section>`;
 document.body.appendChild(datePickerModal);
 const datePickerWeekdays = datePickerModal.querySelector(".date-picker-weekdays");
 czechWeekdays.forEach((day) => {
@@ -195,6 +196,7 @@ const renderDatePicker = () => {
 };
 const closeDatePicker = () => {
   datePickerModal.classList.remove("open");
+  datePickerModal.close();
   activeDateInput = undefined;
 };
 const openDatePicker = (input) => {
@@ -208,6 +210,7 @@ const openDatePicker = (input) => {
   timeField.style.display = isDateTime ? "grid" : "none";
   renderDatePicker();
   datePickerModal.classList.add("open");
+  datePickerModal.showModal();
 };
 datePickerModal.addEventListener("click", (event) => {
   const day = event.target.closest("[data-day]");
@@ -242,8 +245,13 @@ datePickerModal.addEventListener("click", (event) => {
 datePickerModal.querySelector("[data-date-time]").addEventListener("input", (event) => {
   pendingTime = event.target.value;
 });
+datePickerModal.addEventListener("cancel", (event) => {
+  event.preventDefault();
+  closeDatePicker();
+});
 document.addEventListener("keydown", (event) => {
-  if (event.key === "Escape" && datePickerModal.classList.contains("open")) {
+  if (event.key === "Escape" && datePickerModal.open) {
+    event.preventDefault();
     closeDatePicker();
   }
 });

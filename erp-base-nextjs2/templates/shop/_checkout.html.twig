@@ -1,0 +1,44 @@
+{% if shop.checkoutOpen and shop.cart %}
+    <section id="delivery-step" class="delivery-step">
+        <div class="delivery-step-heading"><span class="eyebrow">DORUČENÍ</span><h2>Adresa zákazníka</h2><p>Vyplňte údaje, na které má být nákup doručen.</p></div>
+        <form method="post" class="delivery-form">
+            <input type="hidden" name="action" value="delivery">
+            <label>Jméno<input name="firstName" value="{{ shop.delivery.firstName|default('') }}" autocomplete="given-name" required></label>
+            <label>Příjmení<input name="lastName" value="{{ shop.delivery.lastName|default('') }}" autocomplete="family-name" required></label>
+            <label>Telefon<input name="phone" type="tel" value="{{ shop.delivery.phone|default('') }}" placeholder="+420 123 456 789" autocomplete="tel" required></label>
+            <label>Ulice a číslo domu<input name="street" value="{{ shop.delivery.street|default('') }}" autocomplete="street-address" required></label>
+            <label>Město<input name="city" value="{{ shop.delivery.city|default('') }}" autocomplete="address-level2" required></label>
+            <label>PSČ<input name="postalCode" value="{{ shop.delivery.postalCode|default('') }}" placeholder="602 00" pattern="[0-9]{3} ?[0-9]{2}" autocomplete="postal-code" required></label>
+            <button class="checkout-submit" type="submit">Pokračovat k platbě <span>→</span></button>
+        </form>
+    </section>
+{% elseif shop.paymentOpen and shop.cart %}
+    <section id="payment-step" class="delivery-step payment-step" role="dialog" aria-labelledby="payment-heading">
+        <div class="delivery-step-heading"><span class="eyebrow">PLATBA</span><h2 id="payment-heading">Platební údaje</h2><p>Zvolte způsob úhrady objednávky.</p></div>
+        <form method="post" class="payment-options" data-subtotal="{{ shop.cartTotal }}" data-delivery-fee="{{ shop.deliveryFee }}">
+            <input type="hidden" name="action" value="payment">
+            <div class="payment-methods">
+                <label class="payment-option"><input type="radio" name="paymentMethod" value="card" checked required><span><strong>VISA / MasterCard</strong><small>Platba kartou online</small></span></label>
+                <label class="payment-option"><input type="radio" name="paymentMethod" value="cod"><span><strong>Platba při doručení</strong><small>Uhradíte kurýrovi při převzetí</small></span></label>
+            </div>
+            <div class="card-details" data-card-details>
+                <label>Číslo karty
+                    <span class="card-number-fields">
+                        <input name="cardNumber1" inputmode="numeric" autocomplete="cc-number" maxlength="4" pattern="[0-9]{4}" placeholder="1234">
+                        <input name="cardNumber2" inputmode="numeric" maxlength="4" pattern="[0-9]{4}" placeholder="5678">
+                        <input name="cardNumber3" inputmode="numeric" maxlength="4" pattern="[0-9]{4}" placeholder="9012">
+                        <input name="cardNumber4" inputmode="numeric" maxlength="4" pattern="[0-9]{4}" placeholder="3456">
+                    </span>
+                </label>
+                <label>Platnost<input name="cardExpiry" inputmode="numeric" autocomplete="cc-exp" placeholder="MM/RR"></label>
+                <label>CVV<input name="cardCvc" inputmode="numeric" autocomplete="cc-csc" placeholder="123"></label>
+            </div>
+            <div class="payment-summary">
+                <span>Mezisoučet</span><strong>{{ shop.cartTotal }} Kč</strong>
+                <span data-delivery-fee-label hidden>Poplatek za doručení</span><strong data-delivery-fee-label hidden>{{ shop.deliveryFee }} Kč</strong>
+                <span>Celkem</span><strong data-payment-total>{{ shop.cartTotal }} Kč</strong>
+            </div>
+            <button class="checkout-submit" type="submit">Dokončit objednávku <span>→</span></button>
+        </form>
+    </section>
+{% endif %}

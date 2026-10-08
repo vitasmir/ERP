@@ -13,7 +13,7 @@ flowchart TB
     browser["Web browser"]
 
     subgraph compose["Docker Compose / external projects-network"]
-        frontend["frontend<br/>Next.js 16 / React 19 / TypeScript<br/>Node.js 22 :3000"]
+        frontend["frontend<br/>Next.js 16.3 / Twig.js / TypeScript<br/>Node.js 22 :3000"]
         backend["backend<br/>Spring Boot 4.1.1 / Java 21<br/>REST API :8080"]
         db[("postgres<br/>PostgreSQL 18<br/>database: erp")]
         warehouse["remote-warehouse-mock<br/>Spring Boot / Java 21<br/>in-memory REST API :8080"]
@@ -21,15 +21,17 @@ flowchart TB
 
     user --> browser
     shopper --> browser
-    browser -->|"HTTP :4201"| frontend
+    browser -->|"HTTP :3000"| frontend
     browser -.->|"Optional direct API access :8080"| backend
     frontend -->|"HTTP/JSON :8080<br/>Authorization: Bearer token"| backend
     backend -->|"JPA / JDBC"| db
     warehouse -.->|"Standalone mock API :8091<br/>not called by ERP backend"| browser
 ```
 
-The browser-facing application uses Next.js App Router with React module pages.
-React calls same-origin Next.js route handlers, which forward API requests to
+The browser-facing application uses Next.js App Router route handlers to serve
+the original PHP frontend's HTML templates, rendered by Twig.js. Original CSS
+and JavaScript assets are retained unchanged; React does not hydrate these
+pages. HTML form submissions are handled by TypeScript controllers, which call
 Spring over the Compose network; the browser can also
 reach the published backend API directly. The warehouse mock is a separate
 service and is not currently integrated into backend request flows.
@@ -38,7 +40,7 @@ service and is not currently integrated into backend request flows.
 
 | Component | Runtime responsibility | Data ownership |
 | --- | --- | --- |
-| `frontend` (`erp-base-nextjs`) | Next.js serves React pages and TypeScript route handlers; the backend proxy forwards authenticated requests. | Server-side login sessions, guest carts and backend bearer tokens. |
+| `frontend` (`erp-base-nextjs2`) | Next.js 16.3 serves Twig.js-rendered HTML and original static assets; TypeScript controllers handle forms and backend calls. | Server-side login sessions, guest carts and backend bearer tokens. |
 | `backend` (`erp-backend`) | Spring REST API, authentication and authorization, validation, business workflows, PDF generation, and persistence. | ERP business data and rules. |
 | `postgres` | PostgreSQL database used by the backend. | Durable system of record in the `erp` database. |
 | `remote-warehouse-mock` | Standalone mock API for warehouse/product/stock availability. | Static in-memory fixtures; data resets when the service restarts. |
@@ -50,7 +52,7 @@ are separate Compose services, not separate business-domain microservices.
 
 ## Request and authentication flow
 
-1. A user opens the ERP frontend at `http://localhost:4201`; public shop pages
+1. A user opens the ERP frontend at `http://localhost:3000`; public shop pages
    are also served by the frontend.
 2. On login, the frontend sends credentials to the backend's `/api/v1/auth`
    API. The frontend stores the returned bearer token in its server-side
@@ -80,10 +82,11 @@ the frontend on the internal Compose network.
 | Customer and content | `crm`, `documents`, `helpdesk`, `website` | CRM, documents, helpdesk, website and public pages |
 | Cross-module views | `dashboard` | Dashboard |
 
-The backend API is versioned under `/api/v1/`. Next.js module pages call
-`/api/backend/*`; the server proxy adds authorization and forwards to these APIs.
+The backend API is versioned under `/api/v1/`. TypeScript controllers call these
+APIs with the token from the server-side session. Frontend form URLs and fields
+remain the same as in PHP; there is no browser-facing generic API proxy.
 Mutating requests must pass same-origin checks. Public shop/catalog/website
-routes use an explicit anonymous allowlist. `/api/v1/settings/public` exposes
+controllers make explicit unauthenticated backend calls. `/api/v1/settings/public` exposes
 only the delivery fee for the storefront, not internal settings.
 
 ## Deployment topology
@@ -94,7 +97,7 @@ flowchart LR
 
     subgraph host["Developer or deployment host"]
         compose["Docker Compose"]
-        frontendPort["localhost:4201"]
+        frontendPort["localhost:3000"]
         backendPort["localhost:8080"]
         postgresPort["localhost:5434"]
         warehousePort["localhost:8091"]
@@ -122,7 +125,7 @@ Compose publishes these host ports:
 
 | Host port | Container endpoint | Purpose |
 | --- | --- | --- |
-| `4201` | `frontend:3000` | Next.js ERP UI and public pages |
+| `3000` | `frontend:3000` | Next.js ERP UI and public pages |
 | `8080` | `backend:8080` | Spring REST API |
 | `5434` | `postgres:5432` | PostgreSQL development access |
 | `8091` | `remote-warehouse-mock:8080` | Optional mock API access |
@@ -135,11 +138,12 @@ replica; scaling requires a shared session-store design.
 
 ## Container builds and configuration
 
-- `frontend` is built from `erp-base-nextjs`. Its multi-stage Dockerfile installs
+- `frontend` is built from `erp-base-nextjs2`. Its multi-stage Dockerfile installs
   locked npm dependencies, builds Next.js standalone output, and runs it as a
   non-root Node.js 22 process on port 3000. Compose sets `BACKEND_URL` to
   `http://backend:8080`, `SESSION_DIR` to `/app/var/sessions`, and persists that
-  directory in a named volume.
+  directory in a named volume. Templates and original CSS/JavaScript are included
+  in the final image; PHP is not required.
 - `backend` is built from `erp-backend` as a Java 21 Spring Boot executable
   and listens on port 8080. Compose configures its PostgreSQL connection using
   the `postgres` service name and waits for the database health check.
@@ -149,5 +153,8 @@ replica; scaling requires a shared session-store design.
   service and listens on port 8080 inside its container.
 
 Set `COOKIE_SECURE=true` when deploying behind HTTPS. The PHP/Symfony project
-`erp-base-php` and the JSP frontend `erp-base-frontend` remain in the repository
+`erp-base-php`, the first React frontend `erp-base-nextjs`, and the JSP frontend
+`erp-base-frontend` remain in the repository
 as references and are not the frontend selected by the main Compose file.
+`docker-compose-NEXTJS2.yml` also provides a dedicated deployment of the new
+frontend with the separate `erp-nextjs2-sessions` volume.

@@ -5,7 +5,8 @@ MVP životního cyklu letákové akce pro retailový řetězec.
 ## Stack
 
 - `erp-backend`: Spring Boot 4.1.1, Java 21, JPA, Flyway
-- `erp-base-nextjs`: Next.js 16, React 19, TypeScript, Node.js 22
+- `erp-base-nextjs2`: Next.js 16.3.8, TypeScript, Twig.js, Node.js 22; původní PHP vzhled, CSS a JavaScript
+- `erp-base-nextjs`: zachovaný první React frontend
 - PostgreSQL 18
 - Docker Compose
 
@@ -15,7 +16,7 @@ MVP životního cyklu letákové akce pro retailový řetězec.
 docker compose up --build
 ```
 
-Aplikace bude na `http://localhost:4201`, API na `http://localhost:8080`.
+Aplikace bude na `http://localhost:3000`, API na `http://localhost:8080`.
 Síť `projects-network` musí existovat; při prvním spuštění ji vytvořte přes
 `docker network create projects-network`.
 Pro HTTPS nasazení nastavte `COOKIE_SECURE=true`.
@@ -29,8 +30,11 @@ docker compose down
 docker compose -f docker-compose-PHP.yml up --build
 ```
 
-Obě varianty používají stejné porty, proto je nespouštějte současně. Původní
-JSP frontend zůstává jako reference.
+PHP frontend je na portu 4201. Varianty sdílejí backendové porty, proto je
+nespouštějte současně. Původní JSP frontend zůstává jako reference.
+Samostatná konfigurace nové varianty je také v `docker-compose-NEXTJS2.yml`
+s vlastním objemem `erp-nextjs2-sessions`. Podrobnosti o věrném přepisu PHP
+šablon a funkčnosti jsou v [erp-base-nextjs2/README.md](erp-base-nextjs2/README.md).
 
 ## Automatický rebuild UI
 
@@ -40,24 +44,25 @@ Pro automatické sestavení po změně zdrojů frontendového UI spusťte:
 ./watch-ui.sh
 ```
 
-Watcher spustí Compose na pozadí, sleduje `erp-base-nextjs` a při změně automaticky provede `docker compose up --build -d`.
+Watcher spustí Compose na pozadí, sleduje zdroje, šablony a assety
+`erp-base-nextjs2` a při změně automaticky provede `docker compose up --build -d`.
 
 ## Lokální vývoj
 
 ```bash
 (cd erp-backend && mvn test)
-cd erp-base-nextjs
+cd erp-base-nextjs2
 npm ci
 npm run dev
 ```
 
 Next.js vývojový server běží na `http://localhost:3000` a volá API na
-`http://localhost:8080`. Volitelnou konfiguraci uvádí `erp-base-nextjs/.env.example`.
+`http://localhost:8080`. Volitelnou konfiguraci uvádí `erp-base-nextjs2/.env.example`.
 
 Validace nového frontendu (integrační test spouští vlastní backend mock):
 
 ```bash
-cd erp-base-nextjs
+cd erp-base-nextjs2
 npm run typecheck
 npm run build
 npm test

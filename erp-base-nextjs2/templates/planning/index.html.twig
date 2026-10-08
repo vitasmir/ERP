@@ -1,0 +1,86 @@
+{% extends 'base.html.twig' %}
+{% set pageTitle = 'Plánování' %}
+{% block stylesheets %}
+    <link rel="stylesheet" href="{{ asset('assets/planning.css') }}">
+    <link rel="stylesheet" href="{{ asset('assets/workforce.css') }}">
+{% endblock %}
+{% block body %}
+<main class="planning-page">
+    <header class="planning-header"><a href="/apps" class="back-link">← Aplikace</a><div><span class="eyebrow">PROVOZ / PLÁNOVÁNÍ</span><h1>Plánování</h1></div><a href="#schedule" class="primary">Plán směn</a></header>
+    {% for text in [error, actionError] %}{% if text %}<p class="planning-message error" role="alert">{{ text }}</p>{% endif %}{% endfor %}
+    {% if message %}<p class="planning-message" role="status">{{ message }}</p>{% endif %}
+    <section class="planning-metrics">
+        <article><span>Naplánované směny</span><strong>{{ overview.shiftCount|default('-') }}</strong><small>sloty v aktuálním plánu</small></article>
+        <article><span>Neobsazené sloty</span><strong>{{ overview.openShiftCount|default('-') }}</strong><small>čekají na přiřazení</small></article>
+        <article><span>Kapacita týmu</span><strong>{{ overview.plannedHours|default('-') }} h</strong><small>{{ overview.draftShiftCount|default('-') }} směn v návrhu</small></article>
+    </section>
+    {% if edit %}
+        <section class="workforce-section">
+            <h2>Nová směna</h2>
+            {% include 'planning/_shift_form.html.twig' with {shift: null} %}
+            <datalist id="role-options">{% for roleName in roleOptions %}<option value="{{ roleName }}">{% endfor %}</datalist>
+        </section>
+    {% endif %}
+    {% if manageAll %}
+        <section class="workforce-section">
+            <details>
+                <summary>Pracoviště a kapacity</summary>
+                {% for workplace in workplaces %}<p>{{ workplace.name }}: {{ workplace.capacity }}</p>{% endfor %}
+                <form method="post" class="workforce-form">
+                    <input type="hidden" name="action" value="workplace">
+                    <label>Pracoviště<input name="name" maxlength="150" list="workplace-options" required></label>
+                    <label>Souběžné sloty<input name="capacity" type="number" min="1" max="10000" value="1" required></label>
+                    <button type="submit" class="secondary">Uložit kapacitu</button>
+                </form>
+                <datalist id="workplace-options">{% for workplace in workplaces %}<option value="{{ workplace.name }}">{% endfor %}</datalist>
+            </details>
+        </section>
+    {% endif %}
+    <section id="schedule" class="planning-section">
+        {% if edit %}<form method="post" id="publish-plan" class="workforce-actions"><input type="hidden" name="action" value="publishPlan"><button class="secondary" type="submit">Publikovat vybrané směny</button></form>{% endif %}
+        <div class="section-head"><div><span class="eyebrow">TÝDENNÍ PLÁN</span><h2>Směny a kapacity</h2></div><span class="shift-count">{{ overview.shifts|default([])|length }} sloty</span></div>
+        <div class="shift-table-wrap">
+            <table class="shift-table">
+                <thead><tr><th>Směna</th><th>Začátek</th><th>Konec</th><th>Akce</th></tr></thead>
+                <tbody>
+                {% for shift in overview.shifts|default([]) %}
+                    <tr class="shift-row">
+                        <td data-label="Směna"><span class="status-chip status-{{ shift.status|lower }}">{{ shift.status == 'PUBLISHED' ? 'PUBLIKOVÁNO' : 'NÁVRH' }}</span><strong>{{ shift.roleName }}</strong><small>{{ shift.department }} · {{ shift.employeeName|default('Neobsazeno') }}</small></td>
+                        <td data-label="Začátek">{{ shift.startAt|replace({'T': ' '}) }}</td>
+                        <td data-label="Konec">{{ shift.endAt|replace({'T': ' '}) }}</td>
+                        <td data-label="Akce" class="shift-action-cell">
+                            <div class="workforce-actions">
+                                {% if edit and shift.status == 'DRAFT' %}
+                                    <label><input type="checkbox" form="publish-plan" name="shiftIds[]" value="{{ shift.id }}"> Vybrat</label>
+                                    <form method="post"><input type="hidden" name="action" value="publish"><input type="hidden" name="id" value="{{ shift.id }}"><button class="secondary" type="submit">Publikovat směnu</button></form>
+                                    <form method="post" data-confirm-delete data-confirm-message="Opravdu chcete tento koncept smazat?"><input type="hidden" name="action" value="delete"><input type="hidden" name="id" value="{{ shift.id }}"><button class="secondary" type="submit">Smazat koncept</button></form>
+                                {% endif %}
+                                <a href="/planning?audit={{ shift.id }}#audit">Historie</a>
+                            </div>
+                        </td>
+                    </tr>
+                    {% if edit %}
+                        <tr class="shift-edit-row"><td colspan="4"><details class="workforce-edit"><summary>Upravit směnu</summary>{% include 'planning/_shift_form.html.twig' with {shift: shift} %}</details></td></tr>
+                    {% endif %}
+                {% else %}{% if overview %}<tr><td colspan="4">Žádné směny.</td></tr>{% endif %}{% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </section>
+    {% if events is not null %}
+        <section id="audit" class="workforce-section">
+            <h2>Historie směny</h2>
+            {% for event in events %}<p class="workforce-event"><time>{{ event.occurredAt }}</time> <strong>{{ event.action }}</strong> / {{ event.actor }}<br>{{ event.details }}</p>{% else %}<p>Žádné záznamy.</p>{% endfor %}
+        </section>
+    {% endif %}
+    <section class="workforce-section">
+        <h2>Moje oznámení</h2>
+        {% for notice in notifications %}
+            <div class="workforce-event">
+                <p>{{ notice.message }}</p><time>{{ notice.createdAt }}</time>
+                {% if notice.readAt is null %}<form method="post"><input type="hidden" name="action" value="read"><input type="hidden" name="id" value="{{ notice.id }}"><button type="submit" class="secondary">Označit jako přečtené</button></form>{% endif %}
+            </div>
+        {% else %}<p>Žádná oznámení.</p>{% endfor %}
+    </section>
+</main>
+{% endblock %}

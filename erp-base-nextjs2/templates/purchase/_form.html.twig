@@ -1,0 +1,38 @@
+<form method="post" class="new-order-form" data-purchase-form>
+    <input type="hidden" name="action" value="{{ order ? 'update' : 'create' }}">
+    <input type="hidden" name="id" value="{{ order.id|default('') }}">
+    <label>Dodavatel<input name="supplierName" value="{{ order.supplierName|default('') }}" required maxlength="200" placeholder="Název dodavatele"></label>
+    <label>Požadováno<input type="date" name="requestedOn" value="{{ order.requestedOn|default('') }}" required></label>
+    <label>Očekávané dodání<input type="date" name="expectedDeliveryDate" value="{{ order.expectedDeliveryDate|default('') }}" required></label>
+    <label>Dodavatelský sklad
+        <select name="sourceWarehouseId" required>
+            <option value="">Vyberte sklad</option>
+            {% for warehouse in warehouses %}{% if warehouse.ownerType == 'SUPPLIER' %}<option value="{{ warehouse.id }}" {{ warehouse.id == order.sourceWarehouseId|default('') ? 'selected' : '' }}>{{ warehouse.name }}</option>{% endif %}{% endfor %}
+        </select>
+    </label>
+    <label>Firemní cílový sklad
+        <select name="destinationWarehouseId" required>
+            <option value="">Vyberte sklad</option>
+            {% for warehouse in warehouses %}{% if warehouse.ownerType == 'COMPANY' %}<option value="{{ warehouse.id }}" {{ warehouse.id == order.destinationWarehouseId|default('') ? 'selected' : '' }}>{{ warehouse.name }}</option>{% endif %}{% endfor %}
+        </select>
+    </label>
+    <fieldset class="purchase-lines" data-purchase-lines>
+        <legend>Položky objednávky</legend>
+        {% for line in order.lines|default([{}]) %}
+            <div class="purchase-line" data-purchase-line>
+                <label>Produkt
+                    <select name="productId[]" required data-product-select>
+                        <option value="">Vyberte produkt</option>
+                        {% for product in products %}<option value="{{ product.id }}" data-price="{{ product.purchasePrice|default('0.00') }}" {{ product.id == line.productId|default('') ? 'selected' : '' }}>{{ product.name }} ({{ product.sku }})</option>{% endfor %}
+                    </select>
+                </label>
+                <label>Množství<input type="number" name="quantity[]" value="{{ line.quantity|default('') }}" min="1" step="1" required placeholder="1"></label>
+                <label>Cena / ks<input type="number" name="unitPrice[]" value="{{ line.unitPrice|default('') }}" min="0" step="0.01" required placeholder="0.00" data-unit-price></label>
+                <button class="remove-line" type="button" data-remove-line aria-label="Odebrat položku">×</button>
+            </div>
+        {% endfor %}
+    </fieldset>
+    <button class="add-line" type="button" data-add-line>+ Přidat další produkt</button>
+    <output class="order-total" data-order-total>Celkem: 0,00 Kč</output>
+    <button class="secondary" type="submit">{{ order ? 'Uložit změny' : 'Vytvořit objednávku' }}</button>
+</form>

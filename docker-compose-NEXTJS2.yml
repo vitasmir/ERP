@@ -43,7 +43,7 @@ services:
     ports:
       - "3000:3000"
     volumes:
-      - erp-nextjs-sessions:/app/var/sessions
+      - erp-nextjs2-sessions:/app/var/sessions
     depends_on:
       - backend
     networks:
@@ -59,7 +59,7 @@ services:
 
 volumes:
   erp-postgres-data:
-  erp-nextjs-sessions:
+  erp-nextjs2-sessions:
 
 networks:
   projects-network:

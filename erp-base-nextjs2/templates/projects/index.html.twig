@@ -1,0 +1,37 @@
+{% extends 'base.html.twig' %}
+
+{% block stylesheets %}
+    <link rel="stylesheet" href="{{ asset('assets/projects.css') }}">
+{% endblock %}
+
+{% block body %}
+<div class="projects-page">
+    <header class="projects-header">
+        <a href="/apps" class="back-link">← Aplikace</a>
+        <div><span class="eyebrow">PROVOZ / PROJEKTY</span><h1>Projekty</h1><p>Sledujte odpovědnosti, termíny a postup klíčových iniciativ napříč organizací.</p></div>
+        <a href="#portfolio" class="primary">Přehled projektů</a>
+    </header>
+    {% if error %}<p class="projects-message error" role="alert">{{ error }}</p>{% endif %}
+    {% if actionError %}<p class="projects-message error" role="alert">{{ actionError }}</p>{% endif %}
+    {% if message %}<p class="projects-message" role="status">{{ message }}</p>{% endif %}
+    <section class="projects-metrics">
+        <article><span>Aktivní projekty</span><strong>{{ overview.activeProjectCount ?? '-' }}</strong><small>plánované a rozpracované</small></article>
+        <article><span>Probíhá</span><strong>{{ overview.inProgressCount ?? '-' }}</strong><small>aktivně řešené iniciativy</small></article>
+        <article><span>Termín do 14 dnů</span><strong>{{ overview.dueSoonCount ?? '-' }}</strong><small>vyžaduje pozornost týmu</small></article>
+    </section>
+    <section id="portfolio" class="projects-section">
+        <div class="section-head"><div><span class="eyebrow">PROJEKTOVÉ PORTFOLIO</span><h2>Plán a postup práce</h2></div><span class="project-count">{{ (overview.projects ?? [])|length }} projekty</span></div>
+        <div class="project-list">
+            {% for project in overview.projects ?? [] %}
+            <article class="project-card">
+                <div class="project-main"><span class="status-chip status-{{ project.status|lower }}">{{ project.status == 'IN_PROGRESS' ? 'PROBÍHÁ' : (project.status == 'PLANNED' ? 'PLÁNOVÁNO' : 'DOKONČENO') }}</span><h3>{{ project.name }}</h3><p>{{ project.department }} · vlastník: {{ project.ownerName }}</p></div>
+                <div class="progress-group"><div class="progress-meta"><span>Postup</span><b>{{ project.progress }} %</b></div><div class="progress-track"><span style="width:{{ project.progress }}%"></span></div><small>Termín dokončení: {{ project.dueDate }}</small></div>
+                {% if project.status != 'COMPLETED' %}
+                <form method="post" action="/projects"><input type="hidden" name="id" value="{{ project.id }}"><button class="secondary" type="submit">Dokončit projekt</button></form>
+                {% else %}<span class="completed-label">Projekt uzavřen</span>{% endif %}
+            </article>
+            {% endfor %}
+        </div>
+    </section>
+</div>
+{% endblock %}

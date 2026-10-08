@@ -1,0 +1,107 @@
+{% extends 'base.html.twig' %}
+{% set pageTitle = 'Nákup' %}
+{% block stylesheets %}<link rel="stylesheet" href="{{ asset('assets/purchase.css') }}">{% endblock %}
+{% block body %}
+<main class="purchase-page">
+    <header class="purchase-header">
+        <a href="/apps" class="back-link">← Aplikace</a>
+        <div><span class="eyebrow">PROVOZ / NÁKUP</span><h1>Nákup</h1><p>Řiďte nákupní požadavky, objednávky dodavatelům a očekávané příjmy zboží.</p></div>
+        <div class="purchase-actions"><a href="#orders" class="primary">Přehled nákupu</a><button type="button" class="primary add-order-button" onclick="document.querySelector('[data-order-dialog]').showModal()">Přidej objednávku</button></div>
+    </header>
+    {% for text in [error, actionError] %}{% if text %}<p class="purchase-message error" role="alert">{{ text }}</p>{% endif %}{% endfor %}
+    {% if message %}<p class="purchase-message" role="status">{{ message }}</p>{% endif %}
+    <section class="purchase-metrics">
+        <article><span>Požadavky k objednání</span><strong>{{ overview ? overview.requestedValue|number_format(2, '.', '') : '-' }} Kč</strong><small>čeká na odeslání dodavateli</small></article>
+        <article><span>Objednáno u dodavatelů</span><strong>{{ overview ? overview.orderedValue|number_format(2, '.', '') : '-' }} Kč</strong><small>očekáváme na sklad</small></article>
+        <article><span>Otevřené požadavky</span><strong>{{ overview.requestedCount|default('-') }}</strong><small>vyžaduje rozhodnutí nákupu</small></article>
+    </section>
+    <section id="orders" class="purchase-section">
+        <div class="section-head"><div><span class="eyebrow">NÁKUPNÍ POŽADAVKY A OBJEDNÁVKY</span><h2>Plán zásobování</h2></div><span class="order-count">{{ overview.orders|default([])|length }} dokumenty</span></div>
+        <div class="order-table-wrap">
+            <table class="order-table">
+                <thead><tr><th>Dokument</th><th>Dodavatel</th><th>Tok skladu</th><th>Požadováno</th><th>Dodání</th><th class="amount-column">Celkem</th><th>Stav / akce</th></tr></thead>
+                <tbody>
+                {% for order in overview.orders|default([]) %}
+                    <tr>
+                        <td data-label="Dokument">
+                            <span class="status-chip status-{{ order.status|lower }}">{{ order.status == 'REQUESTED' ? 'POŽADAVEK' : 'OBJEDNÁNO' }}</span><strong>{{ order.orderNumber }}</strong>
+                            <details>
+                                <summary>Obsah objednávky</summary>
+                                <div class="order-detail-lines">
+                                    {% for line in order.lines|default([]) %}
+                                        {% set product = products|where('id', line.productId)|first %}
+                                        {% set imageUrl = product.imageUrl|default('') %}
+                                        {% if not imageUrl %}{% set imageUrl = (product.images|default([])|where('active', true)|first).imageUrl|default('') %}{% endif %}
+                                        <article class="order-detail-line">
+                                            {% if imageUrl %}<img src="{{ imageUrl }}" alt="{{ product.name|default(line.productId) }}" loading="lazy">{% else %}<div class="order-detail-image-placeholder">Bez obrázku</div>{% endif %}
+                                            <div><h3>{{ product.name|default(line.productId) }}</h3><p>{{ product.sku|default('') }} · {{ product.unit|default('') }}</p><strong>{{ line.quantity }} ks · {{ line.unitPrice|number_format(2, '.', '') }} Kč/ks</strong></div>
+                                        </article>
+                                    {% endfor %}
+                                </div>
+                            </details>
+                        </td>
+                        <td data-label="Dodavatel">{{ order.supplierName }}</td>
+                        <td data-label="Tok skladu">
+                            {% set source = warehouses|where('id', order.sourceWarehouseId)|first %}
+                            {% set destination = warehouses|where('id', order.destinationWarehouseId)|first %}
+                            <span class="warehouse-flow"><span>{{ source.name|default(order.sourceWarehouseId) }}</span><span class="warehouse-arrow">→</span><span>{{ destination.name|default(order.destinationWarehouseId) }}</span></span>
+                        </td>
+                        <td data-label="Požadováno"><span class="order-date">{{ order.requestedOn ? order.requestedOn|date('j. n. Y') : '-' }}</span><small class="order-quantity">{{ order.quantity is not null ? order.receivedQuantity ~ ' / ' ~ order.quantity : '-' }} ks</small></td>
+                        <td data-label="Dodání">{{ order.expectedDeliveryDate ? order.expectedDeliveryDate|date('j. n. Y') : '-' }}</td>
+                        <td data-label="Celkem" class="amount-column"><strong>{{ order.totalAmount|number_format(2, '.', '') }} Kč</strong></td>
+                        <td data-label="Stav / akce">
+                            {% if order.status == 'REQUESTED' %}
+                                <details class="workforce-edit"><summary>Upravit</summary>{% include 'purchase/_form.html.twig' with {order: order} %}</details>
+                                <form method="post"><input type="hidden" name="id" value="{{ order.id }}"><button class="secondary" type="submit">Vystavit objednávku</button></form>
+                            {% elseif order.status == 'ORDERED' and order.quantity is not null %}
+                                <form method="post"><input type="hidden" name="id" value="{{ order.id }}"><input type="hidden" name="action" value="receive"><input type="hidden" name="quantity" value="{{ order.quantity - order.receivedQuantity }}"><button class="secondary" type="submit">Přijmout na sklad</button></form>
+                            {% else %}<span class="ordered-label">{{ order.status == 'RECEIVED' ? 'Přijato na sklad' : 'Čeká na dodání' }}</span>{% endif %}
+                        </td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </section>
+</main>
+<dialog class="order-dialog" data-order-dialog aria-labelledby="new-order-title">
+    <div class="order-dialog-head"><div><span class="eyebrow">NOVÝ DOKUMENT</span><h2 id="new-order-title">Přidej objednávku</h2></div><button type="button" class="dialog-close" aria-label="Zavřít" onclick="this.closest('dialog').close()">×</button></div>
+    {% include 'purchase/_form.html.twig' with {order: null} %}
+</dialog>
+{% endblock %}
+{% block javascripts %}
+<script>
+    document.querySelectorAll('[data-purchase-form]').forEach(form => {
+        const lines = form.querySelector('[data-purchase-lines]');
+        const output = form.querySelector('[data-order-total]');
+        const updateTotal = () => {
+            const value = [...lines.querySelectorAll('[data-purchase-line]')].reduce((sum, row) => {
+                return sum + Number(row.querySelector('[name="quantity[]"]').value) * Number(row.querySelector('[name="unitPrice[]"]').value);
+            }, 0);
+            output.textContent = 'Celkem: ' + value.toLocaleString('cs-CZ', {style: 'currency', currency: 'CZK'});
+        };
+        form.addEventListener('input', updateTotal);
+        form.addEventListener('change', event => {
+            if (event.target.matches('[data-product-select]')) {
+                event.target.closest('[data-purchase-line]').querySelector('[data-unit-price]').value = event.target.selectedOptions[0].dataset.price || '0.00';
+                updateTotal();
+            }
+        });
+        form.addEventListener('click', event => {
+            if (event.target.closest('[data-add-line]')) {
+                const row = lines.querySelector('[data-purchase-line]').cloneNode(true);
+                row.querySelectorAll('input').forEach(input => { input.value = ''; });
+                row.querySelector('select').value = '';
+                lines.append(row);
+            }
+            if (event.target.closest('[data-remove-line]') && lines.querySelectorAll('[data-purchase-line]').length > 1) {
+                event.target.closest('[data-purchase-line]').remove();
+            }
+            updateTotal();
+        });
+        updateTotal();
+    });
+    const orderDialog = document.querySelector('[data-order-dialog]');
+    orderDialog.addEventListener('click', event => { if (event.target === orderDialog) orderDialog.close(); });
+</script>
+{% endblock %}

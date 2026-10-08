@@ -1,0 +1,21 @@
+{% for category in categories %}
+    <li>
+        <div class="category-row">
+            <a class="category-filter-link {{ category.id == selectedCategoryId ? 'selected' : '' }}" href="/ecommerce?categoryId={{ category.id }}#catalog"><strong>{{ category.name }}</strong></a>
+            <small>/{{ category.slug }}</small>
+            <div class="catalog-actions">
+                <details>
+                    <summary>Upravit</summary>
+                    <form method="post" class="category-edit-form">
+                        <input type="hidden" name="action" value="updateCategory"><input type="hidden" name="categoryId" value="{{ category.id }}">
+                        <input type="hidden" name="parentId" value="{{ category.parentId|default('') }}">
+                        <input name="name" value="{{ category.name }}" required><input name="slug" value="{{ category.slug }}" required>
+                        <button class="secondary" type="submit">Uložit</button>
+                    </form>
+                </details>
+                <form method="post" onsubmit="return confirm('Opravdu smazat kategorii?');"><input type="hidden" name="action" value="deleteCategory"><input type="hidden" name="categoryId" value="{{ category.id }}"><button class="danger-button" type="submit">Smazat</button></form>
+            </div>
+        </div>
+        {% if category.children|default([]) %}<ul>{% include 'ecommerce/_categories.html.twig' with {categories: category.children} %}</ul>{% endif %}
+    </li>
+{% endfor %}

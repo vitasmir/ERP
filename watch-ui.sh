@@ -6,16 +6,16 @@ cd "$repo_dir"
 
 snapshot() {
   {
-    find erp-base-nextjs/src erp-base-nextjs/public \
+    find erp-base-nextjs2/src erp-base-nextjs2/public erp-base-nextjs2/templates \
       -type f -printf '%p:%T@\n'
-    stat -c '%n:%Y' erp-base-nextjs/package.json erp-base-nextjs/package-lock.json \
-      erp-base-nextjs/next.config.ts erp-base-nextjs/tsconfig.json \
-      erp-base-nextjs/Dockerfile erp-base-nextjs/.dockerignore erp-base-nextjs/.env.example
+    stat -c '%n:%Y' erp-base-nextjs2/package.json erp-base-nextjs2/package-lock.json \
+      erp-base-nextjs2/next.config.ts erp-base-nextjs2/tsconfig.json \
+      erp-base-nextjs2/Dockerfile erp-base-nextjs2/.dockerignore erp-base-nextjs2/.env.example
     stat -c '%n:%Y' docker-compose.yml
   } | sort
 }
 
-echo "Spouštím ERP a sleduji změny v erp-base-nextjs..."
+echo "Spouštím ERP a sleduji změny v erp-base-nextjs2..."
 docker compose up --build -d
 last_snapshot="$(snapshot)"
 

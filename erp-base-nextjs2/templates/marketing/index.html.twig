@@ -1,0 +1,55 @@
+{% extends 'base.html.twig' %}
+
+{% block stylesheets %}
+    <link rel="stylesheet" href="{{ asset('assets/marketing.css') }}">
+{% endblock %}
+
+{% block body %}
+<div class="marketing-page">
+    <header class="marketing-header">
+        <a href="/apps" class="back-link">← Aplikace</a>
+        <div><span class="eyebrow">OBCHOD / MARKETING</span><h1>Marketing</h1><p>Plánujte komunikaci, sledujte čerpání rozpočtu a vyhodnocujte přínos kampaní.</p></div>
+        <a href="#campaigns" class="primary">Přehled kampaní</a>
+    </header>
+    {% if error %}<p class="marketing-message error" role="alert">{{ error }}</p>{% endif %}
+    {% if actionError %}<p class="marketing-message error" role="alert">{{ actionError }}</p>{% endif %}
+    {% if message %}<p class="marketing-message" role="status">{{ message }}</p>{% endif %}
+    <section class="marketing-metrics">
+        <article><span>Aktivní kampaně</span><strong>{{ overview.runningCampaignCount ?? '-' }}</strong><small>aktuálně doručované komunikace</small></article>
+        <article><span>Plánované kampaně</span><strong>{{ overview.plannedCampaignCount ?? '-' }}</strong><small>připravené ke spuštění</small></article>
+        <article><span>Získané leady</span><strong>{{ overview.totalLeadCount ?? '-' }}</strong><small>vyčerpáno {{ overview.totalSpent ?? '-' }} Kč</small></article>
+    </section>
+    <section class="workflow-form">
+        <h2>Nová kampaň</h2>
+        <form method="post" action="/marketing">
+            <input type="hidden" name="action" value="create">
+            <input name="name" placeholder="Název kampaně" required>
+            <input name="audience" placeholder="Segment" required>
+            <select name="channel"><option value="EMAIL">E-mail</option><option value="SOCIAL">Sociální sítě</option><option value="EVENT">Událost</option></select>
+            <input name="ownerName" placeholder="Vlastník" required>
+            <input type="number" step="0.01" name="budget" placeholder="Rozpočet Kč" required>
+            <input type="date" name="plannedStartDate" required>
+            <button class="primary" type="submit">Založit kampaň</button>
+        </form>
+    </section>
+    <section id="campaigns" class="marketing-section">
+        <div class="section-head"><div><span class="eyebrow">KAMPANĚ A SEGMENTY</span><h2>Marketingový plán</h2></div><span class="campaign-count">{{ (overview.campaigns ?? [])|length }} kampaně</span></div>
+        <div class="campaign-list">
+            {% for campaign in overview.campaigns ?? [] %}
+            <article class="campaign-card">
+                <div class="campaign-main">
+                    <span class="channel">{{ campaign.channel == 'EMAIL' ? 'E-MAIL' : (campaign.channel == 'SOCIAL' ? 'SOCIÁLNÍ SÍTĚ' : 'UDÁLOST') }}</span>
+                    <span class="status-chip status-{{ campaign.status|lower }}">{{ campaign.status == 'RUNNING' ? 'AKTIVNÍ' : (campaign.status == 'PLANNED' ? 'PLÁNOVÁNO' : 'DOKONČENO') }}</span>
+                    <h3>{{ campaign.name }}</h3><p>{{ campaign.audience }} · vlastník: {{ campaign.ownerName }}</p>
+                </div>
+                <dl><div><dt>Rozpočet</dt><dd>{{ campaign.spent }} / {{ campaign.budget }} Kč</dd></div><div><dt>Leady</dt><dd>{{ campaign.leadCount }} · start: {{ campaign.plannedStartDate }}</dd></div></dl>
+                {% if campaign.status == 'PLANNED' %}
+                <form method="post" action="/marketing"><input type="hidden" name="id" value="{{ campaign.id }}"><button class="secondary" type="submit">Spustit kampaň</button></form>
+                {% elseif campaign.status == 'RUNNING' %}<span class="running-label">Kampaň běží</span>
+                {% else %}<span class="completed-label">Kampaň uzavřena</span>{% endif %}
+            </article>
+            {% endfor %}
+        </div>
+    </section>
+</div>
+{% endblock %}

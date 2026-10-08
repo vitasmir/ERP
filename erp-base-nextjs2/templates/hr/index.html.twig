@@ -1,0 +1,138 @@
+{% extends 'base.html.twig' %}
+{% set pageTitle = 'Lidé' %}
+{% block stylesheets %}
+    <link rel="stylesheet" href="{{ asset('assets/hr.css') }}">
+    <link rel="stylesheet" href="{{ asset('assets/workforce.css') }}">
+{% endblock %}
+{% block body %}
+<main class="hr-page">
+    <header class="hr-header"><a href="/apps" class="back-link">← Aplikace</a><div><span class="eyebrow">PEOPLE / HR</span><h1>Lidé</h1></div><a href="#employees" class="primary">Přehled týmu</a></header>
+    {% for text in [error, actionError] %}{% if text %}<p class="hr-message error" role="alert">{{ text }}</p>{% endif %}{% endfor %}
+    {% if message %}<p class="hr-message" role="status">{{ message }}</p>{% endif %}
+    <section class="hr-metrics">
+        <article><span>Aktivní zaměstnanci</span><strong>{{ overview.activeEmployeeCount|default('-') }}</strong><small>v evidovaných týmech</small></article>
+        <article><span>Nástupy</span><strong>{{ overview.onboardingCount|default('-') }}</strong><small>čekají na aktivaci</small></article>
+        <article><span>Týmy</span><strong>{{ overview.teamCount|default('-') }}</strong><small>napříč organizací</small></article>
+    </section>
+    {% if edit %}
+        <section class="workforce-section">
+            <h2>Týmy</h2>
+            <form method="post" class="workforce-form"><input type="hidden" name="action" value="createTeam"><label>Nový tým<input name="name" maxlength="150" required></label><button class="primary" type="submit">Založit tým</button></form>
+            <div class="team-list">
+                {% for team in overview.teams|default([]) %}
+                    <div class="team-row">
+                        <form method="post">
+                            <input type="hidden" name="action" value="updateTeam"><input type="hidden" name="teamId" value="{{ team.id }}">
+                            <input name="name" value="{{ team.name }}" maxlength="150" required>
+                            <span class="team-member-count">({{ overview.employees|where('teamId', team.id)|length }})</span>
+                            <button class="secondary" type="submit">Přejmenovat</button>
+                        </form>
+                        <form method="post"><input type="hidden" name="action" value="deleteTeam"><input type="hidden" name="teamId" value="{{ team.id }}"><button class="secondary danger-action" type="submit">Smazat</button></form>
+                        <button class="secondary team-filter-button" type="button" data-team-filter="{{ team.id }}">Zobrazit členy týmu</button>
+                        <button class="secondary team-filter-button" type="button" data-show-all-employees>Zobrazit všechny zaměstnance</button>
+                    </div>
+                {% endfor %}
+            </div>
+        </section>
+        <section class="workforce-section"><h2>Nový zaměstnanec</h2>{% include 'hr/_employee_form.html.twig' with {employee: null} %}</section>
+    {% endif %}
+    <section id="employees" class="hr-section">
+        <div class="section-head"><div><span class="eyebrow">ZAMĚSTNANCI</span><h2>Organizace a nástupy</h2></div><span class="employee-count" id="employee-count">{{ overview.employees|default([])|length }} zaměstnanci</span></div>
+        <div class="employee-table-wrap">
+            <table class="employee-table">
+                <thead><tr><th>STAV</th><th>ZAMĚSTNANEC</th><th>PRACOVNÍ ROLE</th><th>TÝM</th><th>ZÁSTUPCE</th><th>NÁSTUP</th><th>AKTIVACE</th><th>DOSTUPNOST</th><th>ÚČET</th></tr></thead>
+                <tbody>
+                {% for employee in overview.employees|default([]) %}
+                    {% set names = employee.fullName|split(' ') %}
+                    {% set initials = names|length > 1 ? names|first|slice(0, 1) ~ names|last|slice(0, 1) : employee.fullName|slice(0, 2) %}
+                    {% set role = roleOptions|where('name', employee.jobTitle)|first %}
+                    <tr class="employee-record" data-employee-team-id="{{ employee.teamId }}">
+                        <td><span class="status-chip status-{{ employee.status|lower }}">{{ employee.status == 'ONBOARDING' ? 'NÁSTUP' : (employee.status == 'ACTIVE' ? 'AKTIVNÍ' : 'NEAKTIVNÍ') }}</span></td>
+                        <td><div class="employee-main"><span class="employee-avatar">{{ initials|upper }}</span><strong>{{ employee.fullName }}</strong></div></td>
+                        <td><span class="employee-role-mark" style="--role-color:{{ role.color|default('#D9ED62') }}">{{ role.initial|default(employee.jobTitle|default('?')|slice(0, 1)|upper) }}</span>{{ employee.jobTitle }}</td>
+                        <td>{{ employee.teamName }}</td><td>{{ employee.deputyName }}</td><td>{{ employee.employmentStartDate }}</td>
+                        <td class="employee-action-cell">
+                            {% if edit %}
+                                <form method="post">
+                                    <input type="hidden" name="id" value="{{ employee.id }}"><input type="hidden" name="action" value="{{ employee.status == 'ACTIVE' ? 'deactivate' : 'activate' }}">
+                                    {% if employee.status == 'ACTIVE' or employee.employmentStartDate <= 'now'|date('Y-m-d') %}
+                                        <button class="secondary" type="submit">{{ employee.status == 'ACTIVE' ? 'Ukončit pracovní poměr' : 'Aktivovat nástup' }}</button>
+                                    {% else %}<button class="secondary" type="button" disabled title="Aktivace bude možná po datu nástupu">Aktivovat po nástupu</button>{% endif %}
+                                </form>
+                            {% endif %}
+                        </td>
+                        <td class="employee-action-cell"><a href="/hr?employeeId={{ employee.id }}#availability">Dostupnost a kvalifikace</a></td>
+                        <td class="employee-action-cell">{% if admin %}<a href="/users{{ employee.hasUserAccount ? '' : '?employeeId=' ~ employee.id }}">{{ employee.hasUserAccount ? 'Účet v Uživatelích' : 'Vytvořit účet' }}</a>{% endif %}</td>
+                    </tr>
+                    {% if edit %}
+                        <tr class="employee-edit-row" data-employee-team-id="{{ employee.teamId }}"><td colspan="9"><details class="workforce-edit"><summary>Upravit zaměstnance</summary>{% include 'hr/_employee_form.html.twig' with {employee: employee} %}</details></td></tr>
+                    {% endif %}
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </section>
+    {% if availability is not null %}
+        <section id="availability" class="workforce-section">
+            <h2>Dostupnost a kvalifikace</h2>
+            {% for employee in overview.employees|default([]) %}{% if employee.id == selectedEmployeeId %}<h3>{{ employee.fullName }}</h3>{% endif %}{% endfor %}
+            <h3>Kvalifikace</h3>
+            <ul>{% for qualification in availability.qualifications|default([]) %}<li>{{ qualification }}</li>{% endfor %}</ul>
+            {% if edit %}
+                <form method="post" class="workforce-form"><input type="hidden" name="action" value="qualification"><input type="hidden" name="id" value="{{ selectedEmployeeId }}"><label>Pracovní role<input name="roleName" maxlength="150" required></label><button type="submit" class="secondary">Přidat kvalifikaci</button></form>
+            {% endif %}
+            <h3>Absence</h3>
+            {% for absence in availability.absences|default([]) %}
+                <div class="workforce-event">
+                    <p>{{ absence.startAt }} – {{ absence.endAt }} / {{ absence.reason }}</p>
+                    {% if edit %}<form method="post"><input type="hidden" name="action" value="removeAbsence"><input type="hidden" name="id" value="{{ selectedEmployeeId }}"><input type="hidden" name="absenceId" value="{{ absence.id }}"><button type="submit" class="secondary">Zrušit absenci</button></form>{% endif %}
+                </div>
+            {% else %}<p>Žádné absence.</p>{% endfor %}
+            {% if edit %}
+                <form method="post" class="workforce-form">
+                    <input type="hidden" name="action" value="absence"><input type="hidden" name="id" value="{{ selectedEmployeeId }}">
+                    <label>Od<input type="datetime-local" name="startAt" required></label><label>Do<input type="datetime-local" name="endAt" required></label>
+                    <label>Důvod<input name="reason" maxlength="240" required></label><button type="submit" class="secondary">Zapsat absenci</button>
+                </form>
+            {% endif %}
+        </section>
+    {% endif %}
+</main>
+{% endblock %}
+{% block javascripts %}
+<script>
+    const employeeRows = document.querySelectorAll('[data-employee-team-id]');
+    function filterEmployees(teamId) {
+        let count = 0;
+        employeeRows.forEach(row => {
+            row.hidden = !!teamId && row.dataset.employeeTeamId !== teamId;
+            if (!row.hidden && row.classList.contains('employee-record')) count++;
+        });
+        document.getElementById('employee-count').textContent = count + ' zaměstnanci';
+        document.getElementById('employees').scrollIntoView({behavior: 'smooth'});
+    }
+    document.querySelectorAll('[data-team-filter]').forEach(button => button.addEventListener('click', () => filterEmployees(button.dataset.teamFilter)));
+    document.querySelectorAll('[data-show-all-employees]').forEach(button => button.addEventListener('click', () => filterEmployees('')));
+    const normalized = value => value.normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim().toLowerCase();
+    document.querySelectorAll('[data-deputy-role-for]').forEach(select => {
+        const role = document.getElementById(select.dataset.deputyRoleFor);
+        const team = document.getElementById(select.dataset.deputyTeamFor);
+        const filter = () => {
+            let count = 0;
+            const teamName = normalized(team.selectedOptions[0]?.dataset.teamName || '');
+            [...select.options].forEach(option => {
+                const sameTeam = option.dataset.teamId === team.value || normalized(option.dataset.teamName || '') === teamName;
+                const matches = !option.value || normalized(option.dataset.userRole || '') === normalized(role.value) && sameTeam;
+                option.hidden = !matches;
+                option.disabled = !matches;
+                if (matches && option.value) count++;
+            });
+            select.required = count > 0;
+            if (select.selectedOptions[0]?.disabled) select.value = '';
+        };
+        role.addEventListener('change', filter);
+        team.addEventListener('change', filter);
+        filter();
+    });
+</script>
+{% endblock %}

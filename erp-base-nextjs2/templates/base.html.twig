@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="cs">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>ERP | {{ pageTitle|default('Přehled systému') }}</title>
+    <link rel="stylesheet" href="{{ asset('assets/base.css') }}">
+    {% block stylesheets %}{% endblock %}
+    <link rel="stylesheet" href="/compatibility.css?v=1">
+</head>
+<body>
+<div class="app-shell">
+    <aside class="sidebar">
+        <div class="brand"><span class="mark">E</span><div><strong>ERP CORE</strong><small>base module</small></div></div>
+        <div class="workspace-label">WORKSPACE</div>
+        <nav>
+            <a class="nav-item{{ app.request.pathInfo in ['/', '/apps'] ? ' active' : '' }}" href="{{ path('app_home') }}"><span>⌂</span> Přehled</a>
+            <a class="nav-item{{ app.request.pathInfo == '/users' ? ' active' : '' }}" href="/users"><span>♙</span> Uživatelé</a>
+            <a class="nav-item{{ app.request.pathInfo == '/roles' ? ' active' : '' }}" href="/roles"><span>◈</span> Role a oprávnění</a>
+            <a class="nav-item{{ app.request.pathInfo == '/role-modules' ? ' active' : '' }}" href="/role-modules"><span>▤</span> Role pro moduly</a>
+            <a class="nav-item{{ app.request.pathInfo == '/companies' ? ' active' : '' }}" href="/companies"><span>▦</span> Společnosti</a>
+            <a class="nav-item{{ app.request.pathInfo == '/settings' ? ' active' : '' }}" href="/settings"><span>⚙</span> Nastavení</a>
+        </nav>
+        <div class="sidebar-bottom"><span class="online"></span> Systém je online<small>PostgreSQL 18 · lokální režim</small></div>
+    </aside>
+    <main class="main">
+        <header class="topbar">
+            <div><p class="breadcrumb">{{ breadcrumb|default('BASE / ADMINISTRATION') }}</p></div>
+            <div class="top-actions">
+                <button class="search" aria-label="Hledat">⌕ <span>Hledat</span></button>
+                <button class="bell" aria-label="Oznámení">♧<i></i></button>
+                <div class="profile">
+                    {% set profileName = app.session.get('userName')|default('Uživatel') %}
+                    {% set nameParts = profileName|split(' ') %}
+                    <span class="avatar">{{ (nameParts|first|slice(0, 1)) ~ (nameParts|length > 1 ? nameParts|last|slice(0, 1) : '') }}</span>
+                    <span><b>{{ profileName }}</b><small>{{ app.session.get('roleName')|default('Bez role') }}</small></span>
+                    <span>⌄</span>
+                </div>
+                <form method="post" action="{{ path('app_logout') }}" class="logout-form"><button class="logout-button" type="submit">Odhlásit se</button></form>
+            </div>
+        </header>
+        {% block body %}{% endblock %}
+        <footer>ERP CORE / BASE MODULE <span>v0.1.0 · Session zabezpečena</span></footer>
+    </main>
+</div>
+<script src="{{ asset('assets/base.js') }}?v=20261008-1"></script>
+{% block javascripts %}{% endblock %}
+</body>
+</html>

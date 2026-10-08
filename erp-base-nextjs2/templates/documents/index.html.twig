@@ -1,0 +1,37 @@
+{% extends 'base.html.twig' %}
+
+{% block stylesheets %}
+    <link rel="stylesheet" href="{{ asset('assets/documents.css') }}">
+{% endblock %}
+
+{% block body %}
+<div class="documents-page">
+    <header class="documents-header">
+        <a href="/apps" class="back-link">← Aplikace</a>
+        <div><span class="eyebrow">BASE / DOKUMENTY</span><h1>Dokumenty</h1><p>Spravujte interní dokumenty, jejich vlastníky a schvalování v jednom přehledu.</p></div>
+        <a href="#documents" class="primary">Přehled dokumentů</a>
+    </header>
+    {% if error %}<p class="documents-message error" role="alert">{{ error }}</p>{% endif %}
+    {% if actionError %}<p class="documents-message error" role="alert">{{ actionError }}</p>{% endif %}
+    {% if message %}<p class="documents-message" role="status">{{ message }}</p>{% endif %}
+    <section class="documents-metrics">
+        <article><span>Čeká na schválení</span><strong>{{ overview.pendingApprovalCount ?? '-' }}</strong><small>vyžaduje rozhodnutí</small></article>
+        <article><span>Schválené dokumenty</span><strong>{{ overview.approvedCount ?? '-' }}</strong><small>v aktuálním přehledu</small></article>
+        <article><span>Kategorie</span><strong>{{ overview.categoryCount ?? '-' }}</strong><small>typy uložených dokumentů</small></article>
+    </section>
+    <section id="documents" class="documents-section">
+        <div class="section-head"><div><span class="eyebrow">EVIDENCE DOKUMENTŮ</span><h2>Soubory a schvalovací procesy</h2></div><span class="document-count">{{ (overview.documents ?? [])|length }} dokumenty</span></div>
+        <div class="document-list">
+            {% for document in overview.documents ?? [] %}
+            <article class="document-card">
+                <div class="document-main"><span class="document-mark">▣</span><div><span class="status-chip status-{{ document.status|lower }}">{{ document.status == 'PENDING_APPROVAL' ? 'KE SCHVÁLENÍ' : (document.status == 'APPROVED' ? 'SCHVÁLENO' : 'KONCEPT') }}</span><h3>{{ document.title }}</h3><p>{{ document.category }} · {{ document.referenceCode }}</p></div></div>
+                <dl><div><dt>Vlastník</dt><dd>{{ document.ownerName }}</dd></div><div><dt>Aktualizováno</dt><dd>{{ document.updatedOn }}</dd></div></dl>
+                {% if document.status == 'PENDING_APPROVAL' %}
+                <form method="post" action="/documents"><input type="hidden" name="id" value="{{ document.id }}"><button class="secondary" type="submit">Schválit dokument</button></form>
+                {% else %}<span class="approved-label">Proces je uzavřen</span>{% endif %}
+            </article>
+            {% endfor %}
+        </div>
+    </section>
+</div>
+{% endblock %}

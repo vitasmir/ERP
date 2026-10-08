@@ -1,0 +1,32 @@
+{% extends 'base.html.twig' %}
+
+{% block body %}
+{% if error %}<div class="page-alert error-alert module-access-error" role="alert">{{ error }}</div>{% endif %}
+<section class="launcher-head">
+    <div><span class="eyebrow">ERP WORKSPACE</span><h2>Vše, co vaše firma potřebuje.</h2><p>Vyberte aplikaci a začněte pracovat. Každý modul sdílí stejná data a oprávnění.</p></div>
+    <div class="launcher-stat"><strong>{{ allowedModules|length }}</strong><span>aplikací<br>v katalogu</span></div>
+</section>
+<section class="launcher-tools">
+    <div class="launcher-search"><span>⌕</span><input id="module-search" placeholder="Hledat aplikaci nebo funkci..." aria-label="Hledat aplikaci nebo funkci"></div>
+    <div class="launcher-filter"><button class="module-filter active" data-filter="all">Vše</button><button class="module-filter" data-filter="core">Základ</button><button class="module-filter" data-filter="operations">Provoz</button><button class="module-filter" data-filter="sales">Obchod</button></div>
+</section>
+<section class="module-grid" id="module-grid">
+    {% for key, module in moduleCatalog %}
+        {% if key in allowedModules %}
+            <button class="module-tile" data-module="{{ key }}" data-category="{{ module.category }}" data-title="{{ module.title }}" data-subtitle="{{ module.subtitle }}" data-description="{{ module.description }}">
+                <span class="module-icon icon-{{ key }}">{{ module.icon }}</span><b>{{ module.title }}</b><small>{{ module.subtitle }}</small>
+                {% if module.badge is defined %}<i class="module-badge">{{ module.badge }}</i>{% endif %}
+            </button>
+        {% endif %}
+    {% endfor %}
+</section>
+<p class="module-empty" id="module-empty">Žádná aplikace neodpovídá hledání.</p>
+<aside class="module-drawer" id="module-drawer" aria-hidden="true">
+    <button class="drawer-close" id="drawer-close" aria-label="Zavřít detail">×</button>
+    <span class="drawer-icon module-icon"></span><span class="eyebrow">APLIKACE ERP</span>
+    <h2 id="drawer-title"></h2><p class="drawer-subtitle" id="drawer-subtitle"></p><p id="drawer-description"></p>
+    <div class="drawer-status"><span class="online"></span><span>Modul připraven k návrhu</span></div>
+    <div class="drawer-section"><span class="eyebrow">CO BUDE OBSAHOVAT</span><ul><li>Role a oprávnění podle pracovních týmů</li><li>Seznamy, formuláře a filtrování záznamů</li><li>Napojení na společná ERP data</li><li>Auditní stopa a přehledy výkonu</li></ul></div>
+    <button class="primary drawer-action" id="drawer-action">Otevřít modul <span>→</span></button>
+</aside>
+{% endblock %}

@@ -1,0 +1,90 @@
+{% extends 'base.html.twig' %}
+
+{% block stylesheets %}
+    <link rel="stylesheet" href="{{ asset('assets/accounting.css') }}">
+{% endblock %}
+
+{% block body %}
+<div class="accounting-page">
+    <header class="accounting-header">
+        <a href="/apps" class="back-link">← Aplikace</a>
+        <div><span class="eyebrow">FINANCE / ÚČETNICTVÍ</span><h1>Účetnictví</h1><p>Faktury, pohledávky a peněžní tok na jednom místě.</p></div>
+        <a href="#invoices" class="primary">Přehled faktur</a>
+    </header>
+    {% if error %}<p class="accounting-message error" role="alert">{{ error }}</p>{% endif %}
+    {% if actionError %}<p class="accounting-message error" role="alert">{{ actionError }}</p>{% endif %}
+    {% if message %}<p class="accounting-message" role="status">{{ message }}</p>{% endif %}
+    <section class="accounting-metrics">
+        <article><span>Pohledávky</span><strong>{{ overview.receivables ?? '-' }} Kč</strong><small>neuhrazené faktury</small></article>
+        <article><span>Po splatnosti</span><strong>{{ overview.overdue ?? '-' }} Kč</strong><small>vyžaduje kontrolu</small></article>
+        <article><span>Otevřené faktury</span><strong>{{ overview.openInvoiceCount ?? '-' }}</strong><small>čekají na úhradu</small></article>
+    </section>
+    <section id="invoices" class="invoice-section">
+        <div class="section-head"><div><span class="eyebrow">VYSTAVENÉ FAKTURY</span><h2>Přehled pohledávek</h2></div><span class="invoice-count">{{ (overview.invoices ?? [])|length }} faktur</span></div>
+        <div class="invoice-table-wrap">
+            <table class="invoice-table">
+                <thead><tr><th>Stav</th><th>Faktura</th><th>Položky</th><th>Odběratel</th><th>Vystaveno</th><th>Splatnost</th><th>Celkem</th><th>Úhrada</th><th>Akce</th></tr></thead>
+                <tbody>
+                    {% for invoice in overview.invoices ?? [] %}
+                    <tr class="invoice-row">
+                        <td><span class="status-chip status-{{ invoice.status|lower }}">{{ invoice.status }}</span></td>
+                        <td><strong>{{ invoice.invoiceNumber }}</strong></td>
+                        <td class="invoice-items-cell">
+                            <details class="invoice-items">
+                                <summary><span>{{ invoice.lines|length }} položek</span></summary>
+                                <div class="invoice-items-panel">
+                                    {% for line in invoice.lines %}
+                                    <div class="invoice-item">
+                                        {% if line.imageUrl %}<img src="{{ line.imageUrl }}" alt="{{ line.description }}">{% else %}<span class="invoice-item-placeholder">FM</span>{% endif %}
+                                        <div><strong>{{ line.description }}</strong><small>{{ line.quantity }} ks · {{ line.unitPrice }} Kč / kus</small></div>
+                                    </div>
+                                    {% endfor %}
+                                </div>
+                            </details>
+                        </td>
+                        <td><span class="invoice-partner">{{ invoice.partnerName }}</span></td>
+                        <td>{{ invoice.issueDate }}</td><td>{{ invoice.dueDate }}</td><td><strong>{{ invoice.totalAmount }} Kč</strong></td>
+                        <td class="invoice-payment-cell">
+                            {% if invoice.status == 'PAID' %}<span class="paid-label">Uhrazeno {{ invoice.paidAmount }} Kč</span>{% else %}<span class="unpaid-label">Neuhrazeno</span>{% endif %}
+                        </td>
+                        <td class="invoice-action-cell">
+                            {% if invoice.status != 'PAID' %}
+                            <form method="post" action="/accounting"><input type="hidden" name="id" value="{{ invoice.id }}"><button class="secondary" type="submit">Označit jako uhrazenou</button></form>
+                            {% endif %}
+                            <a class="invoice-pdf-link" href="/accounting?pdf={{ invoice.id|url_encode }}">Stáhnout PDF</a>
+                            {% if invoice.status == 'DRAFT' %}
+                            <details class="invoice-edit">
+                                <summary>Upravit</summary>
+                                <form method="post" action="/accounting">
+                                    <h3>Upravit fakturu</h3>
+                                    <input type="hidden" name="action" value="update"><input type="hidden" name="id" value="{{ invoice.id }}"><input type="hidden" name="version" value="{{ invoice.version }}">
+                                    <label>Číslo faktury<input name="invoiceNumber" value="{{ invoice.invoiceNumber }}" required maxlength="40"></label>
+                                    <label>Odběratel<input name="partnerName" value="{{ invoice.partnerName }}" required maxlength="160"></label>
+                                    <label>Vystaveno<input type="date" name="issueDate" value="{{ invoice.issueDate }}" required></label>
+                                    <label>Splatnost<input type="date" name="dueDate" value="{{ invoice.dueDate }}" required></label>
+                                    <label>Celkem<input type="number" name="totalAmount" value="{{ invoice.totalAmount }}" min="0.01" step="0.01" required></label>
+                                    <div class="invoice-edit-actions"><button class="dialog-cancel" type="button" onclick="this.closest('details').removeAttribute('open')">Zrušit</button><button class="secondary" type="submit">Uložit změny</button></div>
+                                </form>
+                            </details>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </section>
+</div>
+{% endblock %}
+
+{% block javascripts %}
+<script>
+    document.querySelectorAll('.invoice-items-cell').forEach(function (cell) {
+        cell.addEventListener('click', function (event) {
+            const details = cell.querySelector('.invoice-items');
+            if (!details || event.target.closest('summary')) return;
+            details.open = !details.open;
+        });
+    });
+</script>
+{% endblock %}

@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="cs">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>All Market | E-shop</title>
+    <link rel="stylesheet" href="{{ asset('assets/shop.css') }}">
+    <style>
+        @media (min-width: 1200px) {
+            .shop-products { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+            .shop-product { padding: 12px; grid-template-columns: 74px 1fr; gap: 10px; min-height: 220px; }
+            .shop-product-image, .product-placeholder { width: 74px; height: 100px; }
+            .product-info h3 { font-size: 15px; }
+            .product-info p { font-size: 10px; }
+            .product-buy { gap: 7px; flex-wrap: wrap; }
+            .product-buy strong { font-size: 17px; }
+            .stock-label { width: 100%; margin-right: 0; }
+            .product-buy form, .add-button { width: 100%; }
+        }
+    </style>
+    <link rel="stylesheet" href="/compatibility.css?v=1">
+</head>
+<body>
+<header class="shop-header">
+    <a class="shop-brand" href="/eshop"><span class="brand-mark">A</span><span><strong>ALL MARKET</strong><small>lokální nákup bez čekání</small></span></a>
+    <nav><a href="#catalog">Katalog</a><a href="#delivery">Doručení</a><a class="admin-link" href="/ecommerce">Administrace</a></nav>
+    <a class="cart-jump" href="#cart">Košík <b>{{ shop.cartCount|default(0) }}</b></a>
+</header>
+<main class="shop-shell">
+    {% if error %}<p class="shop-error" role="alert">{{ error }}</p>{% endif %}
+    {% if shop is null %}
+        <section class="shop-error">Katalog se nepodařilo načíst.</section>
+    {% else %}
+        <section class="shop-hero">
+            <div><span class="kicker">DNEŠNÍ VÝBĚR</span><h1>Dobré věci<br><em>na dosah ruky.</em></h1><p>Čerstvé produkty z vašich oblíbených prodejen. Vyberte kategorii, sestavte košík a zvolte způsob doručení.</p><a class="hero-button" href="#catalog">Prohlédnout nabídku <span>↓</span></a></div>
+            <div class="hero-stamp"><strong>24 h</strong><span>rychlé doručení<br>domů nebo do boxu</span></div>
+        </section>
+        <section class="store-layout" id="catalog">
+            <aside class="category-nav">
+                <div class="eyebrow">KATALOG</div><h2>Co hledáte?</h2>
+                <a class="category-filter {{ shop.selectedCategoryId is null ? 'active' : '' }}" href="/eshop">Všechny produkty <span>{{ shop.totalProductCount }}</span></a>
+                {% for option in shop.categoryOptions %}<a class="category-filter {{ option.id == shop.selectedCategoryId ? 'active' : '' }}" style="padding-left:{{ 14 + option.depth * 16 }}px" href="/eshop?categoryId={{ option.id }}">{{ option.name }} <span>({{ option.productCount }})</span></a>{% endfor %}
+                <div class="category-note" id="delivery"><strong>Doručení podle vás</strong><p>Domů od zítřka<br>Box od pozítří</p></div>
+            </aside>
+            <section class="catalog-area">
+                <div class="catalog-heading"><div><span class="eyebrow">FRESH / LOCAL / TODAY</span><h2>Produkty pro každý den</h2></div><span class="result-count" id="result-count">{{ shop.products|length }} produktů</span></div>
+                <div class="shop-products">
+                    {% for product in shop.products %}
+                        <article class="shop-product" data-product-card data-category-id="{{ product.categoryId|default('uncategorized') }}">
+                            {% if product.imageUrl %}<img class="shop-product-image" src="{{ product.imageUrl }}" alt="{{ product.name }}">{% else %}<div class="product-placeholder"><span>FM</span></div>{% endif %}
+                            <div class="product-info"><span class="product-sku">{{ product.sku }}</span><h3>{{ product.name }}</h3><p>{{ product.description }}</p></div>
+                            <div class="product-buy">
+                                <div><strong>{{ product.price }} Kč</strong><small>/ {{ product.unit }}</small></div><span class="stock-label">{{ product.availableQuantity }} {{ product.unit }} skladem</span>
+                                <form method="post">
+                                    {% include 'shop/_category_input.html.twig' %}
+                                    <input type="hidden" name="action" value="add"><input type="hidden" name="productId" value="{{ product.id }}"><input type="hidden" name="quantity" value="1">
+                                    <button class="add-button" type="submit" {{ product.availableQuantity <= 0 ? 'disabled' : '' }}>{{ product.availableQuantity <= 0 ? 'Vyprodáno' : 'Přidat do košíku' }} <span>+</span></button>
+                                </form>
+                            </div>
+                        </article>
+                    {% endfor %}
+                </div>
+                <p class="empty-products" id="empty-products" style="display:{{ shop.products is empty ? 'block' : 'none' }}">V této kategorii zatím nejsou žádné produkty.</p>
+            </section>
+        </section>
+        <aside class="cart-panel" id="cart">
+            <div class="cart-heading"><div><span class="eyebrow">VÁŠ NÁKUP</span><h2>Košík</h2></div><span class="cart-count">{{ shop.cartCount }} ks</span></div>
+            {% if shop.cart is empty %}
+                <div class="empty-cart"><span>○</span><h3>Košík čeká na svůj první nákup.</h3><p>Vyberte produkt v katalogu a počet kusů upravíte přímo tady.</p></div>
+            {% else %}
+                <div class="cart-lines">
+                    {% for line in shop.cart %}
+                        <article class="cart-line">
+                            <div class="cart-product-thumb">
+                                {% if line.product.imageUrl %}<img class="cart-product-image" src="{{ line.product.imageUrl }}" alt="{{ line.product.name }}">{% else %}<div class="cart-product-placeholder" aria-hidden="true">FM</div>{% endif %}
+                            </div>
+                            <div class="cart-line-main"><strong>{{ line.product.name }}</strong><small>{{ line.product.price }} Kč / {{ line.product.unit }}</small></div>
+                            <div class="quantity-control">
+                                <form method="post">{% include 'shop/_category_input.html.twig' %}<input type="hidden" name="action" value="decrease"><input type="hidden" name="productId" value="{{ line.product.id }}"><button aria-label="Odebrat jeden kus">−</button></form>
+                                <form method="post">{% include 'shop/_category_input.html.twig' %}<input type="hidden" name="action" value="set"><input type="hidden" name="productId" value="{{ line.product.id }}"><input name="quantity" value="{{ line.quantity }}" min="1" max="{{ line.product.availableQuantity }}" type="number" aria-label="Počet kusů"></form>
+                                <form method="post">{% include 'shop/_category_input.html.twig' %}<input type="hidden" name="action" value="increase"><input type="hidden" name="productId" value="{{ line.product.id }}"><button aria-label="Přidat jeden kus">+</button></form>
+                            </div>
+                            <strong class="line-total">{{ line.lineTotal }} Kč</strong>
+                            <form method="post" class="remove-line">{% include 'shop/_category_input.html.twig' %}<input type="hidden" name="action" value="remove"><input type="hidden" name="productId" value="{{ line.product.id }}"><button aria-label="Odstranit produkt z košíku">×</button></form>
+                        </article>
+                    {% endfor %}
+                </div>
+                <div class="cart-summary"><span>Celkem</span><strong>{{ shop.cartTotal }} Kč</strong></div>
+                <button class="checkout-button" type="button">Pokračovat k doručení <span>→</span></button><p class="checkout-note">Objednávku dokončíte v dalším kroku.</p>
+            {% endif %}
+        </aside>
+    {% endif %}
+</main>
+{% if orderCompleted %}
+    <section class="order-complete-dialog" role="dialog" aria-modal="true" aria-labelledby="order-complete-heading">
+        <div><span class="order-complete-mark">✓</span><span class="eyebrow">OBJEDNÁVKA</span><h2 id="order-complete-heading">Objednávka byla úspěšně dokončena</h2><p>Děkujeme za váš nákup. Vracíme vás na úvodní stránku e-shopu.</p><a class="checkout-submit" href="/eshop">Pokračovat do e-shopu <span>→</span></a></div>
+    </section>
+{% endif %}
+{% if shop %}{% include 'shop/_checkout.html.twig' %}{% endif %}
+<script src="{{ asset('assets/shop.js') }}"></script>
+</body>
+</html>

@@ -1,0 +1,17 @@
+<form method="post" class="workforce-form">
+    <input type="hidden" name="action" value="{{ shift ? 'update' : 'create' }}">
+    {% if shift %}<input type="hidden" name="id" value="{{ shift.id }}"><input type="hidden" name="version" value="{{ shift.version }}">{% endif %}
+    <label>Zaměstnanec
+        <select name="employeeId">
+            {% if manageAll %}<option value="">Neobsazeno</option>{% endif %}
+            {% for employee in employees %}<option value="{{ employee.id }}" {{ employee.id == shift.employeeId|default('') ? 'selected' : '' }}>{{ employee.fullName }} / {{ employee.teamName }}</option>{% endfor %}
+        </select>
+    </label>
+    <label>Pracovní role<input name="roleName" value="{{ shift.roleName|default('') }}" maxlength="150" list="role-options" required></label>
+    <label>Pracoviště
+        <select name="department" required>{% for workplace in workplaces %}<option value="{{ workplace.name }}" {{ workplace.name == shift.department|default('') ? 'selected' : '' }}>{{ workplace.name }}</option>{% endfor %}</select>
+    </label>
+    <label>Začátek<input type="datetime-local" name="startAt" value="{{ shift.startAt|default('') }}" required></label>
+    <label>Konec<input type="datetime-local" name="endAt" value="{{ shift.endAt|default('') }}" required></label>
+    <button class="{{ shift ? 'secondary' : 'primary' }}" type="submit">{{ shift ? 'Uložit směnu' : 'Vytvořit směnu' }}</button>
+</form>

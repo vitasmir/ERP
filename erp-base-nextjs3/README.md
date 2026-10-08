@@ -3,7 +3,8 @@
 Independent React rewrite of `erp-base-php`, built with Next.js 16.3.8.
 Every screen is implemented as a typed TSX component; there are no Twig files
 or runtime template engines. The original CSS and JavaScript assets are copied
-from the PHP frontend, and TypeScript route controllers preserve its backend
+from the PHP frontend, with the shared calendar using the same native modal
+dialog fix as Next.js 2 so it opens above purchase dialogs. TypeScript route controllers preserve its backend
 requests, forms, validation, sessions, redirects and access checks.
 
 ## Pages and workflows

@@ -2,6 +2,22 @@
   display: none !important;
 }
 
+dialog.date-picker-modal {
+  width: 100%;
+  height: 100%;
+  max-width: none;
+  max-height: none;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+}
+
+dialog.date-picker-modal::backdrop {
+  background: transparent;
+}
+
 .app-shell > .main {
   flex: 1;
   min-width: 0;

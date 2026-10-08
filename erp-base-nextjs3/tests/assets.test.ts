@@ -3,17 +3,28 @@ import { readdir, readFile } from "node:fs/promises";
 import path from "node:path";
 import test from "node:test";
 
-test("PHP CSS and JavaScript assets are used byte-for-byte", async () => {
+test("PHP assets are unchanged except for the proven Next.js calendar dialog fix", async () => {
   const source = path.resolve("../erp-base-php/public/assets");
   const files = await readdir(source);
   assert.ok(files.length > 0);
   for (const filename of files) {
     assert.deepEqual(
       await readFile(path.join("public/assets", filename)),
-      await readFile(path.join(source, filename)),
+      await readFile(path.join(filename === "base.js" ? "../erp-base-nextjs2/public/assets" : source, filename)),
       filename,
     );
   }
+});
+
+test("the calendar opens in the native modal layer and Escape closes only the calendar", async () => {
+  const script = await readFile("public/assets/base.js", "utf8");
+  const styles = await readFile("public/compatibility.css", "utf8");
+  assert.match(script, /const datePickerModal = document\.createElement\("dialog"\)/);
+  assert.match(script, /datePickerModal\.showModal\(\)/);
+  assert.match(script, /datePickerModal\.close\(\)/);
+  assert.match(script, /datePickerModal\.addEventListener\("cancel", \(event\) => \{\s*event\.preventDefault\(\);\s*closeDatePicker\(\);/);
+  assert.match(script, /event\.key === "Escape" && datePickerModal\.open\) \{\s*event\.preventDefault\(\);\s*closeDatePicker\(\);/);
+  assert.match(styles, /dialog\.date-picker-modal \{[^}]*width: 100%;[^}]*height: 100%;[^}]*margin: 0;[^}]*padding: 0;[^}]*border: 0;[^}]*background: transparent;/);
 });
 
 test("the frontend contains no Twig templates, template engine or Twig dependency", async () => {

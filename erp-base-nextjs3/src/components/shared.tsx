@@ -62,7 +62,7 @@ export function AppDocument({
         <meta charSet="UTF-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <title>{`ERP | ${title}`}</title>
-        {[...baseStyles, ...pageStyles, "/compatibility.css?v=1"].map((href) => (
+        {[...baseStyles, ...pageStyles, "/compatibility.css?v=2"].map((href) => (
           <link key={href} rel="stylesheet" href={href} />
         ))}
       </head>
@@ -100,7 +100,7 @@ export function AppDocument({
             </main>
           </div>
         )}
-        {!isShop && <script src="/assets/base.js?v=1" />}
+        {!isShop && <script src="/assets/base.js?v=2" />}
         {pageScripts.map((src) => <script key={src} src={src} />)}
       </body>
     </html>

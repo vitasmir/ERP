@@ -1,0 +1,269 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: erp-jsp
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres
+  namespace: erp-jsp
+spec:
+  clusterIP: None
+  selector:
+    app: postgres
+  ports:
+    - name: postgres
+      port: 5434
+      targetPort: postgres
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: postgres
+  namespace: erp-jsp
+spec:
+  serviceName: postgres
+  replicas: 1
+  selector:
+    matchLabels:
+      app: postgres
+  template:
+    metadata:
+      labels:
+        app: postgres
+    spec:
+      containers:
+        - name: postgres
+          image: postgres:18
+          ports:
+            - name: postgres
+              containerPort: 5434
+          env:
+            - name: POSTGRES_DB
+              value: erp
+            - name: POSTGRES_USER
+              value: erp
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: erp-postgres
+                  key: POSTGRES_PASSWORD
+          volumeMounts:
+            - name: erp-postgres-data
+              mountPath: /var/lib/postgresql
+          startupProbe:
+            exec:
+              command: ["pg_isready", "-U", "erp", "-d", "erp"]
+            periodSeconds: 5
+            timeoutSeconds: 5
+            failureThreshold: 60
+          readinessProbe:
+            exec:
+              command: ["pg_isready", "-U", "erp", "-d", "erp"]
+            periodSeconds: 5
+            timeoutSeconds: 5
+            failureThreshold: 10
+          livenessProbe:
+            exec:
+              command: ["pg_isready", "-U", "erp", "-d", "erp"]
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 10
+  volumeClaimTemplates:
+    - metadata:
+        name: erp-postgres-data
+      spec:
+        accessModes:
+          - ReadWriteOnce
+        resources:
+          requests:
+            storage: 10Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: backend
+  namespace: erp-jsp
+spec:
+  selector:
+    app: backend
+  ports:
+    - name: http
+      port: 8080
+      targetPort: http
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: backend
+  namespace: erp-jsp
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: backend
+  template:
+    metadata:
+      labels:
+        app: backend
+    spec:
+      initContainers:
+        - name: wait-for-postgres
+          image: postgres:18
+          command:
+            - sh
+            - -c
+            - |
+              until pg_isready -h postgres -p 5434 -U erp -d erp; do
+                echo "Waiting for PostgreSQL"
+                sleep 5
+              done
+      containers:
+        - name: backend
+          image: erp-backend:jsp-local
+          imagePullPolicy: Never
+          ports:
+            - name: http
+              containerPort: 8080
+          env:
+            - name: DB_URL
+              value: jdbc:postgresql://postgres:5432/erp
+            - name: DB_USERNAME
+              value: erp
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: erp-postgres
+                  key: POSTGRES_PASSWORD
+          startupProbe:
+            tcpSocket:
+              port: http
+            periodSeconds: 5
+            failureThreshold: 60
+          readinessProbe:
+            tcpSocket:
+              port: http
+            periodSeconds: 5
+          livenessProbe:
+            tcpSocket:
+              port: http
+            periodSeconds: 10
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: frontend
+  namespace: erp-jsp
+spec:
+  selector:
+    app: frontend
+  ports:
+    - name: http
+      port: 8080
+      targetPort: http
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: frontend
+  namespace: erp-jsp
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: frontend
+  template:
+    metadata:
+      labels:
+        app: frontend
+    spec:
+      initContainers:
+        - name: wait-for-backend
+          image: erp-base-frontend:jsp-local
+          imagePullPolicy: Never
+          command:
+            - bash
+            - -c
+            - |
+              until (echo > /dev/tcp/backend/8080); do
+                echo "Waiting for backend"
+                sleep 5
+              done
+      containers:
+        - name: frontend
+          image: erp-base-frontend:jsp-local
+          imagePullPolicy: Never
+          ports:
+            - name: http
+              containerPort: 8080
+          env:
+            - name: BACKEND_URL
+              value: http://backend:8080
+          startupProbe:
+            tcpSocket:
+              port: http
+            periodSeconds: 5
+            failureThreshold: 60
+          readinessProbe:
+            tcpSocket:
+              port: http
+            periodSeconds: 5
+          livenessProbe:
+            tcpSocket:
+              port: http
+            periodSeconds: 10
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: remote-warehouse-mock
+  namespace: erp-jsp
+spec:
+  selector:
+    app: remote-warehouse-mock
+  ports:
+    - name: http
+      port: 8080
+      targetPort: http
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: remote-warehouse-mock
+  namespace: erp-jsp
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: remote-warehouse-mock
+  template:
+    metadata:
+      labels:
+        app: remote-warehouse-mock
+    spec:
+      containers:
+        - name: remote-warehouse-mock
+          image: erp-remote-warehouse:jsp-local
+          imagePullPolicy: Never
+          ports:
+            - name: http
+              containerPort: 8080
+          startupProbe:
+            httpGet:
+              path: /api/v1/health
+              port: http
+            periodSeconds: 5
+            failureThreshold: 60
+          readinessProbe:
+            httpGet:
+              path: /api/v1/health
+              port: http
+            periodSeconds: 5
+          livenessProbe:
+            httpGet:
+              path: /api/v1/health
+              port: http
+            periodSeconds: 10

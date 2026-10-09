@@ -8,8 +8,10 @@ MVP životního cyklu letákové akce pro retailový řetězec.
 - `erp-base-nextjs2`: Next.js 16.3.8, TypeScript, Twig.js, Node.js 22; původní PHP vzhled, CSS a JavaScript
 - `erp-base-nextjs3`: Next.js 16.3.8, React/TSX, Node.js 22; komponentová alternativa bez Twig
 - `erp-base-nextjs`: zachovaný první React frontend
+- `docker-compose-PHP.yml`: Symfony frontend, PostgreSQL, backend a mock skladu
 - PostgreSQL 18
 - Docker Compose
+- Kubernetes (lokální JSP varianta)
 
 ## Spuštění přes Docker
 
@@ -39,6 +41,122 @@ s vlastním objemem `erp-nextjs2-sessions`. Podrobnosti o věrném přepisu PHP
 React komponentovou alternativu lze spustit přes `docker-compose-NEXTJS3.yml`;
 ta používá samostatný objem `erp-nextjs3-sessions`. Přehled je v
 [erp-base-nextjs3/README.md](erp-base-nextjs3/README.md).
+
+## JSP varianta v Kubernetes
+
+[kubernetes-JSP.yml](kubernetes-JSP.yml) je lokální Kubernetes alternativa
+k [docker-compose-JSP.yml](docker-compose-JSP.yml); původní Compose zůstává
+beze změny. Obsahuje namespace `erp-jsp`, PostgreSQL 18 jako StatefulSet
+s 10Gi PVC a Deploymenty pro backend, JSP frontend a mock vzdáleného skladu.
+Cluster musí mít výchozí StorageClass s dynamickým provisionerem (kind jej
+standardně poskytuje; v minikube musí být zapnuté addony `storage-provisioner`
+a `default-storageclass`).
+
+### Spuštění v Minikube
+
+Z kořene repozitáře spusťte Minikube s Docker driverem a zapněte addony pro
+trvalé úložiště:
+
+```bash
+minikube start --driver=docker
+minikube addons enable storage-provisioner
+minikube addons enable default-storageclass
+minikube status
+minikube kubectl -- get storageclass
+```
+
+Potom podle následujícího návodu sestavte obrazy, nahrajte je do Minikube
+příkazem `minikube image load` a nasaďte manifest. Kubernetes příkazy v tomto
+návodu používají `minikube kubectl --`, takže nepotřebujete samostatně
+nainstalovaný `kubectl`. Před nasazením ověřte kontext. Po nasazení lze
+aplikaci otevřít port-forwardem z následujících příkazů. Minikube zůstává
+spuštěný i po zavření terminálu; pro jeho zastavení použijte `minikube stop`.
+Další spuštění proveďte přes `minikube start`.
+
+Kubernetes nesestavuje Docker obrazy. Z kořene repozitáře je nejprve sestavte:
+
+```bash
+docker build -t erp-backend:jsp-local ./erp-backend
+docker build -t erp-base-frontend:jsp-local ./erp-base-frontend
+docker build -t erp-remote-warehouse:jsp-local ./erp-remote-warehouse
+```
+
+Nahrajte je do zvoleného lokálního clusteru (pro kind upravte název clusteru,
+pokud není `kind`):
+
+```bash
+# minikube
+minikube image load erp-backend:jsp-local erp-base-frontend:jsp-local erp-remote-warehouse:jsp-local
+
+# Nebo kind
+kind load docker-image erp-backend:jsp-local erp-base-frontend:jsp-local erp-remote-warehouse:jsp-local --name kind
+```
+
+Zkontrolujte cílový kontext a vytvořte namespace a Secret s vlastním heslem.
+Heslo není součástí manifestu. Příklad zadání hesla je pro Bash:
+
+```bash
+minikube kubectl -- config current-context
+minikube kubectl -- create namespace erp-jsp --dry-run=client -o yaml | minikube kubectl -- apply -f -
+read -r -s -p "PostgreSQL password: " POSTGRES_PASSWORD
+echo
+minikube kubectl -- -n erp-jsp create secret generic erp-postgres \
+  --from-literal=POSTGRES_PASSWORD="$POSTGRES_PASSWORD"
+unset POSTGRES_PASSWORD
+minikube kubectl -- apply -f kubernetes-JSP.yml
+minikube kubectl -- -n erp-jsp rollout status statefulset/postgres --timeout=300s
+minikube kubectl -- -n erp-jsp rollout status deployment/backend --timeout=300s
+minikube kubectl -- -n erp-jsp rollout status deployment/frontend --timeout=300s
+minikube kubectl -- -n erp-jsp rollout status deployment/remote-warehouse-mock --timeout=300s
+```
+
+Secret vytvářejte jen při prvním nasazení. Změna Secretu sama nezmění heslo
+v již inicializované databázi. PostgreSQL ukládá data do PVC
+`erp-postgres-data-postgres-0` na cestě `/var/lib/postgresql`, kterou používá
+PostgreSQL 18. Data z Docker Compose se automaticky nepřenášejí; případný
+přenos proveďte přes `pg_dump` / `pg_restore`.
+
+Každý port-forward spusťte v samostatném terminálu; používají stejné lokální
+porty jako JSP Compose:
+
+```bash
+minikube kubectl -- -n erp-jsp port-forward service/frontend 4201:8080
+minikube kubectl -- -n erp-jsp port-forward service/backend 8080:8080
+minikube kubectl -- -n erp-jsp port-forward service/remote-warehouse-mock 8091:8080
+minikube kubectl -- -n erp-jsp port-forward service/postgres 5434:5432
+```
+
+Frontend je na `http://localhost:4201`, API na `http://localhost:8080`
+a mock skladu na `http://localhost:8091`. Porty nesmějí být současně obsazené
+Compose variantou. Služby komunikují uvnitř namespace přes DNS názvy
+`postgres`, `backend`, `frontend` a `remote-warehouse-mock`; externí Docker
+síť `projects-network` není potřeba.
+
+Init kontejnery čekají na PostgreSQL a backend. Startup, readiness a liveness
+probes řídí dostupnost a restarty; backend a frontend kontrolují TCP port,
+nikoli úplnou funkčnost aplikace. Kubernetes průběžně restartuje neúspěšné
+kontejnery, takže nepřebírá Compose limit pěti restartů backendu.
+Frontend má jednu repliku a strategii `Recreate`, protože Tomcat sessions
+nejsou sdílené; restart frontendu ukončí stávající přihlášení.
+Lokální aplikační obrazy mají `imagePullPolicy: Never`. Po novém sestavení
+je znovu nahrajte do clusteru a spusťte:
+
+```bash
+minikube kubectl -- -n erp-jsp rollout restart deployment/backend deployment/frontend deployment/remote-warehouse-mock
+```
+
+Zastavení aplikací se zachováním databázového PVC a Secretu:
+
+```bash
+minikube kubectl -- -n erp-jsp delete deployment backend frontend remote-warehouse-mock
+minikube kubectl -- -n erp-jsp delete statefulset postgres
+minikube kubectl -- -n erp-jsp delete service postgres backend frontend remote-warehouse-mock
+```
+
+Opětovné `minikube kubectl -- apply -f kubernetes-JSP.yml` použije zachovaný PVC.
+**Odstranění namespace `erp-jsp` odstraní také PVC a může nenávratně smazat
+databázová data.** Manifest je pro lokální vývoj, nikoli produkční nasazení
+(neobsahuje Ingress/TLS, zálohování ani produkční omezení prostředků).
 
 ## Automatický rebuild UI
 

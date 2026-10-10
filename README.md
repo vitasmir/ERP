@@ -5,6 +5,7 @@ MVP životního cyklu letákové akce pro retailový řetězec.
 ## Stack
 
 - `erp-backend`: Spring Boot 4.1.1, Java 21, JPA, Flyway
+- `erp-base-frontend`: legacy JSP/Servlet frontend, Java 21, Jakarta Servlet 6.1, Tomcat 10.1
 - `erp-base-nextjs2`: Next.js 16.3.8, TypeScript, Twig.js, Node.js 22; původní PHP vzhled, CSS a JavaScript
 - `erp-base-nextjs3`: Next.js 16.3.8, React/TSX, Node.js 22; komponentová alternativa bez Twig
 - `erp-base-nextjs`: zachovaný první React frontend

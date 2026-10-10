@@ -14,7 +14,7 @@ spec:
     app: postgres
   ports:
     - name: postgres
-      port: 5434
+      port: 5432
       targetPort: postgres
 ---
 apiVersion: apps/v1
@@ -38,7 +38,7 @@ spec:
           image: postgres:18
           ports:
             - name: postgres
-              containerPort: 5434
+              containerPort: 5432
           env:
             - name: POSTGRES_DB
               value: erp
@@ -115,13 +115,13 @@ spec:
             - sh
             - -c
             - |
-              until pg_isready -h postgres -p 5434 -U erp -d erp; do
+              until pg_isready -h postgres -p 5432 -U erp -d erp; do
                 echo "Waiting for PostgreSQL"
                 sleep 5
               done
       containers:
         - name: backend
-          image: erp-backend:jsp-local
+          image: erp-backend:local
           imagePullPolicy: Never
           ports:
             - name: http
@@ -246,7 +246,7 @@ spec:
     spec:
       containers:
         - name: remote-warehouse-mock
-          image: erp-remote-warehouse:jsp-local
+          image: erp-remote-warehouse:local
           imagePullPolicy: Never
           ports:
             - name: http

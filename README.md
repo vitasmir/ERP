@@ -13,6 +13,17 @@ MVP životního cyklu letákové akce pro retailový řetězec.
 - Docker Compose
 - Kubernetes (lokální JSP varianta)
 
+## Podrobná architektura a instalační návody
+
+Mermaid diagramy, zásadní workflow a postup od lokálního setupu přes Compose
+po Kubernetes jsou oddělené podle frontendové varianty:
+
+- [JSP / Tomcat a společný Java backend](./docs/architecture/ARCHITECTURE-FULL-JSP.md)
+- [PHP / Symfony](./docs/architecture/ARCHITECTURE-FULL-PHP.md)
+- [Next.js / první React varianta](./docs/architecture/ARCHITECTURE-FULL-NEXTJS.md)
+- [Next.js / Twig.js](./docs/architecture/ARCHITECTURE-FULL-NEXTJS2.md)
+- [Next.js / React TSX](./docs/architecture/ARCHITECTURE-FULL-NEXTJS3.md)
+
 ## Spuštění přes Docker
 
 ```bash
@@ -76,9 +87,9 @@ Další spuštění proveďte přes `minikube start`.
 Kubernetes nesestavuje Docker obrazy. Z kořene repozitáře je nejprve sestavte:
 
 ```bash
-docker build -t erp-backend:jsp-local ./erp-backend
+docker build -t erp-backend:local ./erp-backend
 docker build -t erp-base-frontend:jsp-local ./erp-base-frontend
-docker build -t erp-remote-warehouse:jsp-local ./erp-remote-warehouse
+docker build -t erp-remote-warehouse:local ./erp-remote-warehouse
 ```
 
 Nahrajte je do zvoleného lokálního clusteru (pro kind upravte název clusteru,
@@ -86,10 +97,10 @@ pokud není `kind`):
 
 ```bash
 # minikube
-minikube image load erp-backend:jsp-local erp-base-frontend:jsp-local erp-remote-warehouse:jsp-local
+minikube image load erp-backend:local erp-base-frontend:jsp-local erp-remote-warehouse:local
 
 # Nebo kind
-kind load docker-image erp-backend:jsp-local erp-base-frontend:jsp-local erp-remote-warehouse:jsp-local --name kind
+kind load docker-image erp-backend:local erp-base-frontend:jsp-local erp-remote-warehouse:local --name kind
 ```
 
 Zkontrolujte cílový kontext a vytvořte namespace a Secret s vlastním heslem.
@@ -157,6 +168,86 @@ Opětovné `minikube kubectl -- apply -f kubernetes-JSP.yml` použije zachovaný
 **Odstranění namespace `erp-jsp` odstraní také PVC a může nenávratně smazat
 databázová data.** Manifest je pro lokální vývoj, nikoli produkční nasazení
 (neobsahuje Ingress/TLS, zálohování ani produkční omezení prostředků).
+
+### Další kompletní Kubernetes varianty
+
+Každý manifest obsahuje vlastní namespace, frontend, Java backend, PostgreSQL
+18 se samostatným PVC a warehouse mock. Varianta tak používá vlastní databázi
+a data; sdílené názvy Services se mezi namespaces nekříží.
+
+| Webový projekt | Manifest | Namespace | Frontend |
+| --- | --- | --- | --- |
+| JSP / Tomcat | [kubernetes-JSP.yml](kubernetes-JSP.yml) | `erp-jsp` | port 8080 |
+| PHP / Symfony | [kubernetes-PHP.yml](kubernetes-PHP.yml) | `erp-php` | port 80 |
+| Next.js / React | [kubernetes-NEXTJS.yml](kubernetes-NEXTJS.yml) | `erp-nextjs` | port 3000 |
+| Next.js / Twig.js | [kubernetes-NEXTJS2.yml](kubernetes-NEXTJS2.yml) | `erp-nextjs2` | port 3000 |
+| Next.js / React TSX | [kubernetes-NEXTJS3.yml](kubernetes-NEXTJS3.yml) | `erp-nextjs3` | port 3000 |
+
+Z kořene repozitáře sestavte obrazy a nahrajte je do běžícího Minikube:
+
+```bash
+docker build -t erp-backend:local ./erp-backend
+docker build -t erp-remote-warehouse:local ./erp-remote-warehouse
+docker build -t erp-base-frontend:jsp-local ./erp-base-frontend
+docker build -t erp-base-php:local ./erp-base-php
+docker build -t erp-base-nextjs:local ./erp-base-nextjs
+docker build -t erp-base-nextjs2:local ./erp-base-nextjs2
+docker build -t erp-base-nextjs3:local ./erp-base-nextjs3
+minikube image load erp-backend:local erp-remote-warehouse:local \
+  erp-base-frontend:jsp-local erp-base-php:local erp-base-nextjs:local \
+  erp-base-nextjs2:local erp-base-nextjs3:local
+```
+
+Vyberte **jeden** manifest a odpovídající namespace z tabulky. Příklad pro PHP:
+
+```bash
+minikube kubectl -- create namespace erp-php --dry-run=client -o yaml | minikube kubectl -- apply -f -
+read -r -s -p "PostgreSQL password: " POSTGRES_PASSWORD
+echo
+minikube kubectl -- -n erp-php create secret generic erp-postgres \
+  --from-literal=POSTGRES_PASSWORD="$POSTGRES_PASSWORD"
+unset POSTGRES_PASSWORD
+read -r -s -p "Symfony APP_SECRET: " APP_SECRET
+echo
+minikube kubectl -- -n erp-php create secret generic erp-php-frontend \
+  --from-literal=APP_SECRET="$APP_SECRET"
+unset APP_SECRET
+minikube kubectl -- apply --dry-run=client --validate=strict -f kubernetes-PHP.yml
+minikube kubectl -- apply -f kubernetes-PHP.yml
+minikube kubectl -- -n erp-php rollout status statefulset/postgres --timeout=300s
+minikube kubectl -- -n erp-php rollout status deployment/backend --timeout=300s
+minikube kubectl -- -n erp-php rollout status deployment/frontend --timeout=300s
+minikube kubectl -- -n erp-php rollout status deployment/remote-warehouse-mock --timeout=300s
+```
+
+U jiné varianty nahraďte namespace, manifest i secret příkaz podle tabulky.
+Secret vytvořte před prvním nasazením; při opakovaném nasazení ho nevytvářejte
+znovu. Stejný postup vytvoření namespace a PostgreSQL Secretu platí pro JSP
+a Next.js manifesty; ty nepotřebují Secret `erp-php-frontend`. Každý manifest
+lze validovat ještě před nasazením:
+
+```bash
+minikube kubectl -- apply --dry-run=client --validate=strict -f kubernetes-NEXTJS2.yml
+```
+
+Frontendy PHP a Next.js ukládají sessions do vlastního 1Gi PVC. JSP používá
+Tomcat sessions lokálně v Podu a při jeho výměně se mohou ztratit. Všechny
+frontend Deployments používají jedinou repliku i `Recreate`, aby při výměně
+nebyly dvě instance se stejnou session store současně aktivní.
+PostgreSQL síťový port je ve všech manifesty 5432; 5434 se používá pouze
+jako lokální port-forward. Pro každý port-forward otevřete zvláštní terminál:
+
+```bash
+minikube kubectl -- -n erp-php port-forward service/frontend 4201:80
+minikube kubectl -- -n erp-php port-forward service/backend 8080:8080
+minikube kubectl -- -n erp-php port-forward service/postgres 5434:5432
+```
+
+Pro jiný namespace změňte `erp-php` a port frontendu podle tabulky.
+V Minikube lze host port 4201 nebo 3000 použít jen pro jeden aktivní
+port-forward. Odstranění namespace odstraní jeho PVC a může nenávratně
+smazat databázi i uložené sessions. Původní JSP návod používá image tagy
+`erp-backend:local` a `erp-remote-warehouse:local`.
 
 ## Automatický rebuild UI
 

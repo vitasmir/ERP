@@ -1,6 +1,7 @@
 package com.example.erp.inventory;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
@@ -73,6 +74,24 @@ public class InventoryItem {
         }
         quantity = Math.addExact(quantity, receivedQuantity);
         updatedAt = LocalDateTime.now();
+    }
+
+    public void receivePurchase(int receivedQuantity, BigDecimal purchaseUnitCost) {
+        if (receivedQuantity <= 0 || purchaseUnitCost == null || purchaseUnitCost.signum() < 0) {
+            throw new IllegalArgumentException("Purchase quantity and unit cost must be valid.");
+        }
+        receivePurchaseValue(receivedQuantity, purchaseUnitCost.multiply(BigDecimal.valueOf(receivedQuantity)));
+    }
+
+    void receivePurchaseValue(int receivedQuantity, BigDecimal purchaseValue) {
+        if (receivedQuantity <= 0 || purchaseValue == null || purchaseValue.signum() < 0) {
+            throw new IllegalArgumentException("Purchase quantity and value must be valid.");
+        }
+        int balance = Math.addExact(quantity, receivedQuantity);
+        BigDecimal value = unitCost.multiply(BigDecimal.valueOf(quantity))
+                .add(purchaseValue);
+        unitCost = value.divide(BigDecimal.valueOf(balance), 2, RoundingMode.HALF_UP);
+        receive(receivedQuantity);
     }
 
     public void dispatch(int dispatchedQuantity) {

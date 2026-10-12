@@ -11,6 +11,14 @@
 <%@ page import="com.example.erp.frontend.purchase.PurchaseOverviewView.SupplierView" %>
 <%@ page import="com.example.erp.frontend.purchase.PurchaseOverviewView.ProductView" %>
 <%@ page import="com.example.erp.frontend.purchase.PurchaseOverviewView.ProductImageView" %>
+<%@ page import="com.example.erp.frontend.purchase.PurchaseOverviewView.ReceiptView" %>
+<%@ page import="com.example.erp.frontend.purchase.PurchaseOverviewView.ReceiptLineView" %>
+<%!
+  String html(String value) {
+    return value == null ? "" : value.replace("&", "&amp;").replace("<", "&lt;")
+        .replace(">", "&gt;").replace("\"", "&quot;").replace("'", "&#39;");
+  }
+%>
 <%! private static final DateTimeFormatter LOCAL_DATE_FORMAT = DateTimeFormatter.ofPattern("d. M. uuuu", Locale.forLanguageTag("cs-CZ")); String amount(BigDecimal value) { return value.setScale(2, RoundingMode.HALF_UP).toPlainString(); } String date(LocalDate value) { return value == null ? "-" : LOCAL_DATE_FORMAT.format(value); } String warehouseName(java.util.UUID id, java.util.List<WarehouseView> warehouses) { if (id == null || warehouses == null) return "-"; for (WarehouseView warehouse : warehouses) if (id.equals(warehouse.id())) return warehouse.name(); return id.toString(); } ProductView product(java.util.UUID id, java.util.List<ProductView> products) { if (id == null || products == null) return null; for (ProductView product : products) if (id.equals(product.id())) return product; return null; } String productName(java.util.UUID id, java.util.List<ProductView> products) { ProductView product = product(id, products); return product == null ? (id == null ? "-" : id.toString()) : product.name(); } String productImage(java.util.UUID id, java.util.List<ProductView> products) { ProductView product = product(id, products); if (product == null) return null; if (product.imageUrl() != null && !product.imageUrl().isBlank()) return product.imageUrl(); if (product.images() != null) for (ProductImageView image : product.images()) if (image.active() && image.imageUrl() != null && !image.imageUrl().isBlank()) return image.imageUrl(); return null; } %>
 <!doctype html>
 <html lang="cs">
@@ -19,7 +27,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>ERP | Nákup</title>
   <link rel="stylesheet" href="assets/base.css?v=20261001-1">
-  <link rel="stylesheet" href="assets/purchase.css?v=20261005-7">
+  <link rel="stylesheet" href="assets/purchase.css?v=20261012-1">
 </head>
 <body>
   <% PurchaseOverviewView overview = (PurchaseOverviewView) request.getAttribute("overview"); String error = (String) request.getAttribute("error"); String message = request.getParameter("message"); String actionError = request.getParameter("error"); java.util.List<WarehouseView> warehouses = (java.util.List<WarehouseView>) request.getAttribute("warehouses"); java.util.List<SupplierView> suppliers = (java.util.List<SupplierView>) request.getAttribute("suppliers"); java.util.List<ProductView> products = (java.util.List<ProductView>) request.getAttribute("products"); %>
@@ -29,7 +37,10 @@
       <div><span class="eyebrow">PROVOZ / NÁKUP</span><h1>Nákup</h1><p>Řiďte nákupní požadavky, objednávky dodavatelům a očekávané příjmy zboží.</p></div>
       <div class="purchase-actions"><a href="#orders" class="primary">Přehled nákupu</a><button type="button" class="primary add-order-button" data-open-order-dialog onclick="document.querySelector('[data-order-dialog]').showModal()">Přidej objednávku</button></div>
     </header>
-    <% if (error != null) { %><p class="purchase-message error"><%= error %></p><% } if (actionError != null) { %><p class="purchase-message error"><%= actionError %></p><% } if (message != null) { %><p class="purchase-message"><%= message %></p><% } %>
+    <% if (error != null) { %><p class="purchase-message error"><%= html(error) %></p><% } if (actionError != null) { %><p class="purchase-message error"><%= html(actionError) %></p><% } if (message != null) { %><p class="purchase-message"><%= html(message) %></p><% } %>
+    <% if (request.getAttribute("receiptError") != null) { %>
+    <p class="purchase-message error"><%= html((String) request.getAttribute("receiptError")) %></p>
+    <% } %>
     <section class="purchase-metrics">
       <article><span>Požadavky k objednání</span><strong><%= overview == null ? "-" : amount(overview.requestedValue()) %> Kč</strong><small>čeká na odeslání dodavateli</small></article>
       <article><span>Objednáno u dodavatelů</span><strong><%= overview == null ? "-" : amount(overview.orderedValue()) %> Kč</strong><small>očekáváme na sklad</small></article>
@@ -43,14 +54,150 @@
           <tbody>
             <% if (overview != null) for (PurchaseOrderView order : overview.orders()) { %>
             <tr>
-              <td data-label="Dokument"><button type="button" class="order-details-button" data-order-details><span class="status-chip status-<%= order.status().toLowerCase() %>"><%= order.status().equals("REQUESTED") ? "POŽADAVEK" : "OBJEDNÁNO" %></span><strong><%= order.orderNumber() %></strong><div class="line-summary"><% for (PurchaseLineView line : order.lines()) { %><span><%= productName(line.productId(), products) %> · <%= line.quantity() %> ks · <%= amount(line.unitPrice()) %> Kč/ks</span><% } %></div></button><template data-order-details-template><div class="order-details-content"><span class="eyebrow">OBSAH OBJEDNÁVKY</span><h2><%= order.orderNumber() %></h2><p class="order-details-meta"><%= order.supplierName() %> · <%= date(order.expectedDeliveryDate()) %></p><div class="order-detail-lines"><% for (PurchaseLineView line : order.lines()) { ProductView orderedProduct = product(line.productId(), products); String imageUrl = productImage(line.productId(), products); %><article class="order-detail-line"><% if (imageUrl != null) { %><img src="<%= imageUrl %>" alt="<%= productName(line.productId(), products) %>" loading="lazy"><% } else { %><div class="order-detail-image-placeholder" aria-hidden="true">Bez obrázku</div><% } %><div><h3><%= productName(line.productId(), products) %></h3><% if (orderedProduct != null) { %><p><%= orderedProduct.sku() %><% if (orderedProduct.unit() != null && !orderedProduct.unit().isBlank()) { %> · <%= orderedProduct.unit() %><% } %></p><% } %><strong><%= line.quantity() %> ks · <%= amount(line.unitPrice()) %> Kč/ks</strong></div></article><% } %></div><p class="order-details-total">Celkem: <strong><%= amount(order.totalAmount()) %> Kč</strong></p></div></template><% if ("REQUESTED".equals(order.status())) { %><div class="order-edit-data" data-requested="<%= order.requestedOn() %>" data-expected="<%= order.expectedDeliveryDate() %>" data-source="<%= order.sourceWarehouseId() %>" data-destination="<%= order.destinationWarehouseId() %>" data-supplier="<%= order.supplierId() == null ? "" : order.supplierId() %>"><% for (PurchaseLineView line : order.lines()) { %><span data-edit-line data-product-id="<%= line.productId() %>" data-quantity="<%= line.quantity() %>" data-unit-price="<%= line.unitPrice() %>"></span><% } %></div><% } %></td>
+              <td data-label="Dokument">
+                <button type="button" class="order-details-button" data-order-details>
+                  <span class="status-chip status-<%= order.status().toLowerCase() %>"><%=
+                      "REQUESTED".equals(order.status()) ? "POŽADAVEK" :
+                      "RECEIVED".equals(order.status()) ? "PŘIJATO" :
+                      order.receivedQuantity() > 0 ? "ČÁSTEČNĚ PŘIJATO" : "OBJEDNÁNO" %></span>
+                  <strong><%= html(order.orderNumber()) %></strong>
+                  <div class="line-summary">
+                    <% for (PurchaseLineView line : order.lines()) { %>
+                    <span><%= html(productName(line.productId(), products)) %> · <%= line.quantity() %> ks
+                      · <%= amount(line.unitPrice()) %> Kč/ks · přijato <%= line.receivedQuantity() %></span>
+                    <% } %>
+                  </div>
+                </button>
+                <template data-order-details-template>
+                  <div class="order-details-content">
+                    <span class="eyebrow">OBSAH OBJEDNÁVKY</span>
+                    <h2><%= html(order.orderNumber()) %></h2>
+                    <p class="order-details-meta"><%= html(order.supplierName()) %> · <%= date(order.expectedDeliveryDate()) %></p>
+                    <div class="order-detail-lines">
+                      <% for (PurchaseLineView line : order.lines()) {
+                          ProductView orderedProduct = product(line.productId(), products);
+                          String imageUrl = productImage(line.productId(), products);
+                      %>
+                      <article class="order-detail-line">
+                        <% if (imageUrl != null) { %>
+                        <img src="<%= html(imageUrl) %>" alt="<%= html(productName(line.productId(), products)) %>" loading="lazy">
+                        <% } else { %>
+                        <div class="order-detail-image-placeholder" aria-hidden="true">Bez obrázku</div>
+                        <% } %>
+                        <div>
+                          <h3><%= html(productName(line.productId(), products)) %></h3>
+                          <% if (orderedProduct != null) { %>
+                          <p><%= html(orderedProduct.sku()) %> · <%= html(orderedProduct.unit()) %></p>
+                          <% } %>
+                          <strong><%= line.quantity() %> ks · <%= amount(line.unitPrice()) %> Kč/ks
+                            · přijato <%= line.receivedQuantity() %></strong>
+                        </div>
+                      </article>
+                      <% } %>
+                    </div>
+                    <p class="order-details-total">Celkem: <strong><%= amount(order.totalAmount()) %> Kč</strong></p>
+                  </div>
+                </template>
+                <% if ("REQUESTED".equals(order.status())) { %>
+                <div class="order-edit-data" data-requested="<%= order.requestedOn() %>"
+                    data-expected="<%= order.expectedDeliveryDate() %>" data-source="<%= order.sourceWarehouseId() %>"
+                    data-destination="<%= order.destinationWarehouseId() %>"
+                    data-supplier="<%= order.supplierId() == null ? "" : order.supplierId() %>">
+                  <% for (PurchaseLineView line : order.lines()) { %>
+                  <span data-edit-line data-product-id="<%= line.productId() %>" data-quantity="<%= line.quantity() %>"
+                      data-unit-price="<%= line.unitPrice() %>"></span>
+                  <% } %>
+                </div>
+                <% } %>
+              </td>
               <td data-label="Dodavatel"><%= order.supplierName() %></td>
               <td data-label="Tok skladu"><span class="warehouse-flow"><span><%= warehouseName(order.sourceWarehouseId(), warehouses) %></span><span class="warehouse-arrow" aria-hidden="true">→</span><span><%= warehouseName(order.destinationWarehouseId(), warehouses) %></span></span></td>
               <td data-label="Požadováno"><span class="order-date"><%= date(order.requestedOn()) %></span><small class="order-quantity"><%= order.quantity() == null ? "-" : order.receivedQuantity() + " / " + order.quantity() %> ks</small></td>
               <td data-label="Dodání"><%= date(order.expectedDeliveryDate()) %></td>
               <td data-label="Celkem" class="amount-column"><strong><%= amount(order.totalAmount()) %> Kč</strong></td>
-              <td data-label="Stav / akce"><% if ("REQUESTED".equals(order.status())) { %><button class="secondary edit-order-button" type="button" data-edit-order="<%= order.id() %>">Upravit</button><form method="post"><input type="hidden" name="id" value="<%= order.id() %>"><button class="secondary" type="submit">Vystavit objednávku</button></form><% } else if ("ORDERED".equals(order.status()) && order.quantity() != null) { %><form method="post"><input type="hidden" name="id" value="<%= order.id() %>"><input type="hidden" name="action" value="receive"><input type="hidden" name="quantity" value="<%= order.quantity() - order.receivedQuantity() %>"><button class="secondary" type="submit">Přijmout na sklad</button></form><% } else { %><span class="ordered-label"><%= "RECEIVED".equals(order.status()) ? "Přijato na sklad" : "Čeká na dodání" %></span><% } %></td>
+              <td data-label="Stav / akce">
+                <% if ("REQUESTED".equals(order.status())) { %>
+                <button class="secondary edit-order-button" type="button" data-edit-order="<%= order.id() %>">Upravit</button>
+                <form method="post"><input type="hidden" name="id" value="<%= order.id() %>"><button class="secondary" type="submit">Vystavit objednávku</button></form>
+                <% } else { %>
+                <span class="ordered-label"><%= "RECEIVED".equals(order.status()) ? "Přijato na sklad" :
+                    order.receivedQuantity() > 0 ? "Částečně přijato" : "Čeká na dodání" %></span>
+                <% } %>
+              </td>
             </tr>
+            <% if (("ORDERED".equals(order.status()) && order.quantity() != null) || !order.receipts().isEmpty()) {
+                boolean receiptFailed = request.getAttribute("receiptError") != null
+                    && order.id().toString().equals(request.getParameter("id"));
+                boolean recordedReceipt = false;
+                if (receiptFailed) {
+                    for (ReceiptView receipt : order.receipts()) {
+                        if (receipt.id().toString().equals(request.getParameter("receiptId"))) {
+                            recordedReceipt = true;
+                            break;
+                        }
+                    }
+                }
+                boolean retry = receiptFailed && !recordedReceipt;
+                java.util.Map<String, String> receiptQuantities =
+                    (java.util.Map<String, String>) request.getAttribute("receiptQuantities");
+            %>
+            <tr class="receipt-row">
+              <td colspan="7">
+                <details class="purchase-receipts" <%= receiptFailed ? "open" : "" %>>
+                  <summary>Příjem zboží a příjemky · <%= html(order.orderNumber()) %> (<%= order.receipts().size() %>)</summary>
+                  <% if (recordedReceipt) { %>
+                  <p>Příjemka s odeslaným identifikátorem již existuje. Zkontrolujte její obsah v historii.
+                    Další příjem se ukládá jako nová příjemka, nikoli jako opakování uložené příjemky.</p>
+                  <% } %>
+                  <% if ("ORDERED".equals(order.status()) && order.quantity() != null) { %>
+                  <form method="post" class="purchase-receive-form">
+                    <input type="hidden" name="id" value="<%= order.id() %>">
+                    <input type="hidden" name="action" value="receive">
+                    <input type="hidden" name="receiptId" value="<%= retry
+                        ? html(request.getParameter("receiptId")) : java.util.UUID.randomUUID().toString() %>">
+                    <p>Zadejte skutečně přijaté množství. Nula ponechá řádek pro další dodávku. Ceny jsou bez DPH.</p>
+                    <div class="receipt-lines">
+                      <% for (PurchaseLineView line : order.lines()) {
+                          int remaining = line.quantity() - line.receivedQuantity();
+                          if (remaining <= 0) continue;
+                          String inputValue = retry
+                              ? line.id() == null ? request.getParameter("quantity")
+                                  : receiptQuantities.getOrDefault(line.id().toString(), "0")
+                              : "0";
+                      %>
+                      <label class="receipt-line">
+                        <span><strong><%= html(productName(line.productId(), products)) %></strong>
+                          · přijato <%= line.receivedQuantity() %> / <%= line.quantity() %>
+                          · <%= amount(line.unitPrice()) %> Kč / jednotku
+                        </span>
+                        <% if (line.id() != null) { %>
+                        <input type="hidden" name="lineId" value="<%= line.id() %>">
+                        <% } %>
+                        <input type="number" name="<%= line.id() == null ? "quantity" : "receiveQuantity" %>"
+                            min="<%= line.id() == null ? 1 : 0 %>" max="<%= remaining %>" step="1"
+                            value="<%= html(inputValue) %>" required aria-label="Přijaté množství: <%= html(productName(line.productId(), products)) %>">
+                      </label>
+                      <% } %>
+                    </div>
+                    <button class="secondary" type="submit">Uložit příjemku</button>
+                  </form>
+                  <% } %>
+                  <% for (ReceiptView receipt : order.receipts()) { %>
+                  <article class="receipt-history">
+                    <h3>Příjemka <%= receipt.id() %></h3>
+                    <p><%= html(receipt.createdAt()) %> · <%= html(receipt.actorName()) %></p>
+                    <ul>
+                      <% for (ReceiptLineView line : receipt.lines()) { %>
+                      <li><%= html(productName(line.productId(), products)) %>
+                        · <%= line.quantity() %> · <%= amount(line.unitPrice()) %> Kč / jednotku</li>
+                      <% } %>
+                    </ul>
+                  </article>
+                  <% } %>
+                </details>
+              </td>
+            </tr>
+            <% } %>
             <% } %>
           </tbody>
         </table>

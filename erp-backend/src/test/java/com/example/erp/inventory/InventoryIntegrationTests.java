@@ -74,6 +74,15 @@ class InventoryIntegrationTests extends AbstractPostgresIntegrationTest {
     void cleanUp() {
         if (productId != null) {
             jdbc.update("DELETE FROM inventory_movements WHERE product_id = ?", productId);
+            jdbc.update("""
+                    DELETE FROM purchase_receipt_lines WHERE receipt_id IN
+                        (SELECT receipt.id FROM purchase_receipts receipt JOIN purchase_orders purchase
+                         ON purchase.id = receipt.purchase_order_id WHERE purchase.product_id = ?)
+                    """, productId);
+            jdbc.update("""
+                    DELETE FROM purchase_receipts WHERE purchase_order_id IN
+                        (SELECT id FROM purchase_orders WHERE product_id = ?)
+                    """, productId);
             jdbc.update("DELETE FROM purchase_orders WHERE product_id = ?", productId);
             jdbc.update("DELETE FROM inventory_items WHERE product_id = ?", productId);
             jdbc.update("DELETE FROM products WHERE id = ?", productId);
@@ -185,10 +194,174 @@ class InventoryIntegrationTests extends AbstractPostgresIntegrationTest {
         HttpResponse<String> received = send("PATCH", "/purchase/orders/" + purchaseId + "/receive", Map.of("quantity", 3));
         assertEquals(200, received.statusCode(), received.body());
         assertEquals(3, inventory.findByProductIdAndWarehouseId(productId, destination).orElseThrow().getQuantity());
+        assertEquals(new BigDecimal("20.00"),
+                inventory.findByProductIdAndWarehouseId(productId, destination).orElseThrow().getUnitCost());
         assertEquals(1L, jdbc.queryForObject(
                 "SELECT COUNT(*) FROM inventory_movements WHERE reference = ?", Long.class, purchaseNumber));
         assertEquals(409, send("PATCH", "/purchase/orders/" + purchaseId + "/receive", Map.of("quantity", 3)).statusCode());
         assertEquals(3, inventory.findByProductIdAndWarehouseId(productId, destination).orElseThrow().getQuantity());
+    }
+
+    @Test
+    void partialReceiptsValueStockPreserveHistoryAndDoNotRepeat() throws Exception {
+        UUID purchaseId = purchaseOrder(7, new BigDecimal("170.00"));
+        UUID first = purchaseLine(purchaseId, 4, new BigDecimal("20.00"));
+        UUID second = purchaseLine(purchaseId, 3, new BigDecimal("30.00"));
+        UUID destination = UUID.fromString("b0000000-0000-0000-0000-000000000002");
+        InventoryItem existing = InventoryItem.create(productId, destination, "Praha Vinohrady");
+        existing.receivePurchase(2, new BigDecimal("10.00"));
+        inventory.saveAndFlush(existing);
+
+        UUID receiptId = UUID.randomUUID();
+        var partial = Map.of("receiptId", receiptId, "lines", List.of(
+                Map.of("lineId", first, "quantity", 2), Map.of("lineId", second, "quantity", 1)));
+        BigDecimal orderedBefore = new BigDecimal(mapper.readTree(send("GET", "/purchase/overview", null).body())
+                .path("orderedValue").asText());
+        var result = send("PATCH", "/purchase/orders/" + purchaseId + "/receive", partial);
+        assertEquals(200, result.statusCode(), result.body());
+        var response = mapper.readTree(result.body());
+        assertEquals("ORDERED", response.path("status").asText());
+        assertEquals(3, response.path("receivedQuantity").asInt());
+        assertEquals(1, response.path("receipts").size());
+        assertEquals(5, inventory.findById(existing.getId()).orElseThrow().getQuantity());
+        assertEquals(new BigDecimal("18.00"), inventory.findById(existing.getId()).orElseThrow().getUnitCost());
+        assertEquals(0, orderedBefore.subtract(new BigDecimal("70.00")).compareTo(
+                new BigDecimal(mapper.readTree(send("GET", "/purchase/overview", null).body())
+                        .path("orderedValue").asText())));
+
+        var reordered = Map.of("receiptId", receiptId, "lines", List.of(
+                Map.of("lineId", second, "quantity", 1), Map.of("lineId", first, "quantity", 2)));
+        assertEquals(200, send("PATCH", "/purchase/orders/" + purchaseId + "/receive", reordered).statusCode());
+        assertEquals(5, inventory.findById(existing.getId()).orElseThrow().getQuantity());
+        assertEquals(409, send("PATCH", "/purchase/orders/" + purchaseId + "/order", null).statusCode());
+        var changed = Map.of("receiptId", receiptId, "lines", List.of(Map.of("lineId", first, "quantity", 1)));
+        assertEquals(409, send("PATCH", "/purchase/orders/" + purchaseId + "/receive", changed).statusCode());
+
+        var finalReceipt = Map.of("receiptId", UUID.randomUUID(), "lines", List.of(
+                Map.of("lineId", first, "quantity", 2), Map.of("lineId", second, "quantity", 2)));
+        result = send("PATCH", "/purchase/orders/" + purchaseId + "/receive", finalReceipt);
+        assertEquals(200, result.statusCode(), result.body());
+        assertEquals("RECEIVED", mapper.readTree(result.body()).path("status").asText());
+        assertEquals(409, send("PATCH", "/purchase/orders/" + purchaseId + "/order", null).statusCode());
+        assertEquals(9, inventory.findById(existing.getId()).orElseThrow().getQuantity());
+        assertEquals(new BigDecimal("21.11"), inventory.findById(existing.getId()).orElseThrow().getUnitCost());
+        assertEquals(200, send("PATCH", "/purchase/orders/" + purchaseId + "/receive", finalReceipt).statusCode());
+        assertEquals(2L, jdbc.queryForObject(
+                "SELECT COUNT(*) FROM purchase_receipts WHERE purchase_order_id = ?", Long.class, purchaseId));
+    }
+
+    @Test
+    void receiptRoundsCombinedProductValueOnlyOnce() throws Exception {
+        UUID purchaseId = purchaseOrder(2, new BigDecimal("0.01"));
+        UUID first = purchaseLine(purchaseId, 1, BigDecimal.ZERO);
+        UUID second = purchaseLine(purchaseId, 1, new BigDecimal("0.01"));
+        UUID destination = UUID.fromString("b0000000-0000-0000-0000-000000000002");
+        InventoryItem existing = InventoryItem.create(productId, destination, "Praha Vinohrady");
+        existing.receivePurchase(1, BigDecimal.ZERO);
+        inventory.saveAndFlush(existing);
+
+        var receipt = Map.of("receiptId", UUID.randomUUID(), "lines", List.of(
+                Map.of("lineId", first, "quantity", 1), Map.of("lineId", second, "quantity", 1)));
+        var response = send("PATCH", "/purchase/orders/" + purchaseId + "/receive", receipt);
+        assertEquals(200, response.statusCode(), response.body());
+        assertEquals(3, inventory.findById(existing.getId()).orElseThrow().getQuantity());
+        assertEquals(new BigDecimal("0.00"), inventory.findById(existing.getId()).orElseThrow().getUnitCost());
+        assertEquals(1L, jdbc.queryForObject(
+                "SELECT COUNT(*) FROM inventory_movements WHERE inventory_item_id = ?", Long.class, existing.getId()));
+        assertEquals(new BigDecimal("0.01"), jdbc.queryForObject("""
+                SELECT SUM(line.unit_price * line.quantity) FROM purchase_receipt_lines line
+                JOIN purchase_receipts receipt ON receipt.id = line.receipt_id WHERE receipt.purchase_order_id = ?
+                """, BigDecimal.class, purchaseId));
+    }
+
+    @Test
+    void invalidRowsAndFailedStockChangeRollBackEntireReceipt() throws Exception {
+        UUID purchaseId = purchaseOrder(4, new BigDecimal("80.00"));
+        UUID first = purchaseLine(purchaseId, 2, new BigDecimal("20.00"));
+        UUID second = purchaseLine(purchaseId, 2, new BigDecimal("20.00"));
+        String endpoint = "/purchase/orders/" + purchaseId + "/receive";
+        for (var invalid : List.of(
+                List.of(Map.of("lineId", first, "quantity", 1), Map.of("lineId", second, "quantity", 3)),
+                List.of(Map.of("lineId", first, "quantity", 1), Map.of("lineId", UUID.randomUUID(), "quantity", 1)),
+                List.of(Map.of("lineId", first, "quantity", 1), Map.of("lineId", first, "quantity", 1)),
+                List.of(Map.of("lineId", first, "quantity", 0)))) {
+            int status = send("PATCH", endpoint, Map.of("receiptId", UUID.randomUUID(), "lines", invalid)).statusCode();
+            assertTrue(status == 400 || status == 409);
+        }
+        assertEquals(400, send("PATCH", endpoint, Map.of("quantity", 1)).statusCode());
+        UUID destination = UUID.fromString("b0000000-0000-0000-0000-000000000002");
+        InventoryItem existing = InventoryItem.create(productId, destination, "Praha Vinohrady");
+        existing.receivePurchase(Integer.MAX_VALUE - 1, BigDecimal.ONE);
+        inventory.saveAndFlush(existing);
+        var receipt = Map.of("receiptId", UUID.randomUUID(), "lines", List.of(
+                Map.of("lineId", first, "quantity", 1), Map.of("lineId", second, "quantity", 1)));
+        assertEquals(409, send("PATCH", endpoint, receipt).statusCode());
+        assertEquals(Integer.MAX_VALUE - 1, inventory.findById(existing.getId()).orElseThrow().getQuantity());
+        assertEquals(0L, jdbc.queryForObject(
+                "SELECT COUNT(*) FROM purchase_receipts WHERE purchase_order_id = ?", Long.class, purchaseId));
+        assertEquals(0, jdbc.queryForObject(
+                "SELECT received_quantity FROM purchase_orders WHERE id = ?", Integer.class, purchaseId));
+        assertEquals(0L, jdbc.queryForObject(
+                "SELECT SUM(received_quantity) FROM purchase_order_lines WHERE purchase_order_id = ?", Long.class, purchaseId));
+    }
+
+    @Test
+    void concurrentRetryReceivesStockOnlyOnce() throws Exception {
+        UUID purchaseId = purchaseOrder(4, new BigDecimal("80.00"));
+        UUID lineId = purchaseLine(purchaseId, 4, new BigDecimal("20.00"));
+        var receipt = Map.of("receiptId", UUID.randomUUID(),
+                "lines", List.of(Map.of("lineId", lineId, "quantity", 2)));
+        HttpRequest request = request("PATCH", "/purchase/orders/" + purchaseId + "/receive", receipt);
+        var first = client.sendAsync(request, HttpResponse.BodyHandlers.ofString());
+        var second = client.sendAsync(request, HttpResponse.BodyHandlers.ofString());
+        assertEquals(200, first.get(30, TimeUnit.SECONDS).statusCode());
+        assertEquals(200, second.get(30, TimeUnit.SECONDS).statusCode());
+        assertEquals(2, jdbc.queryForObject(
+                "SELECT received_quantity FROM purchase_orders WHERE id = ?", Integer.class, purchaseId));
+        assertEquals(1L, jdbc.queryForObject(
+                "SELECT COUNT(*) FROM purchase_receipts WHERE purchase_order_id = ?", Long.class, purchaseId));
+    }
+
+    @Test
+    void concurrentReceiptsCannotExceedOrderedQuantity() throws Exception {
+        UUID purchaseId = purchaseOrder(4, new BigDecimal("80.00"));
+        UUID lineId = purchaseLine(purchaseId, 4, new BigDecimal("20.00"));
+        String endpoint = "/purchase/orders/" + purchaseId + "/receive";
+        var first = client.sendAsync(request("PATCH", endpoint, Map.of("receiptId", UUID.randomUUID(),
+                "lines", List.of(Map.of("lineId", lineId, "quantity", 3)))), HttpResponse.BodyHandlers.ofString());
+        var second = client.sendAsync(request("PATCH", endpoint, Map.of("receiptId", UUID.randomUUID(),
+                "lines", List.of(Map.of("lineId", lineId, "quantity", 3)))), HttpResponse.BodyHandlers.ofString());
+        List<Integer> statuses = List.of(first.get(30, TimeUnit.SECONDS).statusCode(),
+                second.get(30, TimeUnit.SECONDS).statusCode()).stream().sorted().toList();
+        assertEquals(List.of(200, 409), statuses);
+        UUID destination = UUID.fromString("b0000000-0000-0000-0000-000000000002");
+        assertEquals(3, inventory.findByProductIdAndWarehouseId(productId, destination).orElseThrow().getQuantity());
+        assertEquals(3, jdbc.queryForObject(
+                "SELECT received_quantity FROM purchase_orders WHERE id = ?", Integer.class, purchaseId));
+        assertEquals(3, jdbc.queryForObject(
+                "SELECT received_quantity FROM purchase_order_lines WHERE id = ?", Integer.class, lineId));
+        assertEquals(1L, jdbc.queryForObject(
+                "SELECT COUNT(*) FROM purchase_receipts WHERE purchase_order_id = ?", Long.class, purchaseId));
+    }
+
+    private UUID purchaseOrder(int quantity, BigDecimal total) {
+        UUID id = UUID.randomUUID();
+        jdbc.update("""
+                INSERT INTO purchase_orders (id, order_number, supplier_name, requested_on, expected_delivery_date,
+                    total_amount, status, destination_warehouse_id, product_id, quantity, received_quantity)
+                VALUES (?, ?, 'Test supplier', CURRENT_DATE, CURRENT_DATE, ?, 'ORDERED',
+                    'b0000000-0000-0000-0000-000000000002', ?, ?, 0)
+                """, id, "PART-" + id.toString().substring(0, 8), total, productId, quantity);
+        return id;
+    }
+
+    private UUID purchaseLine(UUID purchaseId, int quantity, BigDecimal price) {
+        UUID id = UUID.randomUUID();
+        jdbc.update("""
+                INSERT INTO purchase_order_lines (id, purchase_order_id, product_id, quantity, unit_price)
+                VALUES (?, ?, ?, ?, ?)
+                """, id, purchaseId, productId, quantity, price);
+        return id;
     }
 
     private Map<String, Object> receipt(int quantity) {

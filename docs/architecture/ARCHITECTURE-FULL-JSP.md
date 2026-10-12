@@ -238,6 +238,58 @@ shoduje s existujícím dodavatelem. Neznámé starší názvy zůstávají bez 
 pro úpravu takové objednávky je nutné vybrat evidovaného dodavatele a jeho
 sklad.
 
+### 3.7 Částečné příjemky a ocenění zásoby
+
+JSP nákup umožňuje zadat skutečně přijaté množství pro každý dosud nedodaný
+řádek. Nulové množství ve formuláři znamená, že se daný řádek v příjemce
+neposílá. Objednávka zůstává `ORDERED` až do úplného dodání; přehled rozlišuje
+částečný příjem. Z již vystavené nebo přijaté objednávky nelze znovu vytvořit
+nákupní požadavek ani ji znovu vystavit.
+
+Nový požadavek `PATCH /api/v1/purchase/orders/{id}/receive` má tvar:
+
+```json
+{
+  "receiptId": "UUID jedinečné příjemky",
+  "lines": [
+    {"lineId": "UUID řádku objednávky", "quantity": 2}
+  ]
+}
+```
+
+API vyžaduje kladná množství, řádky patřící této objednávce a nejvýše
+zbývající množství. Stejný `receiptId` se stejnými řádky lze bezpečně
+opakovat: zásoba se nezvýší podruhé. Změněný obsah se stejným identifikátorem
+je odmítnut. Příjemka, řádky objednávky, zásoba a historie pohybů se zapisují
+v jedné transakci. Příjemky jsou součástí přehledu nákupu, včetně času,
+uživatele, množství a nákupní ceny.
+
+Při chybě příjmu formulář zachová množství a identifikátor pro bezpečné
+opakování. Pokud přehled již obsahuje příjemku s tímto identifikátorem
+(například po ztrátě potvrzení), zobrazí se její historie a další formulář
+dostane nový identifikátor; uložená příjemka se neposílá s upravenými řádky.
+
+Nákupní příjem používá cenu řádku bez DPH a průběžný vážený průměr pro
+konkrétní produkt a sklad:
+
+```text
+nová cena = (stará zásoba × stará cena + příjem × nákupní cena)
+           / (stará zásoba + příjem)
+```
+
+Cena zásoby se zaokrouhluje na dvě desetinná místa (`HALF_UP`); příjemka
+uchovává původní nákupní cenu. Více řádků stejného produktu v jedné příjemce
+se pro přepočet zásoby sečte před zaokrouhlením. Ruční příjem z modulu skladu nadále používá
+zadanou cenu a minimum, nikoli tento nákupní přepočet.
+
+Starší klienti mohou dál poslat `{"quantity": n}`. U víceřádkové objednávky
+musí tato hodnota odpovídat celému zbývajícímu množství; částečný příjem
+vyžaduje nové řádkové API. Prázdný objekt u víceřádkové objednávky zachovává
+původní příjem všech zbývajících řádků. Bez `receiptId` tyto starší požadavky
+nemají ochranu proti opakovanému odeslání. U starší jednopoložkové objednávky
+bez řádků je jednotková cena odvozena z uložené celkové částky a množství.
+Historické příjmy před migrací V51 nejsou zpětně rekonstruovány jako příjemky.
+
 ## 4. Instalace nástrojů
 
 Příklady předpokládají Linux a Bash. Na Windows použijte WSL2 nebo upravte

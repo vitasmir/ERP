@@ -10,11 +10,13 @@ public record PurchaseOverviewView(BigDecimal requestedValue, BigDecimal ordered
     public record PurchaseOrderView(UUID id, String orderNumber, String supplierName, UUID supplierId, LocalDate requestedOn,
             LocalDate expectedDeliveryDate, BigDecimal totalAmount, String status, UUID sourceWarehouseId,
             UUID destinationWarehouseId, UUID productId, Integer quantity, int receivedQuantity,
-            List<PurchaseLineView> lines) { }
+            List<PurchaseLineView> lines, List<ReceiptView> receipts) { }
 
         public record WarehouseView(UUID id, String name, String ownerType, UUID supplierId) { }
         public record SupplierView(UUID id, String name) { }
-        public record PurchaseLineView(UUID productId, int quantity, BigDecimal unitPrice, int receivedQuantity) { }
+        public record PurchaseLineView(UUID id, UUID productId, int quantity, BigDecimal unitPrice, int receivedQuantity) { }
+        public record ReceiptView(UUID id, String actorName, String createdAt, List<ReceiptLineView> lines) { }
+        public record ReceiptLineView(UUID lineId, UUID productId, int quantity, BigDecimal unitPrice) { }
         public record ProductView(UUID id, String sku, String name, String unit, String description,
                 BigDecimal price, BigDecimal purchasePrice, BigDecimal vatRate,
                 BigDecimal eshopMarginPercent, UUID categoryId, String imageUrl, boolean active,

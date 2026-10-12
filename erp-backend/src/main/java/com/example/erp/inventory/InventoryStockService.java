@@ -50,12 +50,12 @@ public class InventoryStockService {
     }
 
     public InventoryItem receivePurchase(UUID productId, UUID warehouseId, String locationName,
-            int quantity, String reference, ErpUser actor) {
+            int quantity, BigDecimal purchaseValue, String reference, ErpUser actor) {
         Product product = lockProduct(productId);
         InventoryItem item = items.findByProductIdAndWarehouseId(productId, warehouseId)
                 .orElseGet(() -> InventoryItem.create(productId, warehouseId, locationName));
         checkReceipt(item, quantity);
-        item.receive(quantity);
+        item.receivePurchaseValue(quantity, purchaseValue);
         items.saveAndFlush(item);
         records.movement(item, product, "RECEIPT", quantity, reference, "Příjem nákupní objednávky.", actor);
         return item;

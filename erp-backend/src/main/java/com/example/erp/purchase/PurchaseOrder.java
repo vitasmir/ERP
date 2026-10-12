@@ -111,7 +111,12 @@ public class PurchaseOrder {
         this.quantity = quantity;
     }
 
-    public void order() { status = PurchaseOrderStatus.ORDERED; }
+    public void order() {
+        if (status != PurchaseOrderStatus.REQUESTED) {
+            throw new IllegalStateException("Only requested purchases can be ordered.");
+        }
+        status = PurchaseOrderStatus.ORDERED;
+    }
 
     public void receive(int receivedQuantity) {
         if (status != PurchaseOrderStatus.ORDERED) {

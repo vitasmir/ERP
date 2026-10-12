@@ -3,6 +3,43 @@
   gap: 10px;
   flex-wrap: wrap;
 }
+.purchase-receipts {
+  padding: 12px;
+  background: #fffdf8;
+}
+.purchase-receipts summary {
+  cursor: pointer;
+  font-weight: 700;
+}
+.purchase-receive-form,
+.receipt-lines {
+  display: grid;
+  gap: 12px;
+  margin-top: 12px;
+}
+.receipt-line {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+.receipt-line input[type="number"] {
+  width: 100px;
+  padding: 8px;
+}
+.purchase-receive-form > button {
+  justify-self: start;
+}
+.receipt-history {
+  margin-top: 16px;
+  padding-top: 12px;
+  border-top: 1px solid #d9ddd4;
+}
+.receipt-history h3 {
+  overflow-wrap: anywhere;
+  font-size: 13px;
+}
 .purchase-lines {
   display: grid;
   grid-column: 1/-1;

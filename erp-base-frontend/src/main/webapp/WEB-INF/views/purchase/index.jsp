@@ -8,6 +8,7 @@
 <%@ page import="com.example.erp.frontend.purchase.PurchaseOverviewView.PurchaseOrderView" %>
 <%@ page import="com.example.erp.frontend.purchase.PurchaseOverviewView.PurchaseLineView" %>
 <%@ page import="com.example.erp.frontend.purchase.PurchaseOverviewView.WarehouseView" %>
+<%@ page import="com.example.erp.frontend.purchase.PurchaseOverviewView.SupplierView" %>
 <%@ page import="com.example.erp.frontend.purchase.PurchaseOverviewView.ProductView" %>
 <%@ page import="com.example.erp.frontend.purchase.PurchaseOverviewView.ProductImageView" %>
 <%! private static final DateTimeFormatter LOCAL_DATE_FORMAT = DateTimeFormatter.ofPattern("d. M. uuuu", Locale.forLanguageTag("cs-CZ")); String amount(BigDecimal value) { return value.setScale(2, RoundingMode.HALF_UP).toPlainString(); } String date(LocalDate value) { return value == null ? "-" : LOCAL_DATE_FORMAT.format(value); } String warehouseName(java.util.UUID id, java.util.List<WarehouseView> warehouses) { if (id == null || warehouses == null) return "-"; for (WarehouseView warehouse : warehouses) if (id.equals(warehouse.id())) return warehouse.name(); return id.toString(); } ProductView product(java.util.UUID id, java.util.List<ProductView> products) { if (id == null || products == null) return null; for (ProductView product : products) if (id.equals(product.id())) return product; return null; } String productName(java.util.UUID id, java.util.List<ProductView> products) { ProductView product = product(id, products); return product == null ? (id == null ? "-" : id.toString()) : product.name(); } String productImage(java.util.UUID id, java.util.List<ProductView> products) { ProductView product = product(id, products); if (product == null) return null; if (product.imageUrl() != null && !product.imageUrl().isBlank()) return product.imageUrl(); if (product.images() != null) for (ProductImageView image : product.images()) if (image.active() && image.imageUrl() != null && !image.imageUrl().isBlank()) return image.imageUrl(); return null; } %>
@@ -21,7 +22,7 @@
   <link rel="stylesheet" href="assets/purchase.css?v=20261005-7">
 </head>
 <body>
-  <% PurchaseOverviewView overview = (PurchaseOverviewView) request.getAttribute("overview"); String error = (String) request.getAttribute("error"); String message = request.getParameter("message"); String actionError = request.getParameter("error"); java.util.List<WarehouseView> warehouses = (java.util.List<WarehouseView>) request.getAttribute("warehouses"); java.util.List<ProductView> products = (java.util.List<ProductView>) request.getAttribute("products"); %>
+  <% PurchaseOverviewView overview = (PurchaseOverviewView) request.getAttribute("overview"); String error = (String) request.getAttribute("error"); String message = request.getParameter("message"); String actionError = request.getParameter("error"); java.util.List<WarehouseView> warehouses = (java.util.List<WarehouseView>) request.getAttribute("warehouses"); java.util.List<SupplierView> suppliers = (java.util.List<SupplierView>) request.getAttribute("suppliers"); java.util.List<ProductView> products = (java.util.List<ProductView>) request.getAttribute("products"); %>
   <main class="purchase-page">
     <header class="purchase-header">
       <a href="apps" class="back-link">← Aplikace</a>
@@ -42,7 +43,7 @@
           <tbody>
             <% if (overview != null) for (PurchaseOrderView order : overview.orders()) { %>
             <tr>
-              <td data-label="Dokument"><button type="button" class="order-details-button" data-order-details><span class="status-chip status-<%= order.status().toLowerCase() %>"><%= order.status().equals("REQUESTED") ? "POŽADAVEK" : "OBJEDNÁNO" %></span><strong><%= order.orderNumber() %></strong><div class="line-summary"><% for (PurchaseLineView line : order.lines()) { %><span><%= productName(line.productId(), products) %> · <%= line.quantity() %> ks · <%= amount(line.unitPrice()) %> Kč/ks</span><% } %></div></button><template data-order-details-template><div class="order-details-content"><span class="eyebrow">OBSAH OBJEDNÁVKY</span><h2><%= order.orderNumber() %></h2><p class="order-details-meta"><%= order.supplierName() %> · <%= date(order.expectedDeliveryDate()) %></p><div class="order-detail-lines"><% for (PurchaseLineView line : order.lines()) { ProductView orderedProduct = product(line.productId(), products); String imageUrl = productImage(line.productId(), products); %><article class="order-detail-line"><% if (imageUrl != null) { %><img src="<%= imageUrl %>" alt="<%= productName(line.productId(), products) %>" loading="lazy"><% } else { %><div class="order-detail-image-placeholder" aria-hidden="true">Bez obrázku</div><% } %><div><h3><%= productName(line.productId(), products) %></h3><% if (orderedProduct != null) { %><p><%= orderedProduct.sku() %><% if (orderedProduct.unit() != null && !orderedProduct.unit().isBlank()) { %> · <%= orderedProduct.unit() %><% } %></p><% } %><strong><%= line.quantity() %> ks · <%= amount(line.unitPrice()) %> Kč/ks</strong></div></article><% } %></div><p class="order-details-total">Celkem: <strong><%= amount(order.totalAmount()) %> Kč</strong></p></div></template><% if ("REQUESTED".equals(order.status())) { %><div class="order-edit-data" data-requested="<%= order.requestedOn() %>" data-expected="<%= order.expectedDeliveryDate() %>" data-source="<%= order.sourceWarehouseId() %>" data-destination="<%= order.destinationWarehouseId() %>"><% for (PurchaseLineView line : order.lines()) { %><span data-edit-line data-product-id="<%= line.productId() %>" data-quantity="<%= line.quantity() %>" data-unit-price="<%= line.unitPrice() %>"></span><% } %></div><% } %></td>
+              <td data-label="Dokument"><button type="button" class="order-details-button" data-order-details><span class="status-chip status-<%= order.status().toLowerCase() %>"><%= order.status().equals("REQUESTED") ? "POŽADAVEK" : "OBJEDNÁNO" %></span><strong><%= order.orderNumber() %></strong><div class="line-summary"><% for (PurchaseLineView line : order.lines()) { %><span><%= productName(line.productId(), products) %> · <%= line.quantity() %> ks · <%= amount(line.unitPrice()) %> Kč/ks</span><% } %></div></button><template data-order-details-template><div class="order-details-content"><span class="eyebrow">OBSAH OBJEDNÁVKY</span><h2><%= order.orderNumber() %></h2><p class="order-details-meta"><%= order.supplierName() %> · <%= date(order.expectedDeliveryDate()) %></p><div class="order-detail-lines"><% for (PurchaseLineView line : order.lines()) { ProductView orderedProduct = product(line.productId(), products); String imageUrl = productImage(line.productId(), products); %><article class="order-detail-line"><% if (imageUrl != null) { %><img src="<%= imageUrl %>" alt="<%= productName(line.productId(), products) %>" loading="lazy"><% } else { %><div class="order-detail-image-placeholder" aria-hidden="true">Bez obrázku</div><% } %><div><h3><%= productName(line.productId(), products) %></h3><% if (orderedProduct != null) { %><p><%= orderedProduct.sku() %><% if (orderedProduct.unit() != null && !orderedProduct.unit().isBlank()) { %> · <%= orderedProduct.unit() %><% } %></p><% } %><strong><%= line.quantity() %> ks · <%= amount(line.unitPrice()) %> Kč/ks</strong></div></article><% } %></div><p class="order-details-total">Celkem: <strong><%= amount(order.totalAmount()) %> Kč</strong></p></div></template><% if ("REQUESTED".equals(order.status())) { %><div class="order-edit-data" data-requested="<%= order.requestedOn() %>" data-expected="<%= order.expectedDeliveryDate() %>" data-source="<%= order.sourceWarehouseId() %>" data-destination="<%= order.destinationWarehouseId() %>" data-supplier="<%= order.supplierId() == null ? "" : order.supplierId() %>"><% for (PurchaseLineView line : order.lines()) { %><span data-edit-line data-product-id="<%= line.productId() %>" data-quantity="<%= line.quantity() %>" data-unit-price="<%= line.unitPrice() %>"></span><% } %></div><% } %></td>
               <td data-label="Dodavatel"><%= order.supplierName() %></td>
               <td data-label="Tok skladu"><span class="warehouse-flow"><span><%= warehouseName(order.sourceWarehouseId(), warehouses) %></span><span class="warehouse-arrow" aria-hidden="true">→</span><span><%= warehouseName(order.destinationWarehouseId(), warehouses) %></span></span></td>
               <td data-label="Požadováno"><span class="order-date"><%= date(order.requestedOn()) %></span><small class="order-quantity"><%= order.quantity() == null ? "-" : order.receivedQuantity() + " / " + order.quantity() %> ks</small></td>
@@ -61,10 +62,10 @@
       <form method="post" class="new-order-form">
         <input type="hidden" name="action" value="create" data-order-action>
         <input type="hidden" name="id" value="" data-order-id>
-        <label>Dodavatel<input name="supplierName" required maxlength="200" placeholder="Název dodavatele"></label>
+        <label>Dodavatel<select name="supplierId" required><option value="">Vyberte dodavatele</option><% if (suppliers != null) for (SupplierView supplier : suppliers) { %><option value="<%= supplier.id() %>"><%= supplier.name() %></option><% } %></select></label>
         <label>Požadováno<span class="date-input-wrap"><input class="date-input" data-native-date-picker type="date" name="requestedOn" required><button class="date-picker-button" type="button" data-date-picker aria-label="Otevřít kalendář" onclick="window.openPurchaseCalendar(this)">Kalendář</button><span class="date-calendar" data-calendar hidden></span></span></label>
         <label>Očekávané dodání<span class="date-input-wrap"><input class="date-input" data-native-date-picker type="date" name="expectedDeliveryDate" required><button class="date-picker-button" type="button" data-date-picker aria-label="Otevřít kalendář" onclick="window.openPurchaseCalendar(this)">Kalendář</button><span class="date-calendar" data-calendar hidden></span></span></label>
-        <label>Dodavatelský sklad<select name="sourceWarehouseId" required><option value="">Vyberte sklad</option><% if (warehouses != null) for (WarehouseView warehouse : warehouses) if ("SUPPLIER".equals(warehouse.ownerType())) { %><option value="<%= warehouse.id() %>"><%= warehouse.name() %></option><% } %></select></label>
+        <label>Dodavatelský sklad<select name="sourceWarehouseId" required><option value="">Vyberte sklad</option><% if (warehouses != null) for (WarehouseView warehouse : warehouses) if ("SUPPLIER".equals(warehouse.ownerType())) { %><option value="<%= warehouse.id() %>" data-supplier-id="<%= warehouse.supplierId() == null ? "" : warehouse.supplierId() %>"><%= warehouse.name() %></option><% } %></select></label>
         <label>Firemní cílový sklad<select name="destinationWarehouseId" required><option value="">Vyberte sklad</option><% if (warehouses != null) for (WarehouseView warehouse : warehouses) if ("COMPANY".equals(warehouse.ownerType())) { %><option value="<%= warehouse.id() %>"><%= warehouse.name() %></option><% } %></select></label>
         <fieldset class="purchase-lines" data-purchase-lines>
           <legend>Položky objednávky</legend>
@@ -103,8 +104,24 @@
     const orderId = orderForm.querySelector('[data-order-id]');
     const orderTitle = document.querySelector('#new-order-title');
     const orderSubmit = orderForm.querySelector('button[type="submit"]');
+    const supplierSelect = orderForm.querySelector('[name="supplierId"]');
+    const sourceWarehouseSelect = orderForm.querySelector('[name="sourceWarehouseId"]');
+    const filterSupplierWarehouses = () => {
+      [...sourceWarehouseSelect.options].forEach(option => {
+        if (!option.value) return;
+        option.disabled = Boolean(supplierSelect.value && option.dataset.supplierId !== supplierSelect.value);
+      });
+      if (sourceWarehouseSelect.selectedOptions[0]?.disabled) sourceWarehouseSelect.value = '';
+    };
+    supplierSelect.addEventListener('change', filterSupplierWarehouses);
+    sourceWarehouseSelect.addEventListener('change', () => {
+      const supplierId = sourceWarehouseSelect.selectedOptions[0]?.dataset.supplierId;
+      if (supplierId) supplierSelect.value = supplierId;
+      filterSupplierWarehouses();
+    });
     const resetOrderForm = () => {
       orderForm.reset();
+      filterSupplierWarehouses();
       orderAction.value = 'create';
       orderId.value = '';
       orderTitle.textContent = 'Přidej objednávku';
@@ -151,10 +168,11 @@
         orderId.value = button.dataset.editOrder;
         orderTitle.textContent = 'Upravit požadavek';
         orderSubmit.textContent = 'Uložit změny';
-        orderForm.querySelector('[name="supplierName"]').value = row.children[1].textContent.trim();
+        supplierSelect.value = data.dataset.supplier;
         orderForm.querySelector('[name="requestedOn"]').value = data.dataset.requested;
         orderForm.querySelector('[name="expectedDeliveryDate"]').value = data.dataset.expected;
-        orderForm.querySelector('[name="sourceWarehouseId"]').value = data.dataset.source;
+        sourceWarehouseSelect.value = data.dataset.source;
+        filterSupplierWarehouses();
         orderForm.querySelector('[name="destinationWarehouseId"]').value = data.dataset.destination;
         const lineRows = [...lines.querySelectorAll('[data-purchase-line]')];
         lineRows.slice(1).forEach(line => line.remove());

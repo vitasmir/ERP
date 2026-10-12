@@ -23,6 +23,9 @@ public class PurchaseOrder {
     @Column(name = "supplier_name")
     private String supplierName;
 
+    @Column(name = "supplier_id")
+    private UUID supplierId;
+
     @Column(name = "requested_on")
     private LocalDate requestedOn;
 
@@ -54,16 +57,17 @@ public class PurchaseOrder {
     public static PurchaseOrder create(String orderNumber, String supplierName, LocalDate requestedOn,
             LocalDate expectedDeliveryDate, BigDecimal totalAmount) {
         return create(orderNumber, supplierName, requestedOn, expectedDeliveryDate, totalAmount,
-            null, null, null, null);
+            null, null, null, null, null);
         }
 
         public static PurchaseOrder create(String orderNumber, String supplierName, LocalDate requestedOn,
             LocalDate expectedDeliveryDate, BigDecimal totalAmount, UUID sourceWarehouseId,
-            UUID destinationWarehouseId, UUID productId, Integer quantity) {
+                UUID destinationWarehouseId, UUID supplierId, UUID productId, Integer quantity) {
         PurchaseOrder order = new PurchaseOrder();
         order.id = UUID.randomUUID();
         order.orderNumber = orderNumber;
         order.supplierName = supplierName;
+        order.supplierId = supplierId;
         order.requestedOn = requestedOn;
         order.expectedDeliveryDate = expectedDeliveryDate;
         order.totalAmount = totalAmount;
@@ -79,6 +83,7 @@ public class PurchaseOrder {
     public UUID getId() { return id; }
     public String getOrderNumber() { return orderNumber; }
     public String getSupplierName() { return supplierName; }
+    public UUID getSupplierId() { return supplierId; }
     public LocalDate getRequestedOn() { return requestedOn; }
     public LocalDate getExpectedDeliveryDate() { return expectedDeliveryDate; }
     public BigDecimal getTotalAmount() { return totalAmount; }
@@ -89,13 +94,14 @@ public class PurchaseOrder {
     public Integer getQuantity() { return quantity; }
     public int getReceivedQuantity() { return receivedQuantity; }
 
-    public void updateRequested(String supplierName, LocalDate requestedOn, LocalDate expectedDeliveryDate,
-            BigDecimal totalAmount, UUID sourceWarehouseId, UUID destinationWarehouseId,
-            UUID productId, int quantity) {
+    public void updateRequested(String supplierName, UUID supplierId, LocalDate requestedOn,
+            LocalDate expectedDeliveryDate, BigDecimal totalAmount, UUID sourceWarehouseId,
+            UUID destinationWarehouseId, UUID productId, int quantity) {
         if (status != PurchaseOrderStatus.REQUESTED) {
             throw new IllegalStateException("Only requested purchases can be edited.");
         }
         this.supplierName = supplierName;
+        this.supplierId = supplierId;
         this.requestedOn = requestedOn;
         this.expectedDeliveryDate = expectedDeliveryDate;
         this.totalAmount = totalAmount;

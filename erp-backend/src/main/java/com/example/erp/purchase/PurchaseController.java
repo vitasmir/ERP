@@ -24,6 +24,7 @@ import com.example.erp.inventory.InventoryStockService;
 import com.example.erp.inventory.Warehouse;
 import com.example.erp.inventory.WarehouseOwnerType;
 import com.example.erp.inventory.WarehouseRepository;
+import com.example.erp.purchase.Supplier;
 import com.example.erp.users.ErpUser;
 
 @RestController
@@ -32,14 +33,16 @@ public class PurchaseController {
     private final PurchaseOrderRepository orders;
         private final PurchaseOrderLineRepository lines;
         private final WarehouseRepository warehouses;
+        private final SupplierRepository suppliers;
         private final ProductRepository products;
         private final InventoryStockService inventory;
 
         public PurchaseController(PurchaseOrderRepository orders, PurchaseOrderLineRepository lines, WarehouseRepository warehouses,
-                        ProductRepository products, InventoryStockService inventory) {
+                        SupplierRepository suppliers, ProductRepository products, InventoryStockService inventory) {
                 this.orders = orders;
                 this.lines = lines;
                 this.warehouses = warehouses;
+                this.suppliers = suppliers;
                 this.products = products;
                 this.inventory = inventory;
         }
@@ -47,7 +50,15 @@ public class PurchaseController {
         @GetMapping("/warehouses")
         public List<WarehouseResponse> warehouses() {
                 return warehouses.findAllByActiveTrueOrderByOwnerTypeAscNameAsc().stream()
-                                .map(warehouse -> new WarehouseResponse(warehouse.getId(), warehouse.getName(), warehouse.getOwnerType()))
+                                .map(warehouse -> new WarehouseResponse(warehouse.getId(), warehouse.getName(),
+                                                warehouse.getOwnerType(), warehouse.getSupplierId()))
+                                .toList();
+        }
+
+        @GetMapping("/suppliers")
+        public List<SupplierResponse> suppliers() {
+                return suppliers.findAllByOrderByNameAsc().stream()
+                                .map(supplier -> new SupplierResponse(supplier.getId(), supplier.getName()))
                                 .toList();
         }
 
@@ -67,7 +78,7 @@ public class PurchaseController {
         @org.springframework.web.bind.annotation.ResponseStatus(HttpStatus.CREATED)
         @org.springframework.transaction.annotation.Transactional
         public PurchaseOrderResponse create(@RequestBody CreatePurchaseOrderRequest request) {
-                if (request == null || request.supplierName() == null || request.supplierName().isBlank()
+                if (request == null || request.supplierId() == null
                                 || request.requestedOn() == null || request.expectedDeliveryDate() == null
                                 || request.expectedDeliveryDate().isBefore(request.requestedOn()) || request.sourceWarehouseId() == null
                                                 || request.destinationWarehouseId() == null || request.lines() == null
@@ -81,7 +92,8 @@ public class PurchaseController {
                 if (requestedLines.size() != request.lines().size()) {
                         throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Purchase order contains invalid product lines.");
                 }
-                Warehouse source = warehouse(request.sourceWarehouseId(), WarehouseOwnerType.SUPPLIER);
+                Supplier supplier = supplier(request.supplierId());
+                Warehouse source = supplierWarehouse(request.sourceWarehouseId(), supplier.getId());
                 Warehouse destination = warehouse(request.destinationWarehouseId(), WarehouseOwnerType.COMPANY);
                 Map<UUID, com.example.erp.catalog.Product> catalog = requestedLines.stream()
                                 .map(line -> products.findById(line.productId()).orElseThrow(() ->
@@ -93,9 +105,9 @@ public class PurchaseController {
                 PurchaseOrderLineRequest firstLine = requestedLines.get(0);
                 int totalQuantity = requestedLines.stream().mapToInt(PurchaseOrderLineRequest::quantity).sum();
                 PurchaseOrder purchaseOrder = PurchaseOrder.create("POZ-" + LocalDate.now().getYear() + "-"
-                                + UUID.randomUUID().toString().substring(0, 8).toUpperCase(), request.supplierName().trim(),
+                                + UUID.randomUUID().toString().substring(0, 8).toUpperCase(), supplier.getName(),
                                 request.requestedOn(), request.expectedDeliveryDate(), totalAmount, source.getId(),
-                                destination.getId(), firstLine.productId(), totalQuantity);
+                                destination.getId(), supplier.getId(), firstLine.productId(), totalQuantity);
                 PurchaseOrder saved = orders.save(purchaseOrder);
                 lines.saveAll(requestedLines.stream()
                                 .map(line -> PurchaseOrderLine.create(saved.getId(), line.productId(), line.quantity(), line.unitPrice()))
@@ -106,7 +118,7 @@ public class PurchaseController {
         @org.springframework.web.bind.annotation.PutMapping("/orders/{id}")
         @org.springframework.transaction.annotation.Transactional
         public PurchaseOrderResponse update(@PathVariable UUID id, @RequestBody CreatePurchaseOrderRequest request) {
-                if (request == null || request.supplierName() == null || request.supplierName().isBlank()
+                if (request == null || request.supplierId() == null
                                 || request.requestedOn() == null || request.expectedDeliveryDate() == null
                                 || request.expectedDeliveryDate().isBefore(request.requestedOn())
                                 || request.sourceWarehouseId() == null || request.destinationWarehouseId() == null
@@ -120,7 +132,8 @@ public class PurchaseController {
                 if (requestedLines.size() != request.lines().size()) {
                         throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Purchase order contains invalid product lines.");
                 }
-                Warehouse source = warehouse(request.sourceWarehouseId(), WarehouseOwnerType.SUPPLIER);
+                Supplier supplier = supplier(request.supplierId());
+                Warehouse source = supplierWarehouse(request.sourceWarehouseId(), supplier.getId());
                 Warehouse destination = warehouse(request.destinationWarehouseId(), WarehouseOwnerType.COMPANY);
                 Map<UUID, com.example.erp.catalog.Product> catalog = requestedLines.stream()
                                 .map(line -> products.findById(line.productId()).orElseThrow(() ->
@@ -132,8 +145,9 @@ public class PurchaseController {
                 int totalQuantity = requestedLines.stream().mapToInt(PurchaseOrderLineRequest::quantity).sum();
                 PurchaseOrder order = orders.findForUpdate(id)
                                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Purchase order was not found."));
-                order.updateRequested(request.supplierName().trim(), request.requestedOn(), request.expectedDeliveryDate(),
-                                totalAmount, source.getId(), destination.getId(), requestedLines.get(0).productId(), totalQuantity);
+                order.updateRequested(supplier.getName(), supplier.getId(), request.requestedOn(),
+                                request.expectedDeliveryDate(), totalAmount, source.getId(), destination.getId(),
+                                requestedLines.get(0).productId(), totalQuantity);
                 lines.deleteAllByPurchaseOrderId(order.getId());
                 lines.saveAll(requestedLines.stream()
                                 .map(line -> PurchaseOrderLine.create(order.getId(), line.productId(), line.quantity(), line.unitPrice()))
@@ -193,10 +207,25 @@ public class PurchaseController {
                 return warehouse;
         }
 
+        private Warehouse supplierWarehouse(UUID id, UUID supplierId) {
+                Warehouse source = warehouse(id, WarehouseOwnerType.SUPPLIER);
+                if (!supplierId.equals(source.getSupplierId())) {
+                        throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                                        "Dodavatelský sklad nepatří vybranému dodavateli.");
+                }
+                return source;
+        }
+
+        private Supplier supplier(UUID id) {
+                return suppliers.findById(id)
+                                .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                                                "Dodavatel nebyl nalezen."));
+        }
+
     public record PurchaseOverview(BigDecimal requestedValue, BigDecimal orderedValue, long requestedCount,
             List<PurchaseOrderResponse> orders) { }
 
-    public record CreatePurchaseOrderRequest(String supplierName, LocalDate requestedOn,
+    public record CreatePurchaseOrderRequest(UUID supplierId, LocalDate requestedOn,
             LocalDate expectedDeliveryDate, UUID sourceWarehouseId, UUID destinationWarehouseId,
             List<PurchaseOrderLineRequest> lines) { }
 
@@ -204,14 +233,17 @@ public class PurchaseController {
 
     public record ReceivePurchaseRequest(Integer quantity) { }
 
-    public record WarehouseResponse(UUID id, String name, WarehouseOwnerType ownerType) { }
+    public record WarehouseResponse(UUID id, String name, WarehouseOwnerType ownerType, UUID supplierId) { }
 
-    public record PurchaseOrderResponse(UUID id, String orderNumber, String supplierName, LocalDate requestedOn,
+    public record SupplierResponse(UUID id, String name) { }
+
+    public record PurchaseOrderResponse(UUID id, String orderNumber, String supplierName, UUID supplierId, LocalDate requestedOn,
                         LocalDate expectedDeliveryDate, BigDecimal totalAmount, PurchaseOrderStatus status,
                         UUID sourceWarehouseId, UUID destinationWarehouseId, UUID productId, Integer quantity, int receivedQuantity,
                         List<PurchaseOrderLineResponse> lines) {
         static PurchaseOrderResponse from(PurchaseOrder order, List<PurchaseOrderLineResponse> lines) {
             return new PurchaseOrderResponse(order.getId(), order.getOrderNumber(), order.getSupplierName(),
+                                        order.getSupplierId(),
                                         order.getRequestedOn(), order.getExpectedDeliveryDate(), order.getTotalAmount(), order.getStatus(),
                                         order.getSourceWarehouseId(), order.getDestinationWarehouseId(), order.getProductId(), order.getQuantity(), order.getReceivedQuantity(), lines);
         }

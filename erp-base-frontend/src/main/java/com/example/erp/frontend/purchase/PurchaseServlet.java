@@ -42,6 +42,8 @@ public class PurchaseServlet extends HttpServlet {
             request.setAttribute("overview", mapper.readValue(backendResponse.body(), PurchaseOverviewView.class));
                 request.setAttribute("warehouses", getList("/api/v1/purchase/warehouses",
                     new TypeReference<List<PurchaseOverviewView.WarehouseView>>() { }));
+                request.setAttribute("suppliers", getList("/api/v1/purchase/suppliers",
+                    new TypeReference<List<PurchaseOverviewView.SupplierView>>() { }));
                 request.setAttribute("products", getList("/api/v1/catalog/products",
                     new TypeReference<List<PurchaseOverviewView.ProductView>>() { }));
         } catch (InterruptedException exception) {
@@ -70,7 +72,7 @@ public class PurchaseServlet extends HttpServlet {
                 lines.add(new PurchaseLineRequest(UUID.fromString(productIds[index]), Integer.parseInt(quantities[index]),
                     new BigDecimal(unitPrices[index])));
             }
-            String body = mapper.writeValueAsString(new CreatePurchaseOrderRequest(request.getParameter("supplierName"),
+            String body = mapper.writeValueAsString(new CreatePurchaseOrderRequest(UUID.fromString(request.getParameter("supplierId")),
                 LocalDate.parse(request.getParameter("requestedOn")), LocalDate.parse(request.getParameter("expectedDeliveryDate")),
                 UUID.fromString(request.getParameter("sourceWarehouseId")),
                 UUID.fromString(request.getParameter("destinationWarehouseId")), lines));
@@ -83,11 +85,13 @@ public class PurchaseServlet extends HttpServlet {
                 ? requestBuilder.PUT(HttpRequest.BodyPublishers.ofString(body)).build()
                 : requestBuilder.POST(HttpRequest.BodyPublishers.ofString(body)).build();
             HttpResponse<Void> backendResponse = client.send(backendRequest, HttpResponse.BodyHandlers.discarding());
-                String message = (update ? backendResponse.statusCode() == HttpServletResponse.SC_OK
-                    : backendResponse.statusCode() == HttpServletResponse.SC_CREATED)
-                ? (update ? "Nákupní objednávka byla upravena." : "Nákupní objednávka byla vytvořena.")
-                : "Objednávku se nepodařilo uložit.";
-            response.sendRedirect("purchase?message=" + URLEncoder.encode(message, StandardCharsets.UTF_8));
+                boolean succeeded = update ? backendResponse.statusCode() == HttpServletResponse.SC_OK
+                    : backendResponse.statusCode() == HttpServletResponse.SC_CREATED;
+                String message = succeeded
+                    ? (update ? "Nákupní objednávka byla upravena." : "Nákupní objednávka byla vytvořena.")
+                    : "Objednávku se nepodařilo uložit.";
+                response.sendRedirect("purchase?" + (succeeded ? "message=" : "error=")
+                    + URLEncoder.encode(message, StandardCharsets.UTF_8));
             return;
             }
             UUID.fromString(id);
@@ -100,10 +104,12 @@ public class PurchaseServlet extends HttpServlet {
                             ? null : Integer.parseInt(request.getParameter("quantity")))))).build()
                     : requestBuilder.method("PATCH", HttpRequest.BodyPublishers.noBody()).build();
             HttpResponse<Void> backendResponse = client.send(backendRequest, HttpResponse.BodyHandlers.discarding());
-                String message = backendResponse.statusCode() == HttpServletResponse.SC_OK
+                boolean succeeded = backendResponse.statusCode() == HttpServletResponse.SC_OK;
+                String message = succeeded
                     ? ("receive".equals(action) ? "Zboží bylo přijato na sklad." : "Nákupní objednávka byla vystavena.")
                     : "Změnu stavu backend odmítl.";
-            response.sendRedirect("purchase?message=" + URLEncoder.encode(message, StandardCharsets.UTF_8));
+                response.sendRedirect("purchase?" + (succeeded ? "message=" : "error=")
+                    + URLEncoder.encode(message, StandardCharsets.UTF_8));
         } catch (IllegalArgumentException exception) {
             response.sendRedirect("purchase?error=" + URLEncoder.encode("Neplatný nákupní požadavek.", StandardCharsets.UTF_8));
         } catch (InterruptedException exception) {
@@ -112,7 +118,7 @@ public class PurchaseServlet extends HttpServlet {
         }
     }
 
-    private record CreatePurchaseOrderRequest(String supplierName, LocalDate requestedOn,
+    private record CreatePurchaseOrderRequest(UUID supplierId, LocalDate requestedOn,
             LocalDate expectedDeliveryDate, UUID sourceWarehouseId,
             UUID destinationWarehouseId, List<PurchaseLineRequest> lines) { }
         private record PurchaseLineRequest(UUID productId, int quantity, BigDecimal unitPrice) { }

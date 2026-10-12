@@ -228,6 +228,16 @@ Diagram neznamená vynucenou posloupnost stavů. Aktuální `changeStatus`
 přiřazuje dodaný stav; neimplementuje schvalovací automat ani automatické
 časové přechody.
 
+### 3.6 Nákup a dodavatelské sklady
+
+Nákupní objednávka odkazuje na dodavatele přes `supplier_id`; název dodavatele
+se ukládá také jako historický snímek. Zdrojový sklad musí mít stejné
+`supplier_id`, což kontroluje backend při vytvoření i úpravě objednávky.
+Migrace doplní vazbu ke starším objednávkám, pokud se jejich uložený název
+shoduje s existujícím dodavatelem. Neznámé starší názvy zůstávají bez vazby;
+pro úpravu takové objednávky je nutné vybrat evidovaného dodavatele a jeho
+sklad.
+
 ## 4. Instalace nástrojů
 
 Příklady předpokládají Linux a Bash. Na Windows použijte WSL2 nebo upravte

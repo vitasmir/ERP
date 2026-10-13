@@ -4,6 +4,12 @@ Tato složka obsahuje architektonické diagramy jednotlivých aplikací ERP.
 Diagramy jsou zapsané v Mermaid, takže se v prostředích s podporou Mermaid
 (například GitHub) zobrazí jako obrázky přímo z Markdownu.
 
+## Produkční připravenost
+
+[Implementační plán produkčního SaaS](../PRODUCTION-IMPLEMENTATION-PLAN.md)
+popisuje JSP variantu bez Kubernetes, se samostatnou instancí a databází
+pro každého zákazníka, včetně priorit, závislostí a akceptačních podmínek.
+
 ## Systémové přehledy
 
 | Dokument | Co popisuje |

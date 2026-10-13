@@ -1,0 +1,59 @@
+services:
+  backend-blue:
+    image: ${ERP_BACKEND_BLUE_IMAGE:?Set ERP_BACKEND_BLUE_IMAGE to the current backend image}
+    restart: unless-stopped
+    environment:
+      DB_URL: ${DB_URL:?Set DB_URL to the existing ERP database}
+      DB_USERNAME: ${DB_USERNAME:?Set DB_USERNAME}
+      DB_PASSWORD: ${DB_PASSWORD:?Set DB_PASSWORD}
+    expose:
+      - "8080"
+    networks:
+      - erp-network
+
+  backend-green:
+    image: ${ERP_BACKEND_GREEN_IMAGE:?Set ERP_BACKEND_GREEN_IMAGE to the candidate backend image}
+    restart: unless-stopped
+    environment:
+      DB_URL: ${DB_URL:?Set DB_URL to the existing ERP database}
+      DB_USERNAME: ${DB_USERNAME:?Set DB_USERNAME}
+      DB_PASSWORD: ${DB_PASSWORD:?Set DB_PASSWORD}
+    expose:
+      - "8080"
+    networks:
+      - erp-network
+
+  frontend-blue:
+    image: ${ERP_FRONTEND_BLUE_IMAGE:?Set ERP_FRONTEND_BLUE_IMAGE to the current frontend image}
+    restart: unless-stopped
+    environment:
+      BACKEND_URL: http://backend-blue:8080
+    expose:
+      - "8080"
+    networks:
+      - erp-network
+
+  frontend-green:
+    image: ${ERP_FRONTEND_GREEN_IMAGE:?Set ERP_FRONTEND_GREEN_IMAGE to the candidate frontend image}
+    restart: unless-stopped
+    environment:
+      BACKEND_URL: http://backend-green:8080
+    expose:
+      - "8080"
+    networks:
+      - erp-network
+
+  proxy:
+    image: nginx:1.29-alpine
+    restart: unless-stopped
+    ports:
+      - "${HTTP_PORT:-8088}:80"
+    volumes:
+      - ./deploy/nginx/active.conf:/etc/nginx/conf.d/default.conf:ro
+    networks:
+      - erp-network
+
+networks:
+  erp-network:
+    external: true
+    name: ${DOCKER_NETWORK:-projects-network}

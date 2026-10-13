@@ -1,107 +1,109 @@
 # Blue-green ERP deployment with Docker Compose
 
-This deployment file is for the repository's JSP WAR frontend
-(`erp-base-frontend`) and Spring Boot backend. It runs both application
-versions against the **same existing PostgreSQL database**. It does not define
-a database service, so it will not silently create a second database or
-volume.
+This configuration uses the real services from `docker-compose-JSP.yml`:
+PostgreSQL, the Spring Boot backend, the JSP WAR frontend, and the remote
+warehouse mock. It builds the green backend and frontend from their repository
+Dockerfiles; blue uses images from the currently deployed release.
 
-## Prerequisites
+## Before deployment
 
-- Build and publish four immutable images: current and candidate backend and
-  frontend. Do not use `latest` for a release.
-- The existing database and this deployment must share the external Docker
-  network. By default the network is `projects-network`, matching
-  `docker-compose-JSP.yml`.
-- Keep the database credentials outside source control. Provide them through
-  the deployment environment or a protected `.env` file.
-- Put the proxy behind the deployment's TLS terminator and route public
-  traffic to its published port (default `8088`). For HTTPS termination
-  before this proxy, configure Tomcat's `RemoteIpValve` to honor forwarded
-  scheme/host headers from the trusted proxy; the JSP frontend validates
-  same-origin form submissions against the servlet request URL.
+- Set `ERP_BACKEND_BLUE_IMAGE` and `ERP_FRONTEND_BLUE_IMAGE` to immutable
+  images of the current release. If the existing deployment has no tagged
+  images, build and publish its current revision before deploying the newer
+  source as green.
+- Set `POSTGRES_USER` and `POSTGRES_PASSWORD` to the credentials for the
+  existing database. `POSTGRES_DB` defaults to `erp`.
+- Keep database credentials outside source control.
+- Keep `DOCKER_NETWORK` set to the existing external network; it defaults to
+  `projects-network`.
+- Use the same Compose project name as the existing `docker-compose-JSP.yml`
+  deployment. This is essential: the Postgres named volume is scoped to the
+  Compose project. When running from the repository root with the default
+  project name, use `-p erp`; if the existing deployment used another `-p`
+  value, reuse that value instead.
+- Route public traffic to the Nginx proxy's published port (default `8088`).
+  For HTTPS termination before this proxy, configure Tomcat's `RemoteIpValve`
+  to honor forwarded scheme/host headers from the trusted proxy; the JSP
+  frontend validates same-origin form submissions against the servlet request
+  URL.
 
-Required variables:
+Optional variables:
 
-```text
-ERP_BACKEND_BLUE_IMAGE
-ERP_BACKEND_GREEN_IMAGE
-ERP_FRONTEND_BLUE_IMAGE
-ERP_FRONTEND_GREEN_IMAGE
-DB_URL
-DB_USERNAME
-DB_PASSWORD
-```
+- `ERP_BACKEND_GREEN_IMAGE` and `ERP_FRONTEND_GREEN_IMAGE` (default to local
+  tags `erp-backend:green` and `erp-jsp:green`).
+- `POSTGRES_DB` (default `erp`), `POSTGRES_HOST_PORT` (default `5434`),
+  `REMOTE_WAREHOUSE_HOST_PORT` (default `8091`), `HTTP_PORT` (default `8088`),
+  and `DOCKER_NETWORK` (default `projects-network`).
 
-Optional variables are `DOCKER_NETWORK` (default `projects-network`) and
-`HTTP_PORT` (default `8088`). For an existing Compose database, `DB_URL` will
-commonly be `jdbc:postgresql://postgres:5432/erp`, provided its network alias
-is `postgres`.
+## Deploy green
 
-## Deploy a candidate
-
-1. Start the existing blue containers and proxy:
+1. Start the persistent database and current blue version, plus the mock and
+   proxy:
 
    ```sh
-   docker compose -f docker-compose-blue-green.yml up -d \
-     backend-blue frontend-blue proxy
+   docker compose -p erp -f docker-compose-blue-green.yml up -d \
+     postgres backend-blue frontend-blue remote-warehouse-mock proxy
    ```
 
-   The Nginx config in `deploy/nginx/active.conf` initially routes to blue.
+   The proxy initially routes to `frontend-blue`. Before directing live
+   ingress to it, verify that the configured blue images and shared database
+   are the expected existing release and data.
 
-2. Pull and start only the green backend:
+2. Build and start the candidate backend. Its startup runs Flyway migrations:
 
    ```sh
-   docker compose -f docker-compose-blue-green.yml pull backend-green
-   docker compose -f docker-compose-blue-green.yml up -d backend-green
-   docker compose -f docker-compose-blue-green.yml logs -f backend-green
+   docker compose -p erp -f docker-compose-blue-green.yml up -d --build backend-green
+   docker compose -p erp -f docker-compose-blue-green.yml logs -f backend-green
    ```
 
-   Spring Boot runs the configured Flyway migrations during backend startup.
-   Wait for startup and migration logs, then verify the backend using your
-   deployment's smoke tests. This repository does not currently expose a
-   dedicated health endpoint.
+   Wait for successful application and migration startup before proceeding.
+   The backend does not currently expose a dedicated health endpoint. Take
+   and verify a database backup before doing this in production.
 
-3. Start green frontend and smoke-test it before changing public traffic:
+3. Build and start the candidate JSP frontend, then smoke-test it without
+   switching public traffic:
 
    ```sh
-   docker compose -f docker-compose-blue-green.yml pull frontend-green
-   docker compose -f docker-compose-blue-green.yml up -d frontend-green
+   docker compose -p erp -f docker-compose-blue-green.yml up -d --build frontend-green
+   docker compose -p erp -f docker-compose-blue-green.yml exec proxy \
+     wget -qO /dev/null http://frontend-green:8080/
    ```
 
-   For example, from the proxy container, request
-   `http://frontend-green:8080/` and verify the relevant application flows.
+   Also verify important application flows against the green backend.
 
-4. Switch traffic. Edit `deploy/nginx/active.conf`, changing
-   `server frontend-blue:8080;` to `server frontend-green:8080;`, then
-   validate and reload Nginx:
+4. Switch traffic by editing `deploy/nginx/active.conf` from
+   `server frontend-blue:8080;` to `server frontend-green:8080;`, then check
+   and reload Nginx:
 
    ```sh
-   docker compose -f docker-compose-blue-green.yml exec proxy nginx -t
-   docker compose -f docker-compose-blue-green.yml exec proxy nginx -s reload
+   docker compose -p erp -f docker-compose-blue-green.yml exec proxy nginx -t
+   docker compose -p erp -f docker-compose-blue-green.yml exec proxy nginx -s reload
    ```
 
-5. Monitor the new release. Keep blue running until the rollback window has
-   passed; then it can be stopped:
+5. Monitor green and keep blue running through the rollback window. Stop blue
+   only after accepting the new release:
 
    ```sh
-   docker compose -f docker-compose-blue-green.yml stop frontend-blue backend-blue
+   docker compose -p erp -f docker-compose-blue-green.yml stop \
+     frontend-blue backend-blue
    ```
 
-## Rollback
+The remote warehouse mock remains a single shared service, like in the JSP
+Compose stack. PostgreSQL remains a single service with the existing named
+volume; do not change the Compose project name or volume when upgrading.
 
-Change the Nginx upstream back to `frontend-blue:3000`, validate with
-`nginx -t`, and reload Nginx. This rolls back application traffic, **not**
-database changes. It is safe only if the new migration remains compatible
-with the previous application version.
+## Rollback and migration compatibility
 
-Flyway is enabled at application startup, so starting green performs the
-migration while blue is still live. Design schema changes using expand/contract:
-first add backward-compatible schema, deploy code that works with both
-schemas, migrate existing data as a compatible step, and only remove old
-schema in a later release after blue is no longer needed. Take and verify a
-database backup before production migrations. Do not rely on an automatic
-Flyway downgrade for rollback.
+To roll back traffic, restore `server frontend-blue:8080;` in
+`deploy/nginx/active.conf`, run `nginx -t`, and reload Nginx. This restores
+application traffic, **not** database changes. It is safe only if the new
+migration leaves the schema compatible with the previous application.
+
+Flyway is enabled at backend startup, so starting green migrates the shared
+database while blue is still running. Use expand/contract migrations: add
+backward-compatible schema first, deploy code that works with both schemas,
+and remove old schema only in a later release after blue is no longer needed.
+Do not rely on an automatic Flyway downgrade for rollback.
 
 The JSP frontend stores login sessions in Tomcat memory, so switching frontend
 slots does not transfer active sessions; users will need to sign in again.

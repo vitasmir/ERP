@@ -331,6 +331,81 @@ kubectl explain deployment.spec --api-version=apps/v1
 ```
 
 Kubernetes has built-in kinds, and extensions can add more kinds through **CRDs**. So another cluster may offer a different set; `kubectl api-resources` reports what *your current cluster* supports.
+#Rozdily
+Hlavní rozdíl je: **shared rozšiřuje stávající ERP, isolated vytváří vlastní kompletní ERP stack.**
+
+| Vlastnost | `shared` | `isolated` |
+|---|---|---|
+| Namespace | Existující `erp-jsp` | Vlastní `erp-jsp-weighted` |
+| Základní nasazení | Vyžaduje již nasazený `kubernetes-JSP.yml` | Obsahuje celý stack |
+| PostgreSQL | Používá stávající databázi a PVC | Vytvoří vlastní PostgreSQL a PVC |
+| Secret | Používá existující `erp-postgres` | Potřebuje vlastní `erp-postgres` v novém namespace |
+| Backend a frontend | **Upraví stávající** Deploymenty a přidá canary verze | Vytvoří nové stabilní i canary Deploymenty |
+| Warehouse mock | Používá stávající | Vytvoří vlastní |
+| Lokální adresa | `http://localhost:8088/login` | `http://localhost:8089/login` |
+| Dopad na původní ERP | Mění jeho škálování a směrování | Původní ERP nemění |
+
+**Obě varianty mají stejné funkce:**
+- HPA pro stabilní i canary backend: **2–5 replik, CPU 70 %**.
+- Vážené směrování **90 % stabilní / 10 % canary**, zvlášť pro frontend a backend.
+- Envoy Gateway a session cookie pro frontend.
+
+**Pozor:** „isolated“ neznamená vlastní databázi pro každý backend. Stabilní a canary backend **uvnitř izolovaného stacku sdílejí jednu databázi** — ta je ale oddělená od databáze původního ERP.
+
+Obě varianty využívají společný Envoy Gateway controller v clusteru, ale každá má vlastní proxy a pravidla. V předchozím kroku jsme nasadili **shared variantu**.
 
 
 
+
+
+
+
+
+
+Kubernetes manifests use **`apiVersion`** to identify an API group and version, and **`kind`** to identify the resource type within that API. The available choices depend on what your cluster supports.
+
+For example:
+
+```yaml
+apiVersion: apps/v1
+kind: Deployment
+```
+
+Here, `apps/v1` is the API version and `Deployment` is the kind.
+
+Common kinds in your cluster include:
+
+| `apiVersion` | Example kinds |
+|---|---|
+| `v1` | `Pod`, `Service`, `Namespace`, `ConfigMap`, `Secret`, `PersistentVolumeClaim` |
+| `apps/v1` | `Deployment`, `StatefulSet`, `DaemonSet`, `ReplicaSet` |
+| `autoscaling/v2` | `HorizontalPodAutoscaler` |
+| `batch/v1` | `Job`, `CronJob` |
+| `networking.k8s.io/v1` | `Ingress`, `NetworkPolicy` |
+| `gateway.networking.k8s.io/v1` | `Gateway`, `GatewayClass`, `HTTPRoute` |
+| `gateway.envoyproxy.io/v1alpha1` | `EnvoyProxy` and Envoy-specific policy resources |
+
+The last two API groups are available because Gateway API and Envoy Gateway are installed in your cluster.
+
+To list **all API versions** your current cluster serves:
+
+```bash
+kubectl api-versions
+```
+
+To list the **kinds/resources** supported by a particular API group:
+
+```bash
+kubectl api-resources --api-group apps
+kubectl api-resources --api-group gateway.networking.k8s.io
+kubectl api-resources --api-group gateway.envoyproxy.io
+```
+
+To check the fields and schema for a specific kind:
+
+```bash
+kubectl explain httproute --api-version=gateway.networking.k8s.io/v1
+kubectl explain deployment.spec --api-version=apps/v1
+```
+
+Kubernetes has built-in kinds, and extensions can add more kinds through **CRDs**. So another cluster may offer a different set; `kubectl api-resources` reports what *your current cluster* supports.

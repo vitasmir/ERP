@@ -60,32 +60,23 @@ ta používá samostatný objem `erp-nextjs3-sessions`. Přehled je v
 k [docker-compose-JSP.yml](docker-compose-JSP.yml); původní Compose zůstává
 beze změny. Obsahuje namespace `erp-jsp`, PostgreSQL 18 jako StatefulSet
 s 10Gi PVC a Deploymenty pro backend, JSP frontend a mock vzdáleného skladu.
-Cluster musí mít výchozí StorageClass s dynamickým provisionerem (kind jej
-standardně poskytuje; v minikube musí být zapnuté addony `storage-provisioner`
-a `default-storageclass`).
+Cluster musí mít výchozí StorageClass s dynamickým provisionerem pro PVC
+databáze a sessions. Níže uvedený postup používá Kubernetes v Docker Desktopu.
 
-### Spuštění v Minikube
+### Spuštění v Docker Desktopu
 
-Z kořene repozitáře spusťte Minikube s Docker driverem a zapněte addony pro
-trvalé úložiště:
+V Docker Desktopu zapněte Kubernetes v **Settings → Kubernetes** a počkejte,
+dokud cluster nebude spuštěný. V terminálu ověřte kontext, uzel a výchozí
+StorageClass. Pokud příkaz `kubectl` není dostupný, nainstalujte Kubernetes
+CLI nebo jej zpřístupněte v PATH.
 
 ```bash
-minikube start --driver=docker
-minikube addons enable storage-provisioner
-minikube addons enable default-storageclass
-minikube status
-minikube kubectl -- get storageclass
+kubectl config use-context docker-desktop
+kubectl get nodes
+kubectl get storageclass
 ```
 
-Potom podle následujícího návodu sestavte obrazy, nahrajte je do Minikube
-příkazem `minikube image load` a nasaďte manifest. Kubernetes příkazy v tomto
-návodu používají `minikube kubectl --`, takže nepotřebujete samostatně
-nainstalovaný `kubectl`. Před nasazením ověřte kontext. Po nasazení lze
-aplikaci otevřít port-forwardem z následujících příkazů. Minikube zůstává
-spuštěný i po zavření terminálu; pro jeho zastavení použijte `minikube stop`.
-Další spuštění proveďte přes `minikube start`.
-
-Kubernetes nesestavuje Docker obrazy. Z kořene repozitáře je nejprve sestavte:
+Před nasazením sestavte obrazy z kořene repozitáře:
 
 ```bash
 docker build -t erp-backend:local ./erp-backend
@@ -93,33 +84,28 @@ docker build -t erp-base-frontend:jsp-local ./erp-base-frontend
 docker build -t erp-remote-warehouse:local ./erp-remote-warehouse
 ```
 
-Nahrajte je do zvoleného lokálního clusteru (pro kind upravte název clusteru,
-pokud není `kind`):
+Manifest používá `imagePullPolicy: Never`, takže Kubernetes obrazy nestahuje
+z registru. Obrazy sestavte pomocí Docker Desktopu a ujistěte se, že jsou
+dostupné i Kubernetes clusteru. Pokud pod skončí s chybou
+`ErrImageNeverPull`, nakonfigurujte sdílené úložiště obrazů Docker Desktopu
+nebo obrazy zpřístupněte přes registr.
+
+Vytvořte namespace a Secret s vlastním heslem. Heslo není součástí manifestu.
+Následující příklad zadání hesla je pro Bash a Secret se vytváří pouze při
+prvním nasazení:
 
 ```bash
-# minikube
-minikube image load erp-backend:local erp-base-frontend:jsp-local erp-remote-warehouse:local
-
-# Nebo kind
-kind load docker-image erp-backend:local erp-base-frontend:jsp-local erp-remote-warehouse:local --name kind
-```
-
-Zkontrolujte cílový kontext a vytvořte namespace a Secret s vlastním heslem.
-Heslo není součástí manifestu. Příklad zadání hesla je pro Bash:
-
-```bash
-minikube kubectl -- config current-context
-minikube kubectl -- create namespace erp-jsp --dry-run=client -o yaml | minikube kubectl -- apply -f -
+kubectl create namespace erp-jsp --dry-run=client -o yaml | kubectl apply -f -
 read -r -s -p "PostgreSQL password: " POSTGRES_PASSWORD
 echo
-minikube kubectl -- -n erp-jsp create secret generic erp-postgres \
+kubectl -n erp-jsp create secret generic erp-postgres \
   --from-literal=POSTGRES_PASSWORD="$POSTGRES_PASSWORD"
 unset POSTGRES_PASSWORD
-minikube kubectl -- apply -f kubernetes-JSP.yml
-minikube kubectl -- -n erp-jsp rollout status statefulset/postgres --timeout=300s
-minikube kubectl -- -n erp-jsp rollout status deployment/backend --timeout=300s
-minikube kubectl -- -n erp-jsp rollout status deployment/frontend --timeout=300s
-minikube kubectl -- -n erp-jsp rollout status deployment/remote-warehouse-mock --timeout=300s
+kubectl apply -f kubernetes-JSP.yml
+kubectl -n erp-jsp rollout status statefulset/postgres --timeout=300s
+kubectl -n erp-jsp rollout status deployment/backend --timeout=300s
+kubectl -n erp-jsp rollout status deployment/frontend --timeout=300s
+kubectl -n erp-jsp rollout status deployment/remote-warehouse-mock --timeout=300s
 ```
 
 Secret vytvářejte jen při prvním nasazení. Změna Secretu sama nezmění heslo
@@ -132,10 +118,10 @@ Každý port-forward spusťte v samostatném terminálu; používají stejné lo
 porty jako JSP Compose:
 
 ```bash
-minikube kubectl -- -n erp-jsp port-forward service/frontend 4201:8080
-minikube kubectl -- -n erp-jsp port-forward service/backend 8080:8080
-minikube kubectl -- -n erp-jsp port-forward service/remote-warehouse-mock 8091:8080
-minikube kubectl -- -n erp-jsp port-forward service/postgres 5434:5432
+kubectl -n erp-jsp port-forward service/frontend 4201:8080
+kubectl -n erp-jsp port-forward service/backend 8080:8080
+kubectl -n erp-jsp port-forward service/remote-warehouse-mock 8091:8080
+kubectl -n erp-jsp port-forward service/postgres 5434:5432
 ```
 
 Frontend je na `http://localhost:4201`, API na `http://localhost:8080`
@@ -151,21 +137,21 @@ kontejnery, takže nepřebírá Compose limit pěti restartů backendu.
 Frontend má jednu repliku a strategii `Recreate`, protože Tomcat sessions
 nejsou sdílené; restart frontendu ukončí stávající přihlášení.
 Lokální aplikační obrazy mají `imagePullPolicy: Never`. Po novém sestavení
-je znovu nahrajte do clusteru a spusťte:
+zajistěte jejich dostupnost v clusteru a spusťte:
 
 ```bash
-minikube kubectl -- -n erp-jsp rollout restart deployment/backend deployment/frontend deployment/remote-warehouse-mock
+kubectl -n erp-jsp rollout restart deployment/backend deployment/frontend deployment/remote-warehouse-mock
 ```
 
 Zastavení aplikací se zachováním databázového PVC a Secretu:
 
 ```bash
-minikube kubectl -- -n erp-jsp delete deployment backend frontend remote-warehouse-mock
-minikube kubectl -- -n erp-jsp delete statefulset postgres
-minikube kubectl -- -n erp-jsp delete service postgres backend frontend remote-warehouse-mock
+kubectl -n erp-jsp delete deployment backend frontend remote-warehouse-mock
+kubectl -n erp-jsp delete statefulset postgres
+kubectl -n erp-jsp delete service postgres backend frontend remote-warehouse-mock
 ```
 
-Opětovné `minikube kubectl -- apply -f kubernetes-JSP.yml` použije zachovaný PVC.
+Opětovné `kubectl apply -f kubernetes-JSP.yml` použije zachovaný PVC.
 **Odstranění namespace `erp-jsp` odstraní také PVC a může nenávratně smazat
 databázová data.** Manifest je pro lokální vývoj, nikoli produkční nasazení
 (neobsahuje Ingress/TLS, zálohování ani produkční omezení prostředků).
@@ -184,7 +170,9 @@ a data; sdílené názvy Services se mezi namespaces nekříží.
 | Next.js / Twig.js | [kubernetes-NEXTJS2.yml](kubernetes-NEXTJS2.yml) | `erp-nextjs2` | port 3000 |
 | Next.js / React TSX | [kubernetes-NEXTJS3.yml](kubernetes-NEXTJS3.yml) | `erp-nextjs3` | port 3000 |
 
-Z kořene repozitáře sestavte obrazy a nahrajte je do běžícího Minikube:
+Z kořene repozitáře sestavte potřebné obrazy pomocí Docker Desktopu. Obrazy
+musí být dostupné Kubernetes clusteru; viz poznámku o `imagePullPolicy: Never`
+v JSP návodu výše.
 
 ```bash
 docker build -t erp-backend:local ./erp-backend
@@ -194,31 +182,28 @@ docker build -t erp-base-php:local ./erp-base-php
 docker build -t erp-base-nextjs:local ./erp-base-nextjs
 docker build -t erp-base-nextjs2:local ./erp-base-nextjs2
 docker build -t erp-base-nextjs3:local ./erp-base-nextjs3
-minikube image load erp-backend:local erp-remote-warehouse:local \
-  erp-base-frontend:jsp-local erp-base-php:local erp-base-nextjs:local \
-  erp-base-nextjs2:local erp-base-nextjs3:local
 ```
 
 Vyberte **jeden** manifest a odpovídající namespace z tabulky. Příklad pro PHP:
 
 ```bash
-minikube kubectl -- create namespace erp-php --dry-run=client -o yaml | minikube kubectl -- apply -f -
+kubectl create namespace erp-php --dry-run=client -o yaml | kubectl apply -f -
 read -r -s -p "PostgreSQL password: " POSTGRES_PASSWORD
 echo
-minikube kubectl -- -n erp-php create secret generic erp-postgres \
+kubectl -n erp-php create secret generic erp-postgres \
   --from-literal=POSTGRES_PASSWORD="$POSTGRES_PASSWORD"
 unset POSTGRES_PASSWORD
 read -r -s -p "Symfony APP_SECRET: " APP_SECRET
 echo
-minikube kubectl -- -n erp-php create secret generic erp-php-frontend \
+kubectl -n erp-php create secret generic erp-php-frontend \
   --from-literal=APP_SECRET="$APP_SECRET"
 unset APP_SECRET
-minikube kubectl -- apply --dry-run=client --validate=strict -f kubernetes-PHP.yml
-minikube kubectl -- apply -f kubernetes-PHP.yml
-minikube kubectl -- -n erp-php rollout status statefulset/postgres --timeout=300s
-minikube kubectl -- -n erp-php rollout status deployment/backend --timeout=300s
-minikube kubectl -- -n erp-php rollout status deployment/frontend --timeout=300s
-minikube kubectl -- -n erp-php rollout status deployment/remote-warehouse-mock --timeout=300s
+kubectl apply --dry-run=client --validate=strict -f kubernetes-PHP.yml
+kubectl apply -f kubernetes-PHP.yml
+kubectl -n erp-php rollout status statefulset/postgres --timeout=300s
+kubectl -n erp-php rollout status deployment/backend --timeout=300s
+kubectl -n erp-php rollout status deployment/frontend --timeout=300s
+kubectl -n erp-php rollout status deployment/remote-warehouse-mock --timeout=300s
 ```
 
 U jiné varianty nahraďte namespace, manifest i secret příkaz podle tabulky.
@@ -228,7 +213,7 @@ a Next.js manifesty; ty nepotřebují Secret `erp-php-frontend`. Každý manifes
 lze validovat ještě před nasazením:
 
 ```bash
-minikube kubectl -- apply --dry-run=client --validate=strict -f kubernetes-NEXTJS2.yml
+kubectl apply --dry-run=client --validate=strict -f kubernetes-NEXTJS2.yml
 ```
 
 Frontendy PHP a Next.js ukládají sessions do vlastního 1Gi PVC. JSP používá
@@ -239,14 +224,14 @@ PostgreSQL síťový port je ve všech manifesty 5432; 5434 se používá pouze
 jako lokální port-forward. Pro každý port-forward otevřete zvláštní terminál:
 
 ```bash
-minikube kubectl -- -n erp-php port-forward service/frontend 4201:80
-minikube kubectl -- -n erp-php port-forward service/backend 8080:8080
-minikube kubectl -- -n erp-php port-forward service/postgres 5434:5432
+kubectl -n erp-php port-forward service/frontend 4201:80
+kubectl -n erp-php port-forward service/backend 8080:8080
+kubectl -n erp-php port-forward service/postgres 5434:5432
 ```
 
 Pro jiný namespace změňte `erp-php` a port frontendu podle tabulky.
-V Minikube lze host port 4201 nebo 3000 použít jen pro jeden aktivní
-port-forward. Odstranění namespace odstraní jeho PVC a může nenávratně
+Host port 4201 nebo 3000 lze použít jen pro jeden aktivní port-forward.
+Odstranění namespace odstraní jeho PVC a může nenávratně
 smazat databázi i uložené sessions. Původní JSP návod používá image tagy
 `erp-backend:local` a `erp-remote-warehouse:local`.
 

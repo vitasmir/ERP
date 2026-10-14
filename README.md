@@ -159,10 +159,10 @@ databázová data.** Manifest je pro lokální vývoj, nikoli produkční nasaze
 ### Další kompletní Kubernetes varianty
 
 Pro škálování backendu a vážené canary směrování JSP frontendu i backendu přes
-NGINX Ingress Controller jsou k dispozici
+Envoy Gateway (Gateway API) jsou k dispozici
 [návod a dvě varianty manifestů](docs/KUBERNETES-WEIGHTED-CANARY.md): doplněk
 ke stávajícímu ERP stacku nebo samostatný stack s vlastní databází. Vážený
-provoz vyžaduje NGINX Ingress Controller a HPA navíc `metrics-server`.
+provoz vyžaduje Envoy Gateway a HPA navíc `metrics-server`.
 
 Každý manifest obsahuje vlastní namespace, frontend, Java backend, PostgreSQL
 18 se samostatným PVC a warehouse mock. Varianta tak používá vlastní databázi
@@ -284,7 +284,53 @@ Platba kartou je nadále pouze ERP demonstrace, nikoli skutečná platební brá
 Současný backend při checkoutu účtuje cenu zboží bez poplatku za doručení.
 
 
+Kubernetes manifests use **`apiVersion`** to identify an API group and version, and **`kind`** to identify the resource type within that API. The available choices depend on what your cluster supports.
 
+For example:
+
+```yaml
+apiVersion: apps/v1
+kind: Deployment
+```
+
+Here, `apps/v1` is the API version and `Deployment` is the kind.
+
+Common kinds in your cluster include:
+
+| `apiVersion` | Example kinds |
+|---|---|
+| `v1` | `Pod`, `Service`, `Namespace`, `ConfigMap`, `Secret`, `PersistentVolumeClaim` |
+| `apps/v1` | `Deployment`, `StatefulSet`, `DaemonSet`, `ReplicaSet` |
+| `autoscaling/v2` | `HorizontalPodAutoscaler` |
+| `batch/v1` | `Job`, `CronJob` |
+| `networking.k8s.io/v1` | `Ingress`, `NetworkPolicy` |
+| `gateway.networking.k8s.io/v1` | `Gateway`, `GatewayClass`, `HTTPRoute` |
+| `gateway.envoyproxy.io/v1alpha1` | `EnvoyProxy` and Envoy-specific policy resources |
+
+The last two API groups are available because Gateway API and Envoy Gateway are installed in your cluster.
+
+To list **all API versions** your current cluster serves:
+
+```bash
+kubectl api-versions
+```
+
+To list the **kinds/resources** supported by a particular API group:
+
+```bash
+kubectl api-resources --api-group apps
+kubectl api-resources --api-group gateway.networking.k8s.io
+kubectl api-resources --api-group gateway.envoyproxy.io
+```
+
+To check the fields and schema for a specific kind:
+
+```bash
+kubectl explain httproute --api-version=gateway.networking.k8s.io/v1
+kubectl explain deployment.spec --api-version=apps/v1
+```
+
+Kubernetes has built-in kinds, and extensions can add more kinds through **CRDs**. So another cluster may offer a different set; `kubectl api-resources` reports what *your current cluster* supports.
 
 
 

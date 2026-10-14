@@ -88,10 +88,10 @@ metadata:
   namespace: erp-jsp
 spec:
   type: ExternalName
-  externalName: ingress-nginx-controller.ingress-nginx.svc.cluster.local
+  externalName: erp-jsp-proxy.envoy-gateway-system.svc.cluster.local
   ports:
     - name: http
-      port: 80
+      port: 8088
       protocol: TCP
 ---
 apiVersion: v1
@@ -190,46 +190,61 @@ spec:
           type: Utilization
           averageUtilization: 70
 ---
-apiVersion: networking.k8s.io/v1
-kind: Ingress
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: EnvoyProxy
+metadata:
+  name: erp-proxy
+  namespace: erp-jsp
+spec:
+  provider:
+    type: Kubernetes
+    kubernetes:
+      envoyService:
+        name: erp-jsp-proxy
+        type: LoadBalancer
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: erp
+  namespace: erp-jsp
+spec:
+  gatewayClassName: erp-envoy
+  infrastructure:
+    parametersRef:
+      group: gateway.envoyproxy.io
+      kind: EnvoyProxy
+      name: erp-proxy
+  listeners:
+    - name: http
+      protocol: HTTP
+      port: 8088
+      allowedRoutes:
+        namespaces:
+          from: Same
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
 metadata:
   name: backend-api
   namespace: erp-jsp
 spec:
-  ingressClassName: nginx
+  parentRefs:
+    - name: erp
+  hostnames:
+    - backend-router.erp-jsp.svc.cluster.local
   rules:
-    - host: backend-router
-      http:
-        paths:
-          - path: /api
-            pathType: Prefix
-            backend:
-              service:
-                name: backend
-                port:
-                  number: 8080
----
-apiVersion: networking.k8s.io/v1
-kind: Ingress
-metadata:
-  name: backend-api-canary
-  namespace: erp-jsp
-  annotations:
-    nginx.ingress.kubernetes.io/canary: "true"
-    nginx.ingress.kubernetes.io/canary-weight: "10"
-spec:
-  ingressClassName: nginx
-  rules:
-    - host: backend-router
-      http:
-        paths:
-          - path: /api
-            pathType: Prefix
-            backend:
-              service:
-                name: backend-canary
-                port:
-                  number: 8080
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /api
+      backendRefs:
+        - name: backend
+          port: 8080
+          weight: 90
+        - name: backend-canary
+          port: 8080
+          weight: 10
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -256,7 +271,7 @@ spec:
             - bash
             - -c
             - |
-              until (echo > /dev/tcp/backend-router/80); do
+              until (echo > /dev/tcp/backend-router.erp-jsp.svc.cluster.local/8088); do
                 echo "Waiting for backend router"
                 sleep 5
               done
@@ -269,7 +284,7 @@ spec:
               containerPort: 8080
           env:
             - name: BACKEND_URL
-              value: http://backend-router
+              value: http://backend-router.erp-jsp.svc.cluster.local:8088
           startupProbe:
             tcpSocket:
               port: http
@@ -307,7 +322,7 @@ spec:
             - bash
             - -c
             - |
-              until (echo > /dev/tcp/backend-router/80); do
+              until (echo > /dev/tcp/backend-router.erp-jsp.svc.cluster.local/8088); do
                 echo "Waiting for backend router"
                 sleep 5
               done
@@ -320,7 +335,7 @@ spec:
               containerPort: 8080
           env:
             - name: BACKEND_URL
-              value: http://backend-router
+              value: http://backend-router.erp-jsp.svc.cluster.local:8088
           startupProbe:
             tcpSocket:
               port: http
@@ -348,46 +363,31 @@ spec:
       port: 8080
       targetPort: http
 ---
-apiVersion: networking.k8s.io/v1
-kind: Ingress
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
 metadata:
   name: frontend
   namespace: erp-jsp
-  annotations:
-    nginx.ingress.kubernetes.io/affinity: "cookie"
 spec:
-  ingressClassName: nginx
+  parentRefs:
+    - name: erp
+  hostnames:
+    - erp-jsp.local
+    - localhost
   rules:
-    - host: erp-jsp.local
-      http:
-        paths:
-          - path: /
-            pathType: Prefix
-            backend:
-              service:
-                name: frontend
-                port:
-                  number: 8080
----
-apiVersion: networking.k8s.io/v1
-kind: Ingress
-metadata:
-  name: frontend-canary
-  namespace: erp-jsp
-  annotations:
-    nginx.ingress.kubernetes.io/canary: "true"
-    nginx.ingress.kubernetes.io/canary-weight: "10"
-    nginx.ingress.kubernetes.io/affinity-canary-behavior: "sticky"
-spec:
-  ingressClassName: nginx
-  rules:
-    - host: erp-jsp.local
-      http:
-        paths:
-          - path: /
-            pathType: Prefix
-            backend:
-              service:
-                name: frontend-canary
-                port:
-                  number: 8080
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /
+      backendRefs:
+        - name: frontend
+          port: 8080
+          weight: 90
+        - name: frontend-canary
+          port: 8080
+          weight: 10
+      sessionPersistence:
+        sessionName: ERP_GATEWAY_SESSION
+        type: Cookie
+        cookieConfig:
+          lifetimeType: Session

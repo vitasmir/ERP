@@ -158,10 +158,11 @@ databázová data.** Manifest je pro lokální vývoj, nikoli produkční nasaze
 
 ### Další kompletní Kubernetes varianty
 
-Pro vážené canary směrování JSP frontendu přes NGINX Ingress Controller jsou
-k dispozici [návod a dvě varianty manifestů](docs/KUBERNETES-WEIGHTED-CANARY.md):
-doplněk ke stávajícímu ERP stacku nebo samostatný stack s vlastní databází.
-Vážený provoz vyžaduje samostatně nainstalovaný NGINX Ingress Controller.
+Pro škálování backendu a vážené canary směrování JSP frontendu i backendu přes
+NGINX Ingress Controller jsou k dispozici
+[návod a dvě varianty manifestů](docs/KUBERNETES-WEIGHTED-CANARY.md): doplněk
+ke stávajícímu ERP stacku nebo samostatný stack s vlastní databází. Vážený
+provoz vyžaduje NGINX Ingress Controller a HPA navíc `metrics-server`.
 
 Každý manifest obsahuje vlastní namespace, frontend, Java backend, PostgreSQL
 18 se samostatným PVC a warehouse mock. Varianta tak používá vlastní databázi

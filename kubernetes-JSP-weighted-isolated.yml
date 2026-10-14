@@ -99,7 +99,7 @@ metadata:
   name: backend
   namespace: erp-jsp-weighted
 spec:
-  replicas: 1
+  replicas: 2
   selector:
     matchLabels:
       app: backend
@@ -136,6 +136,12 @@ spec:
                 secretKeyRef:
                   name: erp-postgres
                   key: POSTGRES_PASSWORD
+          resources:
+            requests:
+              cpu: 250m
+              memory: 512Mi
+            limits:
+              memory: 1Gi
           startupProbe:
             tcpSocket:
               port: http
@@ -149,6 +155,176 @@ spec:
             tcpSocket:
               port: http
             periodSeconds: 10
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: backend
+  namespace: erp-jsp-weighted
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: backend
+  minReplicas: 2
+  maxReplicas: 5
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 70
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: backend-router
+  namespace: erp-jsp-weighted
+spec:
+  type: ExternalName
+  externalName: ingress-nginx-controller.ingress-nginx.svc.cluster.local
+  ports:
+    - name: http
+      port: 80
+      protocol: TCP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: backend-canary
+  namespace: erp-jsp-weighted
+spec:
+  selector:
+    app: backend-canary
+  ports:
+    - name: http
+      port: 8080
+      targetPort: http
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: backend-canary
+  namespace: erp-jsp-weighted
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: backend-canary
+  template:
+    metadata:
+      labels:
+        app: backend-canary
+    spec:
+      initContainers:
+        - name: wait-for-postgres
+          image: postgres:18
+          command:
+            - sh
+            - -c
+            - |
+              until pg_isready -h postgres -p 5432 -U erp -d erp; do
+                echo "Waiting for PostgreSQL"
+                sleep 5
+              done
+      containers:
+        - name: backend
+          image: erp-backend:canary
+          imagePullPolicy: Never
+          ports:
+            - name: http
+              containerPort: 8080
+          env:
+            - name: DB_URL
+              value: jdbc:postgresql://postgres:5432/erp
+            - name: DB_USERNAME
+              value: erp
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: erp-postgres
+                  key: POSTGRES_PASSWORD
+          resources:
+            requests:
+              cpu: 250m
+              memory: 512Mi
+            limits:
+              memory: 1Gi
+          startupProbe:
+            tcpSocket:
+              port: http
+            periodSeconds: 5
+            failureThreshold: 60
+          readinessProbe:
+            tcpSocket:
+              port: http
+            periodSeconds: 5
+          livenessProbe:
+            tcpSocket:
+              port: http
+            periodSeconds: 10
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: backend-canary
+  namespace: erp-jsp-weighted
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: backend-canary
+  minReplicas: 2
+  maxReplicas: 5
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 70
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: backend-api
+  namespace: erp-jsp-weighted
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: backend-router
+      http:
+        paths:
+          - path: /api
+            pathType: Prefix
+            backend:
+              service:
+                name: backend
+                port:
+                  number: 8080
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: backend-api-canary
+  namespace: erp-jsp-weighted
+  annotations:
+    nginx.ingress.kubernetes.io/canary: "true"
+    nginx.ingress.kubernetes.io/canary-weight: "10"
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: backend-router
+      http:
+        paths:
+          - path: /api
+            pathType: Prefix
+            backend:
+              service:
+                name: backend-canary
+                port:
+                  number: 8080
 ---
 apiVersion: v1
 kind: Service
@@ -188,8 +364,8 @@ spec:
             - bash
             - -c
             - |
-              until (echo > /dev/tcp/backend/8080); do
-                echo "Waiting for backend"
+              until (echo > /dev/tcp/backend-router/80); do
+                echo "Waiting for backend router"
                 sleep 5
               done
       containers:
@@ -201,7 +377,7 @@ spec:
               containerPort: 8080
           env:
             - name: BACKEND_URL
-              value: http://backend:8080
+              value: http://backend-router
           startupProbe:
             tcpSocket:
               port: http
@@ -291,8 +467,8 @@ spec:
             - bash
             - -c
             - |
-              until (echo > /dev/tcp/backend/8080); do
-                echo "Waiting for backend"
+              until (echo > /dev/tcp/backend-router/80); do
+                echo "Waiting for backend router"
                 sleep 5
               done
       containers:
@@ -304,7 +480,7 @@ spec:
               containerPort: 8080
           env:
             - name: BACKEND_URL
-              value: http://backend:8080
+              value: http://backend-router
           startupProbe:
             tcpSocket:
               port: http

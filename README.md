@@ -158,6 +158,11 @@ databázová data.** Manifest je pro lokální vývoj, nikoli produkční nasaze
 
 ### Další kompletní Kubernetes varianty
 
+Pro vážené canary směrování JSP frontendu přes NGINX Ingress Controller jsou
+k dispozici [návod a dvě varianty manifestů](docs/KUBERNETES-WEIGHTED-CANARY.md):
+doplněk ke stávajícímu ERP stacku nebo samostatný stack s vlastní databází.
+Vážený provoz vyžaduje samostatně nainstalovaný NGINX Ingress Controller.
+
 Každý manifest obsahuje vlastní namespace, frontend, Java backend, PostgreSQL
 18 se samostatným PVC a warehouse mock. Varianta tak používá vlastní databázi
 a data; sdílené názvy Services se mezi namespaces nekříží.
@@ -165,6 +170,7 @@ a data; sdílené názvy Services se mezi namespaces nekříží.
 | Webový projekt | Manifest | Namespace | Frontend |
 | --- | --- | --- | --- |
 | JSP / Tomcat | [kubernetes-JSP.yml](kubernetes-JSP.yml) | `erp-jsp` | port 8080 |
+| JSP / Tomcat, weighted canary | [kubernetes-JSP-weighted-isolated.yml](kubernetes-JSP-weighted-isolated.yml) | `erp-jsp-weighted` | port 8080 + 10% canary |
 | PHP / Symfony | [kubernetes-PHP.yml](kubernetes-PHP.yml) | `erp-php` | port 80 |
 | Next.js / React | [kubernetes-NEXTJS.yml](kubernetes-NEXTJS.yml) | `erp-nextjs` | port 3000 |
 | Next.js / Twig.js | [kubernetes-NEXTJS2.yml](kubernetes-NEXTJS2.yml) | `erp-nextjs2` | port 3000 |

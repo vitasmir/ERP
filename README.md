@@ -409,3 +409,102 @@ kubectl explain deployment.spec --api-version=apps/v1
 ```
 
 Kubernetes has built-in kinds, and extensions can add more kinds through **CRDs**. So another cluster may offer a different set; `kubectl api-resources` reports what *your current cluster* supports.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+#Zmeny za behu
+Za běhu změň váhy v **HTTPRoute** pomocí `kubectl patch`. Envoy změnu převezme automaticky — **není nutné restartovat aplikaci**.
+
+### Backend: 75 % stable / 25 % canary
+
+Pro sdílené nasazení v `erp-jsp`:
+
+```bash
+kubectl -n erp-jsp patch httproute backend-api --type=json \
+  -p='[
+    {"op":"replace","path":"/spec/rules/0/backendRefs/0/weight","value":75},
+    {"op":"replace","path":"/spec/rules/0/backendRefs/1/weight","value":25}
+  ]'
+```
+
+Ověření aktuálních vah:
+
+```bash
+kubectl -n erp-jsp get httproute backend-api \
+  -o jsonpath='{range .spec.rules[0].backendRefs[*]}{.name}{": "}{.weight}{"\n"}{end}'
+```
+
+### Frontend
+
+Použij stejný patch, jen místo `backend-api` zadej `frontend`:
+
+```bash
+kubectl -n erp-jsp patch httproute frontend --type=json \
+  -p='[
+    {"op":"replace","path":"/spec/rules/0/backendRefs/0/weight","value":75},
+    {"op":"replace","path":"/spec/rules/0/backendRefs/1/weight","value":25}
+  ]'
+```
+
+Frontend má session affinity: **již připojení klienti s cookie mohou zůstat na své dosavadní verzi**, nové váhy se projeví především u nových klientů.
+
+- **Vypnout canary provoz:** stable `100`, canary `0`.
+- **Přesměrovat vše na canary:** stable `0`, canary `100`.
+- Pro izolovaný stack změň namespace na `erp-jsp-weighted`.
+
+**Změnu zapiš také do používaného manifestu** — `shared` nebo `isolated`. Jinak další `kubectl apply` obnoví váhy uložené v souboru.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Myslím **YAML soubor, ze kterého nasazuješ ERP**. Pro nyní běžící sdílenou variantu je to `kubernetes-JSP-weighted-shared.yml`.
+
+Najdi v něm `kind: HTTPRoute` s `name: backend-api`. V jeho `backendRefs` změň například:
+
+```yaml
+backendRefs:
+  - name: backend
+    port: 8080
+    weight: 75
+  - name: backend-canary
+    port: 8080
+    weight: 25
+```
+
+Pro frontend jsou obdobné váhy v `HTTPRoute` s `name: frontend`.
+
+**`kubectl patch` mění nastavení v běžícím clusteru, ale neupravuje YAML soubor na disku.** Proto je potřeba uložit stejné váhy i do souboru, aby je další `kubectl apply -f ...` nepřepsal původními hodnotami.
+
+Pro izolovanou variantu by to byl `kubernetes-JSP-weighted-isolated.yml`.

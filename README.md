@@ -508,3 +508,31 @@ Pro frontend jsou obdobné váhy v `HTTPRoute` s `name: frontend`.
 **`kubectl patch` mění nastavení v běžícím clusteru, ale neupravuje YAML soubor na disku.** Proto je potřeba uložit stejné váhy i do souboru, aby je další `kubectl apply -f ...` nepřepsal původními hodnotami.
 
 Pro izolovanou variantu by to byl `kubernetes-JSP-weighted-isolated.yml`.
+
+
+
+
+
+
+
+
+
+Myslím **YAML soubor, ze kterého nasazuješ ERP**. Pro nyní běžící sdílenou variantu je to `kubernetes-JSP-weighted-shared.yml`.
+
+Najdi v něm `kind: HTTPRoute` s `name: backend-api`. V jeho `backendRefs` změň například:
+
+```yaml
+backendRefs:
+  - name: backend
+    port: 8080
+    weight: 75
+  - name: backend-canary
+    port: 8080
+    weight: 25
+```
+
+Pro frontend jsou obdobné váhy v `HTTPRoute` s `name: frontend`.
+
+**`kubectl patch` mění nastavení v běžícím clusteru, ale neupravuje YAML soubor na disku.** Proto je potřeba uložit stejné váhy i do souboru, aby je další `kubectl apply -f ...` nepřepsal původními hodnotami.
+
+Pro izolovanou variantu by to byl `kubernetes-JSP-weighted-isolated.yml`.

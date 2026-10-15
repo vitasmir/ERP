@@ -432,12 +432,12 @@ Kubernetes has built-in kinds, and extensions can add more kinds through **CRDs*
 #Zmeny za behu
 Za běhu změň váhy v **HTTPRoute** pomocí `kubectl patch`. Envoy změnu převezme automaticky — **není nutné restartovat aplikaci**.
 
-### Backend: 75 % stable / 25 % canary
+### Dvojice frontend/backend: 75 % stable / 25 % canary
 
 Pro sdílené nasazení v `erp-jsp`:
 
 ```bash
-kubectl -n erp-jsp patch httproute backend-api --type=json \
+kubectl -n erp-jsp patch httproute frontend --type=json \
   -p='[
     {"op":"replace","path":"/spec/rules/0/backendRefs/0/weight","value":75},
     {"op":"replace","path":"/spec/rules/0/backendRefs/1/weight","value":25}
@@ -447,13 +447,14 @@ kubectl -n erp-jsp patch httproute backend-api --type=json \
 Ověření aktuálních vah:
 
 ```bash
-kubectl -n erp-jsp get httproute backend-api \
+kubectl -n erp-jsp get httproute frontend \
   -o jsonpath='{range .spec.rules[0].backendRefs[*]}{.name}{": "}{.weight}{"\n"}{end}'
 ```
 
 ### Frontend
 
-Použij stejný patch, jen místo `backend-api` zadej `frontend`:
+Váhy se nastavují na vstupní route `frontend`. Stabilní frontend volá pouze
+Service `backend`, canary frontend pouze Service `backend-canary`:
 
 ```bash
 kubectl -n erp-jsp patch httproute frontend --type=json \
@@ -491,19 +492,20 @@ Frontend má session affinity: **již připojení klienti s cookie mohou zůstat
 
 Myslím **YAML soubor, ze kterého nasazuješ ERP**. Pro nyní běžící sdílenou variantu je to `kubernetes-JSP-weighted-shared.yml`.
 
-Najdi v něm `kind: HTTPRoute` s `name: backend-api`. V jeho `backendRefs` změň například:
+Najdi v něm `kind: HTTPRoute` s `name: frontend`. V jeho `backendRefs` změň například:
 
 ```yaml
 backendRefs:
-  - name: backend
+  - name: frontend
     port: 8080
     weight: 75
-  - name: backend-canary
+  - name: frontend-canary
     port: 8080
     weight: 25
 ```
 
-Pro frontend jsou obdobné váhy v `HTTPRoute` s `name: frontend`.
+Tato váha vybírá dvojici: stable frontend volá stable backend, canary frontend
+volá canary backend.
 
 **`kubectl patch` mění nastavení v běžícím clusteru, ale neupravuje YAML soubor na disku.** Proto je potřeba uložit stejné váhy i do souboru, aby je další `kubectl apply -f ...` nepřepsal původními hodnotami.
 
@@ -519,19 +521,20 @@ Pro izolovanou variantu by to byl `kubernetes-JSP-weighted-isolated.yml`.
 
 Myslím **YAML soubor, ze kterého nasazuješ ERP**. Pro nyní běžící sdílenou variantu je to `kubernetes-JSP-weighted-shared.yml`.
 
-Najdi v něm `kind: HTTPRoute` s `name: backend-api`. V jeho `backendRefs` změň například:
+Najdi v něm `kind: HTTPRoute` s `name: frontend`. V jeho `backendRefs` změň například:
 
 ```yaml
 backendRefs:
-  - name: backend
+  - name: frontend
     port: 8080
     weight: 75
-  - name: backend-canary
+  - name: frontend-canary
     port: 8080
     weight: 25
 ```
 
-Pro frontend jsou obdobné váhy v `HTTPRoute` s `name: frontend`.
+Tato váha vybírá dvojici: stable frontend volá stable backend, canary frontend
+volá canary backend.
 
 **`kubectl patch` mění nastavení v běžícím clusteru, ale neupravuje YAML soubor na disku.** Proto je potřeba uložit stejné váhy i do souboru, aby je další `kubectl apply -f ...` nepřepsal původními hodnotami.
 
@@ -602,17 +605,122 @@ O rozdělení provozu rozhodují váhy v `HTTPRoute`, **ne tag `canary`**.
 Například tento příkaz upraví váhy v běžící HTTPRoute:
 
 ```bash
-kubectl -n erp-jsp patch httproute backend-api --type=json \
+kubectl -n erp-jsp patch httproute frontend --type=json \
   -p='[
     {"op":"replace","path":"/spec/rules/0/backendRefs/0/weight","value":75},
     {"op":"replace","path":"/spec/rules/0/backendRefs/1/weight","value":25}
   ]'
 ```
 
-Tím nastaví 75 % provozu na stabilní backend a 25 % na canary. Změní se **zdroj v Kubernetes API**; YAML soubor na disku se tím nezmění. Prohlédnout aktuální nastavení můžeš takto:
+Tím nastaví 75 % nových klientů na stabilní dvojici frontend/backend a 25 %
+na canary dvojici. Existující sessions mohou zůstat na své verzi.
+Změní se **zdroj v Kubernetes API**; YAML soubor na disku se tím nezmění.
+Prohlédnout aktuální nastavení můžeš takto:
 
 ```bash
-kubectl -n erp-jsp get httproute backend-api -o yaml
+kubectl -n erp-jsp get httproute frontend -o yaml
 ```
 
 `--type=json` určuje, že patch používá JSON Patch operace, například `replace` pro změnu existující hodnoty.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+#prepis konfigurace tak, at z canary frontendu chodi pozadavky na canary backend a at z stable frontendu chodi pozadavky na stable backend 
+
+
+Upravil jsem obě konfigurace:
+- `shared`
+- `isolated`
+
+Nyní platí:
+```text
+stable frontend → backend:8080
+canary frontend → backend-canary:8080
+```
+
+Init kontejnery také čekají na odpovídající backend. Odstranil jsem nepotřebný `backend-router` a nezávislé backendové vážené směrování. **Váha 90/10 nyní vybírá celou dvojici frontend/backend.** HPA zůstává zachované.
+
+Validace manifestů i kontrola párování prošly. **Do běžícího clusteru jsem změny zatím neaplikoval.** Pro sdílené nasazení spusť:
+
+```bash
+kubectl apply -f kubernetes-JSP-weighted-shared.yml
+kubectl -n erp-jsp rollout status deployment/frontend
+kubectl -n erp-jsp rollout status deployment/frontend-canary
+```
+
+Po dokončení odstraň staré, již nepoužívané prostředky:
+
+```bash
+kubectl -n erp-jsp delete httproute backend-api --ignore-not-found
+kubectl -n erp-jsp delete service backend-router --ignore-not-found
+```
+
+Změna restartuje frontend Pody, takže současná přihlášení mohou zaniknout.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+#stable frontend → backend:8080 
+canary frontend → backend-canary:8080
+
+
+
+
+
+
+
+
+
+
+
+Upravil jsem obě konfigurace:
+- `shared`
+- `isolated`
+
+Nyní platí:
+```text
+stable frontend → backend:8080
+canary frontend → backend-canary:8080
+```
+
+Init kontejnery také čekají na odpovídající backend. Odstranil jsem nepotřebný `backend-router` a nezávislé backendové vážené směrování. **Váha 90/10 nyní vybírá celou dvojici frontend/backend.** HPA zůstává zachované.
+
+Validace manifestů i kontrola párování prošly. **Do běžícího clusteru jsem změny zatím neaplikoval.** Pro sdílené nasazení spusť:
+
+```bash
+kubectl apply -f kubernetes-JSP-weighted-shared.yml
+kubectl -n erp-jsp rollout status deployment/frontend
+kubectl -n erp-jsp rollout status deployment/frontend-canary
+```
+
+Po dokončení odstraň staré, již nepoužívané prostředky:
+
+```bash
+kubectl -n erp-jsp delete httproute backend-api --ignore-not-found
+kubectl -n erp-jsp delete service backend-router --ignore-not-found
+```
+
+Změna restartuje frontend Pody, takže současná přihlášení mohou zaniknout.
+

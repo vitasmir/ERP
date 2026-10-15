@@ -1,8 +1,9 @@
 # Vážený canary provoz a HPA pro JSP ERP
 
 Obě varianty používají Envoy Gateway a Gateway API. `HTTPRoute` rozděluje
-provoz mezi stabilní a canary Service pomocí `backendRefs[].weight: 90/10`.
-Váhy backendu a frontendu jsou nezávislé. Service typu `LoadBalancer` pouze
+provoz mezi stabilní a canary frontend Service pomocí `backendRefs[].weight: 90/10`.
+Stabilní frontend volá pouze stabilní backend, canary frontend pouze canary
+backend. Váha tedy vybírá celou dvojici frontend/backend. Service typu `LoadBalancer` pouze
 zpřístupňuje Envoy proxy; sama vážené směrování neprovádí.
 
 Komunitní ingress-nginx byl v březnu 2026 ukončen a nedostává bezpečnostní
@@ -86,7 +87,8 @@ Na Docker Desktopu otevři `http://localhost:8088/login`. Hostname
 `erp-jsp.local` je také podporovaný, pokud jej nastavíš v DNS nebo `hosts`.
 
 Po aplikaci doplňku neaplikuj samotný základní manifest bez opakování doplňku:
-základní frontend volá Service `backend` přímo a vážený routing by obešel.
+základní manifest obnovuje nastavení stabilního backendu bez HPA resource
+requests. Doplněk musí zůstat zdrojem konfigurace pro váženou variantu.
 
 ## Varianta 2: vlastní namespace a databáze
 
@@ -113,36 +115,52 @@ Secret vytvoř pouze při prvním nasazení; jeho změna nemění heslo již
 inicializované databáze. Na Docker Desktopu otevři `http://localhost:8089/login`.
 Podporovaný hostname je `erp-jsp-weighted.local`, proxy Service se jmenuje
 `erp-jsp-weighted-proxy`. Obě varianty mohou běžet současně bez konfliktu
-backendových hostname nebo veřejných portů, pokud má cluster dost kapacity.
+veřejných portů, pokud má cluster dost kapacity.
 
 ## Jak teče provoz
 
 ```text
-prohlížeč -> LoadBalancer/Envoy -> frontend nebo frontend-canary
-frontend -> backend-router (DNS alias) -> Envoy -> backend nebo backend-canary
+prohlížeč -> LoadBalancer/Envoy -> frontend        -> backend
+                             -> frontend-canary -> backend-canary
 ```
 
-`backend-router` je ExternalName alias na příslušnou Envoy proxy Service.
-Frontendy používají plný DNS název vlastního namespace, který je také hostname
-backendové HTTPRoute. Tak se provoz obou stacků nemůže zaměnit.
+Frontendy používají `BACKEND_URL=http://backend:8080`, respektive
+`BACKEND_URL=http://backend-canary:8080`. Jejich init kontejnery čekají na stejnou
+službu, kterou následně volá aplikace. Service selektory oddělují stabilní a
+canary Pody; každá služba rozděluje provoz jen mezi repliky své verze.
+Krátké DNS názvy se vyhodnocují ve vlastním namespace.
 
 Frontendová route používá session cookie `ERP_GATEWAY_SESSION`, aby se
 uživatel držel konkrétního frontend Podu; Tomcat sessions nejsou sdílené.
-Backendová route cookie affinity nepoužívá: API tokeny jsou uložené ve společné
-databázi. Poměr 90/10 je náhodný a nemusí přesně odpovídat malé sérii požadavků.
+API tokeny jsou uložené ve společné databázi. Poměr 90/10 vybírá frontend
+pro nové klienty; kvůli session affinity a rozdílné aktivitě uživatelů nemusí
+stejnému poměru odpovídat počet backendových API požadavků.
+
+Při přechodu ze starší konfigurace nejprve aplikuj nový manifest a počkej na
+rollout obou frontendů. Potom odstraň nepoužívané prostředky (samotný `apply`
+prostředky odstraněné ze souboru nemaže):
+
+```bash
+kubectl -n erp-jsp delete httproute backend-api --ignore-not-found
+kubectl -n erp-jsp delete service backend-router --ignore-not-found
+```
+
+Pro izolovanou variantu použij namespace `erp-jsp-weighted`.
 
 ## Změna váhy a rollback provozu
 
-Například změna backend canary podílu z 10 % na 25 %:
+Například změna podílu nových klientů pro canary dvojici z 10 % na 25 %:
 
 ```bash
-kubectl -n erp-jsp patch httproute backend-api --type=json \
+kubectl -n erp-jsp patch httproute frontend --type=json \
   -p='[{"op":"replace","path":"/spec/rules/0/backendRefs/0/weight","value":75},{"op":"replace","path":"/spec/rules/0/backendRefs/1/weight","value":25}]'
 ```
 
 Změnu zapiš i do používaného manifestu, jinak další `apply` obnoví 90/10.
 V izolovaném stacku použij namespace `erp-jsp-weighted`.
-Pro zastavení backend canary provozu nastav stabilní váhu na 100 a canary na 0.
+Pro zastavení výběru canary pro nové klienty nastav stabilní váhu na 100 a
+canary na 0. Existující klienti se session cookie mohou zůstat na canary;
+samotná změna vah není okamžité ukončení všech canary sessions.
 To vrací pouze provoz, nikoli databázové migrace.
 
 ## HPA a kontrola provozu
@@ -165,7 +183,8 @@ kubectl -n envoy-gateway-system logs \
 
 Gateway musí mít `Programmed=True`; HTTPRoute podmínky `Accepted=True` a
 `ResolvedRefs=True`. Access log obsahuje `upstream_host`, který lze porovnat
-s IP adresami stabilních a canary Podů. Nepřihlášený požadavek na
+s IP adresami stabilních a canary frontend Podů. Backendové požadavky už
+neprocházejí Envoy a nejsou v jeho access logu. Nepřihlášený požadavek na
 `/api/v1/auth/me` má vracet 401, zatímco veřejný katalog lze testovat bez hesla.
 Pokud cluster LoadBalancer nepodporuje, pro lokální kontrolu použij
 `kubectl -n envoy-gateway-system port-forward service/erp-jsp-proxy 8088:8088`.

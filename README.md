@@ -536,3 +536,83 @@ Pro frontend jsou obdobné váhy v `HTTPRoute` s `name: frontend`.
 **`kubectl patch` mění nastavení v běžícím clusteru, ale neupravuje YAML soubor na disku.** Proto je potřeba uložit stejné váhy i do souboru, aby je další `kubectl apply -f ...` nepřepsal původními hodnotami.
 
 Pro izolovanou variantu by to byl `kubernetes-JSP-weighted-isolated.yml`.
+
+
+
+
+
+
+
+
+
+
+Ano. V zápisu:
+
+```yaml
+image: erp-backend:canary
+```
+
+- **`erp-backend`** je název image repository.
+- **`canary`** je **tag** — označení image, zde kandidátní verze aplikace.
+
+Tag nemusí být číslo verze. Může to být například `canary`, `stable`, `1.2.0` nebo identifikátor commitu. **Název `canary` sám nezaručuje jiný obsah** — záleží, jaký image pod tímto tagem sestavíš.
+
+Při našem testu jsme použili:
+
+```bash
+docker tag erp-backend:local erp-backend:canary
+```
+
+Tím jsme pouze vytvořili další označení **stejného image**, nikoliv novou verzi aplikace. Pro skutečný canary release sestavíš image z upraveného kódu:
+
+```bash
+docker build -t erp-backend:canary ./erp-backend
+```
+
+O rozdělení provozu rozhodují váhy v `HTTPRoute`, **ne tag `canary`**.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+#`kubectl patch` **částečně upraví Kubernetes prostředek, který už běží v clusteru**, aniž bys musel znovu aplikovat celý YAML manifest.
+
+Například tento příkaz upraví váhy v běžící HTTPRoute:
+
+```bash
+kubectl -n erp-jsp patch httproute backend-api --type=json \
+  -p='[
+    {"op":"replace","path":"/spec/rules/0/backendRefs/0/weight","value":75},
+    {"op":"replace","path":"/spec/rules/0/backendRefs/1/weight","value":25}
+  ]'
+```
+
+Tím nastaví 75 % provozu na stabilní backend a 25 % na canary. Změní se **zdroj v Kubernetes API**; YAML soubor na disku se tím nezmění. Prohlédnout aktuální nastavení můžeš takto:
+
+```bash
+kubectl -n erp-jsp get httproute backend-api -o yaml
+```
+
+`--type=json` určuje, že patch používá JSON Patch operace, například `replace` pro změnu existující hodnoty.

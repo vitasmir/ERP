@@ -1,0 +1,165 @@
+# Architektura `erp-base-nextjs3` (React/TSX, bez Twig)
+
+`erp-base-nextjs3` zachovává serverový request/response model a TypeScript
+controller port z varianty Next.js 2, ale místo Twig souborů vrací běžné
+React TSX komponenty vykreslené na serveru. React komponenty nahrazují
+templating vrstvu; browser-side hydration ani Twig runtime nejsou potřeba.
+
+## Komponentní diagram
+
+```mermaid
+flowchart TB
+    Browser["Prohlížeč<br/>HTML formuláře + PHP assets"]
+    Next["Next.js 16.3<br/>Node.js 22<br/>standalone server"]
+    Route["Catch-all App Router<br/>GET / HEAD / POST"]
+
+    subgraph Server["Node.js BFF a controller runtime"]
+        Dispatch["server.ts<br/>Origin, session, auth,<br/>module permission"]
+        Session["session.ts<br/>opaque cookie + soubory"]
+        Controllers["TypeScript route controllers<br/>admin / auth / commerce /<br/>operations / shop"]
+        Context["context.ts<br/>Backend + FormData + Page"]
+    end
+
+    subgraph View["Server-side React"]
+        Registry["components/render.tsx<br/>view registry + assets"]
+        Shared["components/shared.tsx<br/>document, shell, helpers"]
+        Pages["components/pages/*.tsx<br/>core / business / operations"]
+        Inline["InlinePageScript markers<br/>scripts emitted after assets"]
+    end
+
+    Assets["public/assets<br/>PHP CSS/JS unchanged"]
+    Layout["public/compatibility.css"]
+    Backend["erp-backend<br/>Spring REST /api/v1"]
+    DB[("PostgreSQL")]
+
+    Browser --> Route --> Dispatch
+    Dispatch --> Session
+    Dispatch --> Controllers --> Context
+    Context -->|"server-side JSON/Bearer"| Backend
+    Controllers -->|"Page(view, data)"| Registry
+    Registry --> Shared
+    Registry --> Pages
+    Pages --> Inline
+    Shared -->|"React SSR -> HTML document"| Browser
+    Inline -->|"after shared/page scripts"| Browser
+    Assets -.-> Browser
+    Layout -.-> Browser
+    Backend --> DB
+```
+
+## Vykreslení stránky
+
+1. Route handler předá request do dispatcheru, který kontroluje Origin,
+   session, přihlášení a oprávnění modulu.
+2. TypeScript controller přečte query/form data, volá backend přes serverový
+   `Backend` klient a sestaví `Page` (`view`, `data`, HTTP status).
+3. Registry v `render.tsx` namapuje `view` na pojmenovanou React komponentu,
+   stránkové styly a skripty. `AppDocument` obalí stránky společným HTML
+   dokumentem, sidebar/topbar shell nebo veřejnou/login variantou.
+4. React server renderer vrátí statické HTML. `InlinePageScript` dovoluje
+   přesunout potřebné inline chování za společné a stránkové skripty, aby se
+   zachovalo pořadí jako v PHP stránce.
+5. Prohlížeč používá tradiční GET/POST formuláře a originální JavaScript.
+   React komponenty se po načtení nehydratují.
+
+## Propojený model frontend + backend
+
+Tento diagram propojuje React/TSX renderer a route controllery této varianty
+s interním API/domain/persistence modelem backendu. Podrobný popis backendu je
+v [samostatném dokumentu backendu](./erp-backend.md).
+
+```mermaid
+flowchart LR
+    Browser["Browser<br/>server-rendered HTML + forms"]
+
+    subgraph Frontend["erp-base-nextjs3 · Next.js / Node.js"]
+        Route["Catch-all App Router<br/>GET / HEAD / POST"]
+        Dispatch["server.ts<br/>Origin + session + access"]
+        Session[("Session files<br/>token + role + cart")]
+        Cookie["Opaque HttpOnly cookie"]
+        Controllers["TypeScript controllers<br/>admin / auth / operations / shop"]
+        Context["Backend + FormData context"]
+        Registry["React view registry"]
+        Components["TSX pages + shared AppDocument"]
+        Inline["InlinePageScript markers"]
+        Assets["Original PHP assets<br/>CSS/JS + compatibility.css"]
+    end
+
+    subgraph Backend["erp-backend · Spring Boot REST /api/v1"]
+        AuthApi["AuthController<br/>login / me / logout"]
+        Access["ApiAccess<br/>Bearer + role/module checks"]
+        ApiControllers["Domain REST controllers<br/>companies / catalog / sales /<br/>purchase / inventory / CRM / ..."]
+        Services["Domain services<br/>rules + transactions"]
+        Repositories["Spring Data JPA repositories"]
+        Model["JPA entities / domain model"]
+        UserRepo["UserRepository"]
+        Flyway["Flyway migrations"]
+        DB[("PostgreSQL 18<br/>ERP data")]
+    end
+
+    Browser --> Route --> Dispatch
+    Dispatch --> Session
+    Session --> Cookie
+    Cookie -->|"opaque ID on requests"| Dispatch
+    Dispatch --> Controllers --> Context
+    Controllers -->|"Page(view, data)"| Registry
+    Registry --> Components
+    Components --> Inline
+    Components -->|"React SSR document"| Browser
+    Inline --> Browser
+    Assets -.-> Browser
+    Context -->|"POST /api/v1/auth/login"| AuthApi
+    AuthApi --> UserRepo --> DB
+    AuthApi -->|"token kept in session"| Session
+    Context -->|"server-side Bearer + /api/v1/*"| Access
+    Access --> ApiControllers
+    ApiControllers --> Services
+    ApiControllers -.->|"simple read/write"| Repositories
+    Services --> Repositories
+    Repositories --> Model --> DB
+    Flyway -->|"schema/data versions"| DB
+```
+
+```mermaid
+sequenceDiagram
+    actor User as Prohlížeč
+    participant Route as Next route
+    participant Dispatch as server.ts
+    participant Controller as TS controller
+    participant Backend as Spring API
+    participant Renderer as React SSR
+
+    User->>Route: GET /purchase
+    Route->>Dispatch: Request + session cookie
+    Dispatch->>Dispatch: Guard + session + permission check
+    Dispatch->>Backend: GET /api/v1/purchase/overview
+    Backend-->>Dispatch: JSON
+    Dispatch->>Controller: Context / route dispatch
+    Controller->>Backend: načtení dat pro view
+    Backend-->>Controller: JSON response
+    Controller-->>Dispatch: Page(view, data)
+    Dispatch->>Renderer: renderPage(Page, path, session)
+    Renderer-->>User: úplný HTML dokument
+    User->>Route: POST formulář
+    Route->>Dispatch: Origin-checked FormData
+    Dispatch->>Controller: mapování + validace
+    Controller->>Backend: server-side mutace
+    Backend-->>Controller: status
+    Controller-->>User: redirect/feedback response
+```
+
+## Bezpečnostní a datové hranice
+
+Opaque HttpOnly session cookie odkazuje na serverový session soubor, který
+obsahuje token, roli/profil a stav guest cart/doručení. Token neopouští
+server-side controller/Backend klient. Node runtime spravuje rotaci,
+idle/absolutní expiraci a same-origin guard pro POST. Samotná práva modulů
+a validace business pravidel znovu vynucuje backend.
+
+CSS/JavaScript jsou kopie původních PHP assetů; layout změny jsou oddělené
+v `compatibility.css`. Veřejné routy shop a web/public nepoužívají přihlášený
+app shell. Žádné `.twig` soubory ani Twig balíček nejsou součástí projektu.
+
+`docker-compose-NEXTJS3.yml` spouští UI na `3000`, backend na `8080`,
+PostgreSQL na host portu `5434` a warehouse mock na `8091`. Vlastní volume
+`erp-nextjs3-sessions` je oddělen od sessions ostatních frontendu variant.

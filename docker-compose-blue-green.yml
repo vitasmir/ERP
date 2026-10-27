@@ -1,0 +1,106 @@
+services:
+  postgres:
+    image: postgres:18
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-erp}
+      POSTGRES_USER: ${POSTGRES_USER:?Set POSTGRES_USER to match the existing database}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD to match the existing database}
+    networks:
+      - erp-network
+    ports:
+      - "${POSTGRES_HOST_PORT:-5434}:5432"
+    volumes:
+      - erp-postgres-data:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  backend-blue:
+    image: ${ERP_BACKEND_BLUE_IMAGE:?Set ERP_BACKEND_BLUE_IMAGE to the current backend image}
+    restart: unless-stopped
+    environment:
+      DB_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:-erp}
+      DB_USERNAME: ${POSTGRES_USER:?Set POSTGRES_USER}
+      DB_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD}
+    expose:
+      - "8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - erp-network
+
+  backend-green:
+    image: ${ERP_BACKEND_GREEN_IMAGE:-erp-backend:green}
+    build:
+      context: ./erp-backend
+    restart: unless-stopped
+    environment:
+      DB_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:-erp}
+      DB_USERNAME: ${POSTGRES_USER:?Set POSTGRES_USER}
+      DB_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD}
+    expose:
+      - "8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - erp-network
+
+  frontend-blue:
+    image: ${ERP_FRONTEND_BLUE_IMAGE:?Set ERP_FRONTEND_BLUE_IMAGE to the current frontend image}
+    restart: unless-stopped
+    environment:
+      BACKEND_URL: http://backend-blue:8080
+    expose:
+      - "8080"
+    depends_on:
+      - backend-blue
+    networks:
+      - erp-network
+
+  frontend-green:
+    image: ${ERP_FRONTEND_GREEN_IMAGE:-erp-jsp:green}
+    build:
+      context: ./erp-base-frontend
+    restart: unless-stopped
+    environment:
+      BACKEND_URL: http://backend-green:8080
+    expose:
+      - "8080"
+    depends_on:
+      - backend-green
+    networks:
+      - erp-network
+
+  proxy:
+    image: nginx:1.29-alpine
+    restart: unless-stopped
+    ports:
+      - "${HTTP_PORT:-8088}:80"
+    volumes:
+      - ./deploy/nginx/active.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      - frontend-blue
+    networks:
+      - erp-network
+
+  remote-warehouse-mock:
+    build:
+      context: ./erp-remote-warehouse
+    restart: unless-stopped
+    ports:
+      - "${REMOTE_WAREHOUSE_HOST_PORT:-8091}:8080"
+    networks:
+      - erp-network
+
+volumes:
+  erp-postgres-data:
+
+networks:
+  erp-network:
+    external: true
+    name: ${DOCKER_NETWORK:-projects-network}

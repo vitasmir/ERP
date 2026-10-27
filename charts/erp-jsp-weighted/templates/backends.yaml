@@ -1,0 +1,107 @@
+{{- range $version := list "stable" "canary" }}
+{{- $suffix := ternary "" "-canary" (eq $version "stable") }}
+{{- $name := printf "backend%s" $suffix }}
+{{- $image := index $.Values.images.backend $version }}
+{{- $replicas := index $.Values.backend.replicas $version }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ $name }}
+  labels:
+    {{- include "erp-jsp-weighted.labels" $ | nindent 4 }}
+spec:
+  selector:
+    app: {{ $name }}
+  ports:
+    - name: http
+      port: 8080
+      targetPort: http
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ $name }}
+  labels:
+    {{- include "erp-jsp-weighted.labels" $ | nindent 4 }}
+spec:
+  replicas: {{ $replicas }}
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: {{ $name }}
+  template:
+    metadata:
+      labels:
+        app: {{ $name }}
+    spec:
+      initContainers:
+        - name: wait-for-postgres
+          image: {{ include "erp-jsp-weighted.image" $.Values.images.postgres | quote }}
+          imagePullPolicy: {{ $.Values.images.postgres.pullPolicy }}
+          command:
+            - sh
+            - -c
+            - |
+              until pg_isready -h postgres -p 5432 -U {{ $.Values.database.user }} -d {{ $.Values.database.name }}; do
+                echo "Waiting for PostgreSQL"
+                sleep 5
+              done
+      containers:
+        - name: backend
+          image: {{ include "erp-jsp-weighted.image" $image | quote }}
+          imagePullPolicy: {{ $image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: 8080
+          env:
+            - name: DB_URL
+              value: jdbc:postgresql://postgres:5432/{{ $.Values.database.name }}
+            - name: DB_USERNAME
+              value: {{ $.Values.database.user | quote }}
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ $.Values.database.passwordSecretName }}
+                  key: {{ $.Values.database.passwordSecretKey }}
+          resources:
+            {{- toYaml $.Values.backend.resources | nindent 12 }}
+          startupProbe:
+            tcpSocket:
+              port: http
+            periodSeconds: 5
+            failureThreshold: 60
+          readinessProbe:
+            tcpSocket:
+              port: http
+            periodSeconds: 5
+          livenessProbe:
+            tcpSocket:
+              port: http
+            periodSeconds: 10
+            failureThreshold: 10
+---
+{{- if $.Values.backend.hpa.enabled }}
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: {{ $name }}
+  labels:
+    {{- include "erp-jsp-weighted.labels" $ | nindent 4 }}
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: {{ $name }}
+  minReplicas: {{ $.Values.backend.hpa.minReplicas }}
+  maxReplicas: {{ $.Values.backend.hpa.maxReplicas }}
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: {{ $.Values.backend.hpa.averageCpuUtilization }}
+---
+{{- end }}
+{{- end }}

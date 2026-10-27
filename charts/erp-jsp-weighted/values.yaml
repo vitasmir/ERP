@@ -1,0 +1,71 @@
+images:
+  postgres:
+    repository: postgres
+    tag: "18"
+    pullPolicy: IfNotPresent
+  backend:
+    stable:
+      repository: erp-backend
+      tag: local
+      pullPolicy: Never
+    canary:
+      repository: erp-backend
+      tag: canary
+      pullPolicy: Never
+  frontend:
+    stable:
+      repository: erp-base-frontend
+      tag: jsp-local
+      pullPolicy: Never
+    canary:
+      repository: erp-base-frontend
+      tag: jsp-canary
+      pullPolicy: Never
+  warehouse:
+    repository: erp-remote-warehouse
+    tag: local
+    pullPolicy: Never
+
+database:
+  name: erp
+  user: erp
+  passwordSecretName: erp-postgres
+  passwordSecretKey: POSTGRES_PASSWORD
+  storage: 10Gi
+  storageClassName: ""
+
+backend:
+  replicas:
+    stable: 2
+    canary: 2
+  hpa:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 5
+    averageCpuUtilization: 70
+  resources:
+    requests:
+      cpu: 250m
+      memory: 512Mi
+    limits:
+      memory: 1Gi
+
+frontend:
+  replicas:
+    stable: 1
+    canary: 1
+
+warehouse:
+  replicas: 1
+
+route:
+  hostnames:
+    - erp-jsp-weighted.local
+    - localhost
+  stableWeight: 90
+  canaryWeight: 10
+
+gateway:
+  className: erp-envoy
+  listenerPort: 8089
+  proxyServiceName: erp-jsp-weighted-proxy

@@ -1,0 +1,595 @@
+# Samostatne prostredi ERP s JSP frontendem a vazenym smerovanim stable/canary.
+# Tok pozadavku: klient -> Envoy Gateway :8089 -> frontend -> backend -> PostgreSQL.
+# Stable a canary maji vlastni frontend i backend, ale sdileji jednu databazi.
+# "Isolated" zde znamena oddeleny namespace, nikoli sitovou izolaci:
+# tento soubor neobsahuje NetworkPolicy, ktera by omezovala komunikaci.
+#
+# Pred nasazenim musi byt dostupne:
+# - Gateway API CRD, Envoy Gateway a GatewayClass s nazvem erp-envoy;
+# - Secret erp-postgres v tomto namespace s klicem POSTGRES_PASSWORD;
+# - vychozi StorageClass nebo vhodny persistentni svazek pro databazi;
+# - lokalni aplikacni images na uzlech, kde pobezi pody (imagePullPolicy: Never).
+# Pro HPA je navic potreba poskytovatel metrik CPU, typicky Metrics Server.
+# Jednotlive Kubernetes objekty jsou oddeleny radkem "---".
+apiVersion: v1 # Zakladni Kubernetes API pro Namespace.
+kind: Namespace # Vytvori logicky oddeleny prostor pro objekty tohoto stacku.
+metadata: # Identifikace objektu a jeho doplnkove stitky.
+  name: erp-jsp-weighted # Jmeno namespace pouzite ve vsech objektech nize.
+  labels: # Stitky, podle kterych mohou objekt rozpoznat dalsi controllery.
+    # Pokud je nainstalovano Istio, zapne automaticke pridavani sidecaru do podu.
+    istio-injection: enabled # Samotne Istio neinstaluje.
+---
+# Headless Service poskytuje databazi DNS jmeno postgres bez vlastni cluster IP.
+# Selector propojuje Service s pody oznacenymi app: postgres.
+apiVersion: v1 # Service patri do zakladniho Kubernetes API.
+kind: Service # Stabilni DNS vstup k databazovemu podu.
+metadata:
+  name: postgres # DNS jmeno, ktere pouzivaji backendy.
+  namespace: erp-jsp-weighted # Service plati v tomto namespace.
+spec: # Pozadovana konfigurace Service.
+  clusterIP: None # Headless: DNS vraci adresy podu, ne virtualni IP Service.
+  selector:
+    app: postgres # Vybere pody s timto labelem.
+  ports:
+    - name: postgres # Jmeno portu v ramci Service.
+      port: 5432 # Port, na ktery se pripojuje databazovy klient.
+      targetPort: postgres # Odkaz na pojmenovany port databazoveho kontejneru.
+---
+# StatefulSet zachovava identitu databazoveho podu a pripojuje jeho vlastni disk.
+# Jedna replika zde nezajistuje vysokou dostupnost ani replikaci databaze.
+apiVersion: apps/v1 # API pro rizeni aplikacnich workloadu.
+kind: StatefulSet # Spravuje pody se stalou identitou a persistentnimi disky.
+metadata:
+  name: postgres # Pod s ordinalem bude mit jmeno postgres-0.
+  namespace: erp-jsp-weighted # Stejny namespace jako databazova Service a Secret.
+spec:
+  serviceName: postgres # Headless Service pro sitovou identitu StatefulSetu.
+  replicas: 1 # Pozadovany pocet databazovych podu.
+  selector: # Urcuje pody, ktere tento StatefulSet spravuje.
+    matchLabels:
+      app: postgres # Musi odpovidat labels v sablone podu.
+  template: # Sablona, ze ktere controller vytvori pod.
+    metadata:
+      labels:
+        app: postgres # Spojuje pod se StatefulSetem i Service selectorem.
+    spec: # Konfigurace kontejneru a behu podu.
+      containers: # Hlavni kontejnery bezici v podu.
+        - name: postgres # Jmeno kontejneru, napr. pro kubectl logs -c postgres.
+          image: postgres:18 # Oficialni image PostgreSQL, hlavni verze 18.
+          ports:
+            - name: postgres # Tento nazev pouziva Service v targetPort.
+              containerPort: 5432 # Deklarace portu; sama ho nezverejnuje mimo pod.
+          env: # Promenne prostredi predane procesu PostgreSQL.
+            # Inicializacni hodnoty pro novou databazi; existujici data nemigruji.
+            - name: POSTGRES_DB # Databaze vytvorena pri prvni inicializaci.
+              value: erp # Nazev databaze.
+            - name: POSTGRES_USER # Inicializacni databazovy uzivatel.
+              value: erp # Uzivatel pouzivany take backendy.
+            - name: POSTGRES_PASSWORD # Heslo inicializacniho uzivatele.
+              # Heslo se nacita z existujiciho Secretu, neni ulozene v manifestu.
+              valueFrom: # Hodnota se nenastavuje primo, ale z jineho objektu.
+                secretKeyRef: # Odkaz na Secret ve stejnem namespace.
+                  name: erp-postgres # Secret musi byt vytvoren pred startem podu.
+                  key: POSTGRES_PASSWORD # Klic obsahujici heslo uvnitr Secretu.
+          volumeMounts: # Pripojeni uloziste do souboroveho systemu kontejneru.
+            - name: erp-postgres-data # Odpovida nazvu ve volumeClaimTemplates.
+              # PostgreSQL 18 pouziva datovy adresar pod /var/lib/postgresql.
+              mountPath: /var/lib/postgresql # Persistentni uloziste dat PostgreSQL.
+          # Startup probe dava databazi na start priblizne 5 minut (60 x 5 s).
+          # Dokud neprojde, readiness a liveness kontroly se nespousteji.
+          startupProbe: # Kontrola dokonceni startu databaze.
+            exec: # Kontrolni prikaz bezi primo uvnitr kontejneru.
+              command: ["pg_isready", "-U", "erp", "-d", "erp"] # Lokalni kontrola pripravenosti DB.
+            periodSeconds: 5 # Opakovani kontroly kazdych 5 sekund.
+            timeoutSeconds: 5 # Maximalni doba jednoho pokusu.
+            failureThreshold: 60 # Po 60 neuspesnych pokusech se kontejner restartuje.
+          # Nepripraveny pod se vyradi z bezneho provozu pres Service.
+          readinessProbe: # Rozhoduje, zda pod smi prijimat provoz pres Service.
+            exec:
+              command: ["pg_isready", "-U", "erp", "-d", "erp"] # Stejna kontrola prijmu spojeni.
+            periodSeconds: 5 # Pripravenost se kontroluje kazdych 5 sekund.
+            timeoutSeconds: 5 # Pokus muze trvat nejvyse 5 sekund.
+            failureThreshold: 10 # Po 10 selhanich v rade bude pod nepripraveny.
+          # Opakovane selhani liveness vyvola restart kontejneru.
+          livenessProbe: # Kontroluje, zda neni treba databazovy kontejner restartovat.
+            exec:
+              command: ["pg_isready", "-U", "erp", "-d", "erp"] # Lokalni kontrola databaze.
+            periodSeconds: 10 # Kontrola kazdych 10 sekund.
+            timeoutSeconds: 5 # Casovy limit jednoho pokusu.
+            failureThreshold: 10 # Restart po 10 selhanich za sebou.
+  # Pro databazovy pod vznikne PVC na 10 GiB; data preziji jeho znovuvytvoreni.
+  # ReadWriteOnce znamena zapis z jednoho uzlu, nikoli nutne z jedineho podu.
+  volumeClaimTemplates: # Sablona samostatneho PVC pro kazdy pod StatefulSetu.
+    - metadata:
+        name: erp-postgres-data # Vznikne PVC erp-postgres-data-postgres-0.
+      spec:
+        accessModes:
+          - ReadWriteOnce # Uloziste pro cteni a zapis z jednoho uzlu.
+        resources:
+          requests:
+            storage: 10Gi # Pozadovana kapacita; StorageClass zde neni explicitne urcena.
+---
+# Interni vstup na stabilni backend: http://backend:8080.
+# Service vybira pripravene pody podle labelu, nikoli podle nazvu Deploymentu.
+apiVersion: v1 # API pro Service.
+kind: Service # Interni stabilni adresa backendu.
+metadata:
+  name: backend # DNS jmeno backend ve vlastnim namespace.
+  namespace: erp-jsp-weighted # Oddeluje tuto Service od jinych ERP stacku.
+spec:
+  selector:
+    app: backend # Vybira pouze stabilni backend pody.
+  ports:
+    - name: http # Pojmenovani HTTP portu Service.
+      port: 8080 # Port dostupny ostatnim podum v clusteru.
+      targetPort: http # Preda spojeni na kontejnerovy port pojmenovany http.
+---
+# Stabilni backend startuje ve dvou kopiich; jejich pocet dale ridi HPA nize.
+apiVersion: apps/v1 # API pro Deployment.
+kind: Deployment # Udrzuje pocet replik a provadi aktualizace backendu.
+metadata:
+  name: backend # Na toto jmeno odkazuje stabilni HPA.
+  namespace: erp-jsp-weighted # Deployment i jeho pody patri sem.
+spec:
+  replicas: 2 # Pocatecni pocet podu; po nasazeni ho upravuje HPA.
+  selector:
+    matchLabels:
+      app: backend # Deployment spravuje pody s timto oznacenim.
+  template: # Sablona kazde repliky backendu.
+    metadata:
+      labels:
+        app: backend # Musi souhlasit s Deployment i Service selectorem.
+    spec:
+      initContainers: # Dokonci se pred spustenim hlavniho kontejneru.
+        # Aplikace se spusti az pote, co PostgreSQL prijima spojeni.
+        # pg_isready neoveruje spravnost hesla ani existenci aplikacniho schematu.
+        - name: wait-for-postgres # Jednorazove cekani na databazi pri startu podu.
+          image: postgres:18 # Obsahuje klientsky prikaz pg_isready.
+          command: # Prepisuje vychozi start image vlastnim shell skriptem.
+            - sh # Spusti shell.
+            - -c # Nasledujici retezec shell vyhodnoti jako prikaz.
+            - | # until opakuje test DB; echo vypise stav, sleep ceka 5 s, done uzavira smycku.
+              until pg_isready -h postgres -p 5432 -U erp -d erp; do
+                echo "Waiting for PostgreSQL"
+                sleep 5
+              done
+      containers:
+        - name: backend # Hlavni aplikacni kontejner.
+          image: erp-backend:local # Stabilni sestaveni backendu.
+          # Kubernetes image nestahuje; musi byt predem dostupny na danem uzlu.
+          imagePullPolicy: Never # Chybejici lokalni image znamena chybu startu.
+          ports:
+            - name: http # Spolecny odkaz pro Service a sondy.
+              containerPort: 8080 # Port, na kterem backend nasloucha.
+          env:
+            - name: DB_URL # JDBC adresa predana aplikaci.
+              # Kratke DNS jmeno postgres se vyhodnoti v tomto namespace.
+              value: jdbc:postgresql://postgres:5432/erp # Server postgres, port 5432, DB erp.
+            - name: DB_USERNAME # Prihlasovaci jmeno pro databazi.
+              value: erp # Odpovida POSTGRES_USER.
+            - name: DB_PASSWORD # Heslo databazoveho spojeni backendu.
+              valueFrom:
+                secretKeyRef:
+                  name: erp-postgres # Stejny Secret jako u PostgreSQL.
+                  key: POSTGRES_PASSWORD # Backend a databaze dostanou shodne heslo.
+          # Requests slouzi planovaci a vypoctu HPA: 250m = ctvrtina CPU jadra.
+          # Pamet ma rezervaci 512 MiB a limit 1 GiB; CPU limit zde neni nastaven.
+          resources: # Pozadavky na kapacitu a omezeni kontejneru.
+            requests: # Planovac s touto kapacitou pocita pri umisteni podu.
+              cpu: 250m # 0,25 CPU jadra; zaklad pro procentni metriku HPA.
+              memory: 512Mi # Pozadovana pamet pro jednu repliku.
+            limits: # Hranice spotreby; zde je omezena pouze pamet.
+              memory: 1Gi # Prekroceni muze vest k OOM ukonceni kontejneru.
+          # TCP sondy overuji otevreny port, nikoli funkcnost API nebo databaze.
+          # Startup povoli cca 5 minut startu; readiness ridi zarazeni do Service;
+          # opakovane selhani liveness vede k restartu kontejneru.
+          startupProbe: # Chrani pomale spousteni aplikace pred predcasnym restartem.
+            tcpSocket: # Pokusi se navazat TCP spojeni do podu.
+              port: http # Pouzije pojmenovany kontejnerovy port 8080.
+            periodSeconds: 5 # Interval startovaci kontroly.
+            failureThreshold: 60 # Restart po 60 neuspesnych pokusech.
+          readinessProbe: # Pripravenost pro provoz pres Service.
+            tcpSocket:
+              port: http # Kontrola dostupnosti backend portu.
+            periodSeconds: 5 # Kontrola kazdych 5 s; vychozi prah jsou 3 selhani.
+          livenessProbe: # Kontrola bezici aplikace s pripadnym restartem.
+            tcpSocket:
+              port: http # Neoveruje obsah HTTP odpovedi.
+            periodSeconds: 10 # Kontrola kazdych 10 s; vychozi prah jsou 3 selhani.
+---
+# HPA meni pocet stabilnich backend podu mezi 2 a 5 podle prumerneho vyuziti CPU.
+# Cil 70 % se pocita z CPU requestu (250m), ne z celeho vykonu uzlu.
+# Pri dalsim apply muze replicas: 2 v Deploymentu docasne prepsat pocet replik HPA.
+apiVersion: autoscaling/v2 # API pro autoscaling podle metrik.
+kind: HorizontalPodAutoscaler # Controller automaticky meni pocet backend replik.
+metadata:
+  name: backend # Jmeno HPA, nikoli jeho selector.
+  namespace: erp-jsp-weighted # Cil musi byt ve stejnem namespace jako HPA.
+spec:
+  scaleTargetRef: # Presny odkaz na skalovany objekt.
+    apiVersion: apps/v1 # API ciloveho objektu.
+    kind: Deployment # Skaluje Deployment, nikoli Service.
+    name: backend # Stabilni backend Deployment.
+  minReplicas: 2 # Dolni mez poctu backend podu.
+  maxReplicas: 5 # Horni mez poctu backend podu.
+  metrics: # Metriky, podle kterych HPA vyhodnocuje zatez.
+    - type: Resource # Vestavena metrika spotreby prostredku podu.
+      resource:
+        name: cpu # Sleduje procesor, ne pamet nebo pocet HTTP pozadavku.
+        target:
+          type: Utilization # Procentni vyuziti vzhledem k CPU requests.
+          averageUtilization: 70 # Cilovy prumer; u samotneho backendu 175m z 250m.
+---
+# Canary backend ma vlastni Service, aby na nej stabilni frontend neposilal provoz.
+apiVersion: v1 # Zakladni API.
+kind: Service # Interni sitovy vstup na canary backend.
+metadata:
+  name: backend-canary # DNS jmeno pouzivane canary frontendem.
+  namespace: erp-jsp-weighted # Stejny namespace jako canary aplikace.
+spec:
+  selector:
+    app: backend-canary # Nevytvari spojeni na stabilni backend pody.
+  ports:
+    - name: http # Jmeno portu teto Service.
+      port: 8080 # Pristupovy port Service.
+      targetPort: http # Cilovy pojmenovany port canary kontejneru.
+---
+# Kandidat nove verze backendu. Pouziva jiny image, ale stejnou DB jako stable.
+# Zmeny databazoveho schematu proto musi byt kompatibilni s obema verzemi.
+apiVersion: apps/v1 # API pro Deployment.
+kind: Deployment # Samostatne rizeni replik kandidata nove verze.
+metadata:
+  name: backend-canary # Cil pro samostatne canary HPA.
+  namespace: erp-jsp-weighted # Sdileny namespace se stable vetvi.
+spec:
+  replicas: 2 # Vychozi pocet podu pred zasahem HPA.
+  selector:
+    matchLabels:
+      app: backend-canary # Tento Deployment nespravuje stable pody.
+  template: # Sablona canary podu.
+    metadata:
+      labels:
+        app: backend-canary # Shoda se selectorem Deploymentu a canary Service.
+    spec:
+      initContainers: # Pred startem aplikace musi skoncit uspesne.
+        - name: wait-for-postgres # Ceka na sdilenou databazi, ne na stable backend.
+          image: postgres:18 # Image s nastrojem pg_isready.
+          command: # Vlastni prikaz misto vychoziho spusteni image.
+            - sh # Interpret shell skriptu.
+            - -c # Skript dostane jako nasledujici argument.
+            - | # until testuje DB; echo hlasi cekani, sleep pocka 5 s, done uzavira smycku.
+              until pg_isready -h postgres -p 5432 -U erp -d erp; do
+                echo "Waiting for PostgreSQL"
+                sleep 5
+              done
+      containers:
+        - name: backend # Jmeno kontejneru muze byt stejne jako u stable podu.
+          image: erp-backend:canary # Kandidat nove verze, nikoli stabilni tag local.
+          imagePullPolicy: Never # Canary image musi existovat na prislusnem uzlu.
+          ports:
+            - name: http # Odkaz pro Service a vsechny TCP sondy.
+              containerPort: 8080 # Aplikacni port uvnitr podu.
+          env:
+            - name: DB_URL # JDBC adresa stejne DB jako u stabilniho backendu.
+              value: jdbc:postgresql://postgres:5432/erp # Service postgres, DB erp.
+            - name: DB_USERNAME # Databazovy ucet.
+              value: erp # Shodny se stable vetvi.
+            - name: DB_PASSWORD # Heslo se neuklada primo do Deploymentu.
+              valueFrom:
+                secretKeyRef:
+                  name: erp-postgres # Sdileny databazovy Secret.
+                  key: POSTGRES_PASSWORD # Klic se skutecnou hodnotou hesla.
+          resources: # Nastaveni kapacity jedne canary repliky.
+            requests: # Zaklad pro planovac a CPU utilization v HPA.
+              cpu: 250m # Ctvrtina CPU jadra.
+              memory: 512Mi # Pozadavek na pamet pro jednu repliku.
+            limits:
+              memory: 1Gi # Maximalni pamet; CPU zde nema nastaveny limit.
+          startupProbe: # Umoznuje aplikaci pomaly start.
+            tcpSocket: # Testuje pouze navazani TCP spojeni.
+              port: http # Canary backend na portu 8080.
+            periodSeconds: 5 # Jeden pokus kazdych 5 sekund.
+            failureThreshold: 60 # Po 60 selhanich restart; priblizne 5 minut.
+          readinessProbe: # Nepripraveny pod nebude cil Service.
+            tcpSocket:
+              port: http # Overuje dostupnost aplikacniho portu.
+            periodSeconds: 5 # Perioda kontroly pripravenosti.
+          livenessProbe: # Opakovane selhani restartuje kontejner.
+            tcpSocket:
+              port: http # Neoveruje databazi ani funkcnost API.
+            periodSeconds: 10 # Perioda kontroly zivosti.
+---
+# Canary se skaluje nezavisle na stable, take mezi 2 a 5 backend pody.
+# Nulova vaha na Gateway tyto pody nevypina; minReplicas stale plati.
+apiVersion: autoscaling/v2 # API pro autoscaling.
+kind: HorizontalPodAutoscaler # Samostatny autoscaler pro canary backend.
+metadata:
+  name: backend-canary # Identifikace HPA.
+  namespace: erp-jsp-weighted # Stejny namespace jako skalovany Deployment.
+spec:
+  scaleTargetRef: # Odkaz na workload, jehoz replicas bude HPA menit.
+    apiVersion: apps/v1 # Verze API ciloveho workloadu.
+    kind: Deployment # Typ ciloveho workloadu.
+    name: backend-canary # Nikoli backend stable.
+  minReplicas: 2 # Canary ma nejmene dve repliky i pri vaze provozu 0.
+  maxReplicas: 5 # Nejvyse pet canary backend podu.
+  metrics:
+    - type: Resource # Spotreba prostredku z Metrics API.
+      resource:
+        name: cpu # Skalovani podle CPU.
+        target:
+          type: Utilization # Podil skutecne spotreby k CPU requestu.
+          averageUtilization: 70 # Cilovy prumer je 70 %, ne pevny CPU limit.
+---
+# Nastaveni infrastruktury Envoy proxy, na ktere odkazuje Gateway nize.
+# LoadBalancer zada externi pristup; prideleni adresy zavisi na prostredi clusteru.
+apiVersion: gateway.envoyproxy.io/v1alpha1 # Rozsireni dodavane Envoy Gateway CRD.
+kind: EnvoyProxy # Nastaveni proxy infrastruktury, nikoli aplikacni Deployment.
+metadata:
+  name: erp-proxy # Na tento objekt odkazuje Gateway.parametersRef nize.
+  namespace: erp-jsp-weighted # Konfigurace lezi ve stejnem namespace jako Gateway.
+spec:
+  provider: # Zpusob, jakym Envoy Gateway vytvori infrastrukturu.
+    type: Kubernetes # Proxy pobezi jako Kubernetes prostredky.
+    kubernetes:
+      envoyService: # Parametry Service vytvarene controllerem pro Envoy.
+        name: erp-jsp-weighted-proxy # Jmeno generovane proxy Service.
+        type: LoadBalancer # Pozada prostredi o externi pristup k proxy.
+---
+# Verejny vstup do aplikace. GatewayClass erp-envoy musi existovat mimo tento soubor.
+# Listener prijima pouze HTTP na portu 8089; TLS/HTTPS zde neni nakonfigurovano.
+apiVersion: gateway.networking.k8s.io/v1 # Standardni Gateway API, vyzaduje CRD.
+kind: Gateway # Definuje sitovy vstup a jeho listenery.
+metadata:
+  name: erp # Na toto jmeno odkazuje HTTPRoute.parentRefs.
+  namespace: erp-jsp-weighted # Namespace vstupni konfigurace.
+spec:
+  gatewayClassName: erp-envoy # Existujici GatewayClass vybira Envoy controller.
+  infrastructure: # Doplnkove nastaveni infrastruktury teto Gateway.
+    parametersRef: # Odkaz na vyse definovanou konfiguraci proxy.
+      group: gateway.envoyproxy.io # API skupina odkazovaneho objektu.
+      kind: EnvoyProxy # Typ odkazovaneho objektu.
+      name: erp-proxy # Jmeno EnvoyProxy ve stejnem namespace.
+  listeners: # Seznam vstupnich portu a pravidel pro pripojeni rout.
+    - name: http # Jmeno listeneru.
+      protocol: HTTP # Nesifrovany HTTP provoz.
+      port: 8089 # Verejny port pro tento izolovany stack.
+      allowedRoutes: # Urcuje, ktere routy smi listener pouzivat.
+        namespaces: # Omezeni podle namespace routy.
+          # K tomuto listeneru lze pripojit routy jen ze stejneho namespace.
+          from: Same # Neprijme routu z jineho namespace.
+---
+# Interni Service stabilniho JSP frontendu, na ktery smeruje HTTPRoute.
+apiVersion: v1 # API pro Service.
+kind: Service # Stabilni sitovy vstup na JSP frontend.
+metadata:
+  name: frontend # Na tuto Service odkazuje HTTPRoute, ne primo na Deployment.
+  namespace: erp-jsp-weighted # Stejny namespace jako Gateway a frontend pody.
+spec:
+  selector:
+    app: frontend # Vybira jen stabilni JSP frontend.
+  ports:
+    - name: http # Jmeno portu Service.
+      port: 8080 # Cilovy port uvedeny take v HTTPRoute.backendRefs.
+      targetPort: http # Port kontejneru pojmenovany http.
+---
+# Stabilni JSP frontend. Backend vola primo uvnitr clusteru, ne pres Gateway.
+apiVersion: apps/v1 # API pro Deployment.
+kind: Deployment # Sprava stabilniho JSP/Tomcat frontendu.
+metadata:
+  name: frontend # Jmeno workloadu pro rollout a logy.
+  namespace: erp-jsp-weighted # Namespace stabilniho frontendu.
+spec:
+  replicas: 1 # Jeden frontend pod; tento workload nema HPA.
+  strategy: # Zpusob vymeny podu pri aktualizaci.
+    # Pri aktualizaci se nejdrive odstrani stary pod, pak vznikne novy.
+    # S jedinou replikou to znamena docasnou nedostupnost stabilniho frontendu.
+    type: Recreate # Stary a novy frontend pod se pri aktualizaci neprekryvaji.
+  selector:
+    matchLabels:
+      app: frontend # Identifikuje pody spravovane timto Deploymentem.
+  template: # Sablona frontend podu.
+    metadata:
+      labels:
+        app: frontend # Odpovida selectorem Deploymentu a Service.
+    spec:
+      initContainers: # Frontend pocka na backend pred vlastnim spustenim.
+        - name: wait-for-backend # Jednorazova startovaci kontrola zavislosti.
+          image: erp-base-frontend:jsp-local # Image obsahuje bash pro TCP test.
+          imagePullPolicy: Never # Pouzije pouze lokalne dostupny image.
+          command: # Vlastni cekaci skript misto startu Tomcatu.
+            - bash # Bash podporuje specialni cestu /dev/tcp/host/port.
+            - -c # Vyhodnoti nasledujici vice-radkovy argument.
+            - | # until zkousi TCP backend:8080; echo hlasi stav, sleep ceka 5 s.
+              until (echo > /dev/tcp/backend/8080); do
+                echo "Waiting for stable backend"
+                sleep 5
+              done
+      containers:
+        - name: frontend # Hlavni kontejner se stabilni JSP aplikaci.
+          image: erp-base-frontend:jsp-local # Stabilni tag frontendu.
+          imagePullPolicy: Never # Image musi byt dostupny na uzlu.
+          ports:
+            - name: http # Na tento nazev odkazuji Service a TCP sondy.
+              containerPort: 8080 # HTTP port Tomcatu uvnitr podu.
+          env:
+            - name: BACKEND_URL # Adresa API pouzivana serverovou casti frontendu.
+              # Stable frontend pouziva vyhradne stabilni backend.
+              value: http://backend:8080 # Interni Service stable backendu.
+          startupProbe: # Povoli pomaly start Tomcatu.
+            tcpSocket:
+              port: http # TCP test frontend portu 8080.
+            periodSeconds: 5 # Start se kontroluje kazdych 5 sekund.
+            failureThreshold: 60 # Restart po 60 neuspesnych kontrolach.
+          readinessProbe: # Ridi pripravenost podu pro prichozi provoz.
+            tcpSocket:
+              port: http # Otevreny port nezarucuje funkcni prihlaseni nebo API.
+            periodSeconds: 5 # Perioda kontroly pripravenosti.
+          livenessProbe: # Pri opakovanem selhani restartuje frontend.
+            tcpSocket:
+              port: http # Kontroluje dostupnost TCP portu Tomcatu.
+            periodSeconds: 10 # Perioda kontroly zivosti.
+---
+# Interni adresa simulovaneho vzdaleneho skladu: remote-warehouse-mock:8080.
+# Gateway na tuto Service primo nesmeruje.
+apiVersion: v1 # API pro Service.
+kind: Service # Interni DNS vstup k simulovanemu skladu.
+metadata:
+  name: remote-warehouse-mock # DNS jmeno mock sluzby.
+  namespace: erp-jsp-weighted # Namespace tohoto testovaciho skladu.
+spec:
+  selector:
+    app: remote-warehouse-mock # Vybere pod mock Deploymentu nize.
+  ports:
+    - name: http # Jmeno portu Service.
+      port: 8080 # Port dostupny klientum uvnitr clusteru.
+      targetPort: http # Pojmenovany port mock kontejneru.
+---
+# Mock skladu slouzi misto skutecne externi sluzby.
+# Na rozdil od TCP sond aplikace kontroluje HTTP odpoved /api/v1/health.
+apiVersion: apps/v1 # API pro Deployment.
+kind: Deployment # Spousti simulaci vzdalene skladove sluzby.
+metadata:
+  name: remote-warehouse-mock # Jmeno workloadu mock skladu.
+  namespace: erp-jsp-weighted # Namespace odpovidajici jeho Service.
+spec:
+  replicas: 1 # Jedna instance mocku, bez autoscalingu.
+  selector:
+    matchLabels:
+      app: remote-warehouse-mock # Pody spravovane timto Deploymentem.
+  template:
+    metadata:
+      labels:
+        app: remote-warehouse-mock # Shoda se selectorem Deploymentu i Service.
+    spec:
+      containers:
+        - name: remote-warehouse-mock # Kontejner simulovane sluzby.
+          image: erp-remote-warehouse:local # Lokalni sestaveni skladoveho mocku.
+          imagePullPolicy: Never # Neni dovoleno stahovani z registry.
+          ports:
+            - name: http # Cil pro Service a HTTP sondy.
+              containerPort: 8080 # HTTP server mock sluzby.
+          startupProbe: # Ceka na dokonceni startu mocku.
+            httpGet: # HTTP 200-399 se povazuje za uspech.
+              path: /api/v1/health # Cesta zdravotni kontroly aplikace.
+              port: http # HTTP dotaz na kontejnerovy port 8080.
+            periodSeconds: 5 # Opakuje dotaz kazdych 5 sekund.
+            failureThreshold: 60 # Pri dlouhem neuspesnem startu restartuje kontejner.
+          readinessProbe: # Ridi zarazeni mock podu do provozu Service.
+            httpGet:
+              path: /api/v1/health # Kontrola aplikacniho health endpointu.
+              port: http # Pojmenovany HTTP port.
+            periodSeconds: 5 # Kontrola pripravenosti kazdych 5 sekund.
+          livenessProbe: # Pri opakovanem selhani restartuje mock.
+            httpGet:
+              path: /api/v1/health # Stejny endpoint jako u readiness.
+              port: http # Port mock serveru.
+            periodSeconds: 10 # Kontrola zivosti kazdych 10 sekund.
+---
+# Canary JSP frontend pouziva vlastni image i backend-canary.
+# Bez explicitni strategie se aktualizuje vychozim RollingUpdate.
+apiVersion: apps/v1 # API pro Deployment.
+kind: Deployment # Samostatny workload canary JSP frontendu.
+metadata:
+  name: frontend-canary # Jmeno pro rollout kandidata frontendu.
+  namespace: erp-jsp-weighted # Stejny namespace jako canary backend.
+spec:
+  replicas: 1 # Jedna canary frontend replika, bez HPA.
+  selector:
+    matchLabels:
+      app: frontend-canary # Oddeluje tento Deployment od stable frontendu.
+  template:
+    metadata:
+      labels:
+        app: frontend-canary # Musi odpovidat i selectoru canary Service.
+    spec:
+      initContainers: # Frontend se nespusti, dokud cekaci kontejner neskonci.
+        - name: wait-for-backend # Ceka pouze na backend-canary.
+          image: erp-base-frontend:jsp-canary # Stejny image jako hlavni frontend.
+          imagePullPolicy: Never # Image musi byt predem na uzlu.
+          command: # Spusti TCP cekaci smycku misto aplikace.
+            - bash # Shell s podporou /dev/tcp.
+            - -c # Nasledujici argument obsahuje skript.
+            - | # until testuje backend-canary:8080; echo hlasi stav, sleep ceka 5 s.
+              until (echo > /dev/tcp/backend-canary/8080); do
+                echo "Waiting for canary backend"
+                sleep 5
+              done
+      containers:
+        - name: frontend # Jmeno kontejneru uvnitr canary podu.
+          image: erp-base-frontend:jsp-canary # Kandidat nove verze JSP aplikace.
+          imagePullPolicy: Never # Zadny pokus o stazeni z registry.
+          ports:
+            - name: http # Pojmenovany port pro Service a sondy.
+              containerPort: 8080 # HTTP port canary Tomcatu.
+          env:
+            - name: BACKEND_URL # Pevna volba backendu pro canary frontend.
+              # Oddelena aplikacni vetev; s backendem stable sdili az databazi.
+              value: http://backend-canary:8080 # Neprochazi pres verejnou Gateway.
+          startupProbe: # Prostor pro dokonceni startu aplikace.
+            tcpSocket:
+              port: http # TCP test portu 8080.
+            periodSeconds: 5 # Jeden startovaci pokus za 5 sekund.
+            failureThreshold: 60 # Restart po 60 selhanich za sebou.
+          readinessProbe: # Nepripraveny pod nema dostavat provoz.
+            tcpSocket:
+              port: http # Kontroluje otevreny port, nikoli stav session.
+            periodSeconds: 5 # Interval kontroly pripravenosti.
+          livenessProbe: # Vynuti restart pri opakovanem selhani TCP kontroly.
+            tcpSocket:
+              port: http # Port hlavniho kontejneru.
+            periodSeconds: 10 # Interval kontroly zivosti.
+---
+# Samostatna Service umoznuje Gateway rozlisit stable a canary frontend.
+apiVersion: v1 # API pro Service.
+kind: Service # Samostatny sitovy cil pro canary v HTTPRoute.
+metadata:
+  name: frontend-canary # Toto jmeno pouziva HTTPRoute.backendRefs.
+  namespace: erp-jsp-weighted # Stejny namespace jako routa.
+spec:
+  selector:
+    app: frontend-canary # Vybira pouze pody canary frontendu.
+  ports:
+    - name: http # Jmeno portu Service.
+      port: 8080 # Port, na ktery odkazuje Gateway routa.
+      targetPort: http # Preklad na pojmenovany port kontejneru.
+---
+# Smerovani vstupniho HTTP provozu a prirazeni klienta k vybrane verzi frontendu.
+apiVersion: gateway.networking.k8s.io/v1 # Gateway API; podpora poli zavisi i na CRD/controlleru.
+kind: HTTPRoute # Pravidla vyberu HTTP provozu a jeho cilovych sluzeb.
+metadata:
+  name: frontend # Jmeno routy, shoda se jmenem Service neni povinna.
+  namespace: erp-jsp-weighted # Splnuje omezeni allowedRoutes: Same na Gateway.
+spec:
+  parentRefs: # Gateway, ke kterym se tato routa pripojuje.
+    # Pripojeni teto routy ke Gateway erp ve stejnem namespace.
+    - name: erp # Odkaz na Gateway erp, nikoli na EnvoyProxy.
+  hostnames: # Routa obslouzi jen pozadavky s odpovidajicim hostitelem.
+    # Musi odpovidat HTTP Host hlavicce. DNS/hosts zaznam tento soubor nevytvari.
+    - erp-jsp-weighted.local # Vlastni lokalni hostname, vyzaduje DNS/hosts.
+    - localhost # Umoznuje pristup pres http://localhost:8089.
+  rules: # Seznam pravidel pro prijate HTTP pozadavky.
+    - matches: # Podminky pro pouziti tohoto pravidla.
+        - path: # Vyber podle URL cesty.
+            type: PathPrefix # Porovnava prefix po segmentech cesty.
+            # Prefix "/" pokryva vsechny cesty pro uvedene hostnames.
+            value: / # Vsechny URL cesty vcetne /login a /api.
+      backendRefs: # Cile jsou frontendove Services, ne backendove Deploymenty.
+        # Vahy jsou pomer, ne pocty podu. 100:0 posila nove relace jen na stable.
+        # Napr. 90:10 priradi priblizne desetinu novych relaci ke canary.
+        - name: frontend # Stabilni frontend Service.
+          port: 8080 # Port Service, nikoli verejny port Gateway 8089.
+          weight: 100 # Cela vaha noveho provozu jde na stable.
+        - name: frontend-canary # Canary frontend Service.
+          port: 8080 # Port canary Service.
+          weight: 0 # Canary se pro nove relace podle vah nevybira.
+      # Pokud to instalovana verze Envoy Gateway podporuje, cookie drzi klienta
+      # u vybraneho frontend podu (instance), nikoli pouze u stable/canary Service.
+      # Jiz prirazene relace se proto nemusi okamzite ridit novym pomerem vah.
+      # Nejde o JSP JSESSIONID ani o sdileni aplikacnich session mezi pody.
+      sessionPersistence: # Afinita dalsich pozadavku stejneho klienta.
+        sessionName: ERP_GATEWAY_SESSION # Nazev cookie nastavovane Envoy proxy.
+        type: Cookie # Klient vraci identifikaci relace v HTTP Cookie hlavicce.
+        cookieConfig: # Dalsi vlastnosti teto gateway cookie.
+          # Relacni cookie bez pevne doby expirace (typicky do zavreni prohlizece).
+          lifetimeType: Session # Bez trvale expirace; obnova relaci v prohlizeci ji muze zachovat.

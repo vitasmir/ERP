@@ -1,0 +1,186 @@
+.projects-page {
+  min-height: 100vh;
+  background: #f3f1eb;
+  color: #17362b;
+  padding: 44px max(5vw, 24px);
+  font-family: "Space Grotesk", sans-serif;
+}
+.projects-header {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 32px;
+  align-items: start;
+  padding-bottom: 42px;
+  border-bottom: 1px solid #d9ddd4;
+}
+.projects-header h1 {
+  font-size: 42px;
+  letter-spacing: 0;
+  margin: 8px 0;
+}
+.projects-header p {
+  margin: 0;
+  color: #65756b;
+}
+.back-link {
+  color: #456a56;
+  font: 11px "DM Mono";
+  text-decoration: none;
+  padding-top: 8px;
+}
+.projects-metrics {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  margin: 28px 0 44px;
+}
+.projects-metrics article {
+  background: #fffdf8;
+  border-top: 3px solid #3c8592;
+  padding: 20px;
+}
+.projects-metrics article:nth-child(2) {
+  border-color: #7666a6;
+}
+.projects-metrics article:nth-child(3) {
+  border-color: #d28153;
+}
+.projects-metrics span,
+.projects-metrics small {
+  display: block;
+  color: #718078;
+  font: 10px "DM Mono";
+}
+.projects-metrics strong {
+  display: block;
+  font-size: 27px;
+  letter-spacing: 0;
+  margin: 9px 0;
+}
+.section-head {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+}
+.section-head h2 {
+  margin: 7px 0;
+  font-size: 27px;
+  letter-spacing: 0;
+}
+.project-count {
+  font: 10px "DM Mono";
+  color: #7b897f;
+}
+.project-list {
+  display: grid;
+  gap: 12px;
+}
+.project-card {
+  display: grid;
+  grid-template-columns: 1.1fr 1.2fr auto;
+  gap: 22px;
+  align-items: center;
+  background: #fffdf8;
+  border: 1px solid #e0e2da;
+  padding: 22px;
+}
+.project-card h3 {
+  margin: 8px 0 4px;
+  font-size: 17px;
+}
+.project-card p {
+  margin: 0;
+  color: #748278;
+  font: 11px "DM Mono";
+}
+.status-chip {
+  display: inline-block;
+  border-radius: 3px;
+  padding: 4px 6px;
+  font: 9px "DM Mono";
+}
+.status-planned {
+  background: #fff0cf;
+  color: #935f13;
+}
+.status-in_progress {
+  background: #e3edf5;
+  color: #3c6f92;
+}
+.status-completed {
+  background: #daf0e6;
+  color: #257453;
+}
+.progress-group {
+  display: grid;
+  gap: 7px;
+}
+.progress-meta {
+  display: flex;
+  justify-content: space-between;
+  color: #65756b;
+  font: 10px "DM Mono";
+}
+.progress-meta b {
+  color: #17362b;
+  font-weight: normal;
+}
+.progress-track {
+  height: 7px;
+  background: #e5e8e1;
+  overflow: hidden;
+}
+.progress-track span {
+  display: block;
+  height: 100%;
+  background: #3c8592;
+}
+.progress-group small {
+  color: #7b897f;
+  font: 10px "DM Mono";
+}
+.secondary {
+  border: 1px solid #35624c;
+  background: transparent;
+  color: #28543f;
+  padding: 8px 11px;
+  font: 11px "Space Grotesk";
+  cursor: pointer;
+  white-space: nowrap;
+}
+.completed-label {
+  font: 10px "DM Mono";
+  color: #257453;
+}
+.projects-message {
+  background: #dff0e3;
+  color: #285f39;
+  padding: 12px 14px;
+  font-size: 12px;
+}
+.projects-message.error {
+  background: #f8dfdf;
+  color: #963f47;
+}
+@media (max-width: 840px) {
+  .projects-header {
+    grid-template-columns: 1fr;
+  }
+  .projects-header .primary {
+    justify-self: start;
+  }
+  .projects-metrics {
+    grid-template-columns: 1fr;
+  }
+  .project-card {
+    grid-template-columns: 1fr;
+  }
+}
+@media (max-width: 520px) {
+  .projects-page {
+    padding: 28px 18px;
+  }
+  .projects-header h1 {
+    font-size: 36px;
+  }
+}

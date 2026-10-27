@@ -1,0 +1,53 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: remote-warehouse-mock
+  labels:
+    {{- include "erp-jsp-weighted.labels" . | nindent 4 }}
+spec:
+  selector:
+    app: remote-warehouse-mock
+  ports:
+    - name: http
+      port: 8080
+      targetPort: http
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: remote-warehouse-mock
+  labels:
+    {{- include "erp-jsp-weighted.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.warehouse.replicas }}
+  selector:
+    matchLabels:
+      app: remote-warehouse-mock
+  template:
+    metadata:
+      labels:
+        app: remote-warehouse-mock
+    spec:
+      containers:
+        - name: remote-warehouse-mock
+          image: {{ include "erp-jsp-weighted.image" .Values.images.warehouse | quote }}
+          imagePullPolicy: {{ .Values.images.warehouse.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: 8080
+          startupProbe:
+            httpGet:
+              path: /api/v1/health
+              port: http
+            periodSeconds: 5
+            failureThreshold: 60
+          readinessProbe:
+            httpGet:
+              path: /api/v1/health
+              port: http
+            periodSeconds: 5
+          livenessProbe:
+            httpGet:
+              path: /api/v1/health
+              port: http
+            periodSeconds: 10

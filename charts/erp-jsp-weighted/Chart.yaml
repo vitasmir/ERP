@@ -1,0 +1,6 @@
+apiVersion: v2
+name: erp-jsp-weighted
+description: Isolated JSP ERP stack with stable/canary frontend and backend releases
+type: application
+version: 0.1.0
+appVersion: "1.0.0"

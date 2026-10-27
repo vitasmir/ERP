@@ -1,0 +1,206 @@
+.permissions-table tbody tr:hover th,
+.permissions-table tbody tr:hover td {
+  background: #eef5d9;
+}
+.permissions-section {
+  margin-top: 34px;
+}
+.section-head.compact {
+  margin-bottom: 16px;
+}
+.permissions-table-wrap {
+  max-height: calc(100vh - 220px);
+  overflow: auto;
+  border: 1px solid #dedfd4;
+  background: #fffdf8;
+}
+.permissions-table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 720px;
+}
+.permissions-table th,
+.permissions-table td {
+  padding: 14px 16px;
+  border-bottom: 1px solid #e7e8df;
+  text-align: center;
+  font-size: 12px;
+}
+.permissions-table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: #f4f4ed;
+  color: #5d6d66;
+  font-size: 11px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.permissions-table th:first-child {
+  text-align: left;
+  min-width: 170px;
+  position: sticky;
+  left: 0;
+  z-index: 2;
+  background: #fffdf8;
+  box-shadow: 1px 0 0 #e7e8df;
+}
+.permissions-table thead th:first-child {
+  z-index: 3;
+  background: #f4f4ed;
+}
+.permissions-table tbody th {
+  color: #273b34;
+  font-weight: 700;
+}
+.permissions-table tbody tr:last-child th,
+.permissions-table tbody tr:last-child td {
+  border-bottom: 0;
+}
+.permissions-table input {
+  width: 17px;
+  height: 17px;
+  accent-color: #245543;
+}
+.role-column-mark {
+  display: inline-grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  margin-right: 7px;
+  background: var(--card-color, #d9ed62);
+  color: #173b30;
+  font-weight: 800;
+}
+.permissions-table input:disabled {
+  opacity: 1;
+  cursor: not-allowed;
+}
+.section-head.compact h2 {
+  margin-bottom: 4px;
+}
+.section-head.compact p {
+  margin: 0;
+}
+.role-toolbar {
+  display: flex;
+  justify-content: flex-end;
+  margin: -18px 0 10px;
+}
+.role-modal {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+}
+.role-modal.open {
+  display: grid;
+  place-items: center;
+}
+.role-modal-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(20, 54, 45, 0.58);
+}
+.role-dialog {
+  position: relative;
+  width: min(540px, calc(100% - 32px));
+  max-height: calc(100vh - 32px);
+  overflow: auto;
+  background: #fffdf8;
+  border: 1px solid #dedfd4;
+  box-shadow: 0 22px 70px rgba(20, 54, 45, 0.24);
+  padding: 32px;
+}
+.role-dialog h2 {
+  margin: 6px 0;
+}
+.role-dialog p {
+  margin: 0 0 24px;
+  color: #718078;
+}
+.role-dialog form {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 14px;
+}
+.role-dialog label {
+  display: grid;
+  gap: 6px;
+  color: #39454c;
+  font-size: 13px;
+  font-weight: 700;
+}
+.role-dialog input:not([type="checkbox"]),
+.role-dialog textarea,
+.role-dialog select {
+  box-sizing: border-box;
+  width: 100%;
+  border: 1px solid #c9d1c9;
+  background: #fff;
+  padding: 11px 12px;
+  color: #1e2b32;
+  font: inherit;
+  font-weight: 400;
+}
+.role-dialog input:focus,
+.role-dialog textarea:focus,
+.role-dialog select:focus {
+  outline: 0;
+  border-color: #5b806d;
+  box-shadow: 0 0 0 3px rgba(91, 128, 109, 0.14);
+}
+.role-dialog textarea {
+  resize: vertical;
+  min-height: 88px;
+}
+.role-dialog #role-edit-field,
+.role-dialog .permission-fields,
+.role-dialog .dialog-actions {
+  grid-column: 1;
+}
+.permission-fields {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 10px;
+  border: 1px solid #d9ddd2;
+  padding: 14px;
+}
+.permission-fields legend {
+  padding: 0 6px;
+  color: #718078;
+  font: 10px "DM Mono";
+  text-transform: uppercase;
+}
+.permission-fields label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  font-weight: 400;
+}
+.permission-fields input {
+  accent-color: #245543;
+}
+.role-mark.custom {
+  background: #d9ed62;
+  color: #173b30;
+}
+.dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  padding-top: 4px;
+  border-top: 1px solid #e5e8df;
+}
+@media (max-width: 600px) {
+  .role-dialog {
+    padding: 24px 18px;
+  }
+  .dialog-actions {
+    position: sticky;
+    bottom: 0;
+    background: #fffdf8;
+    padding-top: 12px;
+  }
+}

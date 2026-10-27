@@ -1,0 +1,75 @@
+{{- range $version := list "stable" "canary" }}
+{{- $suffix := ternary "" "-canary" (eq $version "stable") }}
+{{- $name := printf "frontend%s" $suffix }}
+{{- $backendName := printf "backend%s" $suffix }}
+{{- $image := index $.Values.images.frontend $version }}
+{{- $replicas := index $.Values.frontend.replicas $version }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ $name }}
+  labels:
+    {{- include "erp-jsp-weighted.labels" $ | nindent 4 }}
+spec:
+  selector:
+    app: {{ $name }}
+  ports:
+    - name: http
+      port: 8080
+      targetPort: http
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ $name }}
+  labels:
+    {{- include "erp-jsp-weighted.labels" $ | nindent 4 }}
+spec:
+  replicas: {{ $replicas }}
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: {{ $name }}
+  template:
+    metadata:
+      labels:
+        app: {{ $name }}
+    spec:
+      initContainers:
+        - name: wait-for-backend
+          image: {{ include "erp-jsp-weighted.image" $image | quote }}
+          imagePullPolicy: {{ $image.pullPolicy }}
+          command:
+            - bash
+            - -c
+            - |
+              until (echo > /dev/tcp/{{ $backendName }}/8080); do
+                echo "Waiting for {{ $version }} backend"
+                sleep 5
+              done
+      containers:
+        - name: frontend
+          image: {{ include "erp-jsp-weighted.image" $image | quote }}
+          imagePullPolicy: {{ $image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: 8080
+          env:
+            - name: BACKEND_URL
+              value: http://{{ $backendName }}:8080
+          startupProbe:
+            tcpSocket:
+              port: http
+            periodSeconds: 5
+            failureThreshold: 60
+          readinessProbe:
+            tcpSocket:
+              port: http
+            periodSeconds: 5
+          livenessProbe:
+            tcpSocket:
+              port: http
+            periodSeconds: 10
+---
+{{- end }}
